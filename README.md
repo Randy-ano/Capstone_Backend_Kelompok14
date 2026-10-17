@@ -45,19 +45,25 @@ erDiagram
 
 ## ⚙️ Instalasi
 
+Panduan lengkap (software, database, akun demo, alur kerja tim): **[SETUP.md](SETUP.md)**.
+
+Ringkasnya, setelah membuat database MySQL `intellisys_talent_hub`:
+
 ```bash
-git clone https://github.com/USERNAME/REPO.git
-cd REPO/backend
+git clone https://github.com/Randy-ano/Capstone_Kelompok14.git
+cd Capstone_Kelompok14/backend
 composer install
-cp .env.example .env
+copy .env.example .env
 php artisan key:generate
-php artisan migrate --seed
+php artisan migrate:fresh --seed
 php artisan serve
 
 cd ../frontend
 npm install
 npm run dev
 ```
+
+Spesifikasi backend: [BACKEND_SPEC.md](BACKEND_SPEC.md).
 
 ## 👥 Tim
 
