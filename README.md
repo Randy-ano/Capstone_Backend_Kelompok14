@@ -20,10 +20,10 @@
 
 | Layer | Teknologi |
 |---|---|
-| Backend | Laravel (REST API), Sanctum, spatie/laravel-permission |
-| Frontend | React (Vite), Tailwind CSS, shadcn/ui |
-| Database | MySQL |
-| Lainnya | laravel-dompdf, Laravel Mail & Scheduler |
+| Backend | Laravel 12 (REST API), Sanctum (token), otorisasi lewat `users.role` + Policies |
+| Frontend | React (Vite), Tailwind CSS, React Router |
+| Database | MySQL 8 |
+| Lainnya | laravel-dompdf, Laravel Mail & Scheduler, Pest (test), Scribe (dokumentasi API) |
 
 ## 🖼 Tampilan
 <!-- Seret screenshot / GIF ke sini -->
@@ -74,6 +74,6 @@ Spesifikasi backend: [BACKEND_SPEC.md](BACKEND_SPEC.md).
 | Randy Abraham Pythagoras Hutasoit | Frontend Developer |
 | Junhaikal Syahwana  | UI/UX Designer |
 
-<a href="https://github.com/USERNAME/REPO/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=USERNAME/REPO" />
+<a href="https://github.com/Randy-ano/Capstone_Kelompok14/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Randy-ano/Capstone_Kelompok14" alt="Contributors" />
 </a>
