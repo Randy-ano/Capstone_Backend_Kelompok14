@@ -41,7 +41,40 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Buat user beserta profil sesuai role-nya (talent / hr_client / pegawai).
+ */
+function buatUser(App\Enums\Role $role): App\Models\User
 {
-    // ..
+    return match ($role) {
+        App\Enums\Role::Talent => App\Models\Talent::factory()->create()->user,
+        App\Enums\Role::HrClient => App\Models\HrClient::factory()->create()->user,
+        App\Enums\Role::AccountManager => App\Models\Pegawai::factory()->accountManager()->create()->user,
+        App\Enums\Role::TalentSupport => App\Models\Pegawai::factory()->talentSupport()->create()->user,
+        App\Enums\Role::Manager => App\Models\Pegawai::factory()->manager()->create()->user,
+    };
+}
+
+/**
+ * Buat user dengan role tertentu lalu login sebagai user tersebut (Sanctum).
+ */
+function loginSebagai(App\Enums\Role $role): App\Models\User
+{
+    $user = buatUser($role);
+    Laravel\Sanctum\Sanctum::actingAs($user);
+
+    return $user;
+}
+
+/**
+ * Semua role kecuali yang diberikan, untuk menguji akses lintas role (403).
+ *
+ * @return array<string, array{App\Enums\Role}>
+ */
+function roleSelain(App\Enums\Role ...$diizinkan): array
+{
+    return collect(App\Enums\Role::cases())
+        ->reject(fn (App\Enums\Role $role) => in_array($role, $diizinkan, true))
+        ->mapWithKeys(fn (App\Enums\Role $role) => [$role->value => [$role]])
+        ->all();
 }

@@ -1,22 +1,22 @@
-import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
-import { NAV_ITEMS, ROLES } from "../data/navigation";
+import AksesDitolak from "../pages/AksesDitolak";
+import { useAuth } from "../auth/AuthContext";
+import { NAV_ITEMS, canAccess } from "../data/navigation";
 
 export default function AppLayout() {
-  const [role, setRole] = useState(ROLES[0]);
+  const { user } = useAuth();
   const { pathname } = useLocation();
   const current = NAV_ITEMS.find((item) => item.path === pathname);
+  const boleh = !current || canAccess(current, user.role);
 
   return (
     <>
-      <Sidebar role={role} onRoleChange={setRole} />
+      <Sidebar />
       <div className="pl-72">
         <Header title={current?.label ?? "Operasional Outsourcing"} />
-        <main className="w-full pt-16 bg-surface min-h-screen">
-          <Outlet />
-        </main>
+        <main className="w-full pt-16 bg-surface min-h-screen">{boleh ? <Outlet /> : <AksesDitolak />}</main>
       </div>
     </>
   );

@@ -49,6 +49,39 @@ class User extends Authenticatable
         ];
     }
 
+    public function hasRole(Role ...$roles): bool
+    {
+        return in_array($this->role, $roles, true);
+    }
+
+    /**
+     * AM, TS, atau Manager PT Intellisys (boleh melihat semua data, bagian 5.2).
+     */
+    public function isInternal(): bool
+    {
+        return $this->role->isInternal();
+    }
+
+    /**
+     * Klien tempat HR Client bekerja; null untuk role lain.
+     */
+    public function idKlien(): ?int
+    {
+        return $this->role === Role::HrClient ? $this->hrClient?->id_klien : null;
+    }
+
+    /**
+     * Profil sesuai role: Talent, HrClient, atau Pegawai.
+     */
+    public function profil(): Talent|HrClient|Pegawai|null
+    {
+        return match (true) {
+            $this->role === Role::Talent => $this->talent,
+            $this->role === Role::HrClient => $this->hrClient,
+            default => $this->pegawai,
+        };
+    }
+
     public function pegawai(): HasOne
     {
         return $this->hasOne(Pegawai::class, 'id_user', 'id_user');
