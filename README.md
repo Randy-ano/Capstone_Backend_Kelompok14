@@ -47,20 +47,18 @@ erDiagram
 
 Panduan lengkap (software, database, akun demo, alur kerja tim): **[SETUP.md](SETUP.md)**.
 
+Repo ini berisi **backend** (Laravel). Frontend ada di repo terpisah.
+
 Ringkasnya, setelah membuat database MySQL `intellisys_talent_hub`:
 
 ```bash
 git clone https://github.com/Randy-ano/Capstone_Kelompok14.git
-cd Capstone_Kelompok14/backend
+cd Capstone_Kelompok14
 composer install
 copy .env.example .env
 php artisan key:generate
 php artisan migrate:fresh --seed
 php artisan serve
-
-cd ../frontend
-npm install
-npm run dev
 ```
 
 Spesifikasi backend: [BACKEND_SPEC.md](BACKEND_SPEC.md).
