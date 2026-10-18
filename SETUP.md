@@ -6,8 +6,11 @@ Panduan menyiapkan project di laptop masing-masing (Windows) sampai siap mengerj
 
 | Bagian | Sudah ada |
 |---|---|
-| Backend | Database lengkap (23 tabel), model, factory, seeder, auth & akun (FR-01, FR-02) |
-| Frontend | Halaman login yang tersambung ke backend, menu sesuai role (halaman lain masih mockup) |
+| Backend (repo ini) | Database lengkap (23 tabel), model, factory, seeder, auth & akun (FR-01, FR-02) |
+| Frontend (repo terpisah, lihat langkah 4) | Halaman login yang tersambung ke backend, menu sesuai role (halaman lain masih mockup) |
+
+> Repo ini sekarang **khusus backend** (kode Laravel ada langsung di root repo). Frontend dipindah ke repo sendiri.
+> Sudah pernah clone versi lama yang masih punya folder `backend/` dan `frontend/`? Ikuti [Pindah dari struktur lama](#pindah-dari-struktur-lama) di bagian bawah.
 
 ---
 
@@ -49,8 +52,9 @@ git pull origin main
 
 ## 3. Setup backend
 
+Semua perintah di bawah dijalankan di root repo (folder `Capstone_Kelompok14`).
+
 ```
-cd backend
 composer install
 copy .env.example .env
 php artisan key:generate
@@ -79,13 +83,16 @@ Cek http://localhost:8000/api/v1/health → harus `{"status":"ok"}`.
 
 ## 4. Setup frontend
 
-Di terminal kedua (backend tetap berjalan):
+Frontend ada di **repo terpisah** (link menyusul dari Randy). Clone ke folder lain, **bukan** di dalam folder repo backend. Lalu di terminal kedua (backend tetap berjalan):
 
 ```
-cd frontend
+git clone <URL repo frontend>
+cd <nama folder repo frontend>
 npm install
 npm run dev
 ```
+
+Frontend menghubungi backend di `http://localhost:8000/api/v1` (bisa diubah lewat `VITE_API_URL`, lihat `.env.example` di repo frontend).
 
 Buka http://localhost:5173 lalu login dengan akun demo. Password semuanya **`password`**.
 
@@ -115,7 +122,7 @@ git checkout -b nama-kamu
 
 ## 6. Aturan tim
 
-1. **Baca [BACKEND_SPEC.md](BACKEND_SPEC.md)**: aturan bisnis (R1–R32) dan daftar endpoint per FR. Keputusan di luar spec dicatat di [backend/DECISIONS.md](backend/DECISIONS.md); tambahkan keputusanmu di sana juga.
+1. **Baca [BACKEND_SPEC.md](BACKEND_SPEC.md)**: aturan bisnis (R1–R32) dan daftar endpoint per FR. Keputusan di luar spec dicatat di [DECISIONS.md](DECISIONS.md); tambahkan keputusanmu di sana juga.
 2. **Skema database dikunci.** Jangan tambah/ubah migration tanpa persetujuan tim (sudah sesuai ERD yang disetujui dosen).
 3. **Logika bisnis di `app/Services`.** Controller hanya: FormRequest → Service → API Resource. Contoh: `AuthService` + `AuthController`.
 4. **Setiap endpoint wajib punya test**: sukses, 422 (validasi gagal), 403 (role lain), dan 403/404 (data milik pihak lain).
@@ -139,3 +146,19 @@ git checkout -b nama-kamu
 | `Connection refused` saat migrate | MySQL Laragon belum menyala, atau port 3306 masih dipakai XAMPP. |
 | Frontend: "Tidak dapat terhubung ke server" | `php artisan serve` belum dijalankan. |
 | Frontend: error CORS di console browser | Buka frontend lewat `http://localhost:5173` (bukan `127.0.0.1` atau port lain). |
+
+## Pindah dari struktur lama
+
+Untuk yang sudah clone repo ini **sebelum** dipisah (masih ada folder `backend/` dan `frontend/`):
+
+1. Simpan pekerjaanmu dulu: commit di branch-mu (`git add -A` lalu `git commit`).
+2. Ambil struktur baru:
+   ```
+   git checkout main
+   git pull origin main
+   ```
+   File Laravel sekarang ada di root repo. Folder `backend/` mungkin masih tersisa, tapi isinya hanya file yang tidak dilacak git (`vendor/`, `.env`, `storage/`, dsb.).
+3. Pindahkan `.env` lamamu ke root repo (`backend\.env` → `.env`), lalu **hapus folder `backend/` dan `frontend/` yang tersisa**.
+4. Di root repo jalankan `composer install`, lalu `php artisan test` untuk memastikan semuanya hijau.
+5. Gabungkan struktur baru ke branch-mu: `git checkout nama-kamu` lalu `git merge main`. Git mengenali file yang pindah folder, jadi perubahanmu di `backend/...` ikut terbawa ke lokasi baru. Kalau ada konflik, tanya di grup.
+6. Untuk frontend, clone repo frontend yang baru (lihat langkah 4) di folder terpisah.
