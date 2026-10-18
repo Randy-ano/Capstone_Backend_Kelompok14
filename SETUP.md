@@ -83,11 +83,11 @@ Cek http://localhost:8000/api/v1/health → harus `{"status":"ok"}`.
 
 ## 4. Setup frontend
 
-Frontend ada di **repo terpisah** (link menyusul dari Randy). Clone ke folder lain, **bukan** di dalam folder repo backend. Lalu di terminal kedua (backend tetap berjalan):
+Frontend ada di **repo terpisah** (https://github.com/Randy-ano/Capstone_Frontend_Kelompok14). Clone ke folder lain, **bukan** di dalam folder repo backend. Lalu di terminal kedua (backend tetap berjalan):
 
 ```
-git clone <URL repo frontend>
-cd <nama folder repo frontend>
+git clone https://github.com/Randy-ano/Capstone_Frontend_Kelompok14.git
+cd Capstone_Frontend_Kelompok14
 npm install
 npm run dev
 ```
