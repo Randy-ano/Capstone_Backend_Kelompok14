@@ -265,6 +265,10 @@ class UpdateTalentProfileRequest extends FormRequest
                 'Format URL GitHub tidak valid.',
             'portfolio.url' =>
                 'Format URL portofolio tidak valid.',
+
+            // Pesan bawaan required_unless berbunyi "... kecuali masih bekerja ada di true."
+            'riwayat_pengalaman_kerja.*.tanggal_selesai.required_unless' =>
+                'Tanggal selesai wajib diisi jika tidak sedang bekerja di sana.',
         ];
     }
 }

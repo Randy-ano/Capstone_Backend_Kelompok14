@@ -161,6 +161,7 @@ describe('PUT /talent/profil', function () use ($riwayatPendidikan, $riwayatPeng
             ])
             ->assertJsonValidationErrors([
                 'nama_lengkap' => 'Nama lengkap wajib diisi.',
+                'riwayat_pengalaman_kerja.0.tanggal_selesai' => 'Tanggal selesai wajib diisi jika tidak sedang bekerja di sana.',
                 'riwayat_pendidikan.1.tahun_selesai' => 'Tahun selesai tidak boleh sebelum tahun mulai.',
                 'riwayat_pengalaman_kerja.1.tanggal_selesai' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
             ]);
