@@ -171,18 +171,27 @@ class JobRequirementService
 
         return DB::transaction(function () use ($job, $status) {
             if ($status === StatusReq::Dibatalkan) {
-                Talent::query()
-                    ->where('status_kandidat', StatusKandidat::DalamProses)
-                    ->whereHas('screenings', fn (Builder $q) => $q
-                        ->where('id_job_req', $job->id_job_req)
-                        ->where('hasil_screening', '!=', HasilScreening::TidakLolos))
-                    ->update(['status_kandidat' => StatusKandidat::Tersedia]);
+                $this->lepasTalentDalamProses($job);
             }
 
             $job->update(['status_req' => $status]);
 
             return $this->detail($job);
         });
+    }
+
+    /**
+     * Talent yang masih diproses untuk job ini (screening belum tidak_lolos) dikembalikan menjadi tersedia.
+     * Dipakai saat job dibatalkan dan saat job terpenuhi oleh placement (R19).
+     */
+    public function lepasTalentDalamProses(JobRequirement $job): void
+    {
+        Talent::query()
+            ->where('status_kandidat', StatusKandidat::DalamProses)
+            ->whereHas('screenings', fn (Builder $q) => $q
+                ->where('id_job_req', $job->id_job_req)
+                ->where('hasil_screening', '!=', HasilScreening::TidakLolos))
+            ->update(['status_kandidat' => StatusKandidat::Tersedia]);
     }
 
     /** Job yang boleh dilihat user: HR Client hanya milik kliennya. */

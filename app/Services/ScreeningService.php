@@ -21,12 +21,12 @@ use Illuminate\Validation\ValidationException;
  */
 class ScreeningService
 {
-    public const RELASI = ['talent.user', 'jobRequirement.klien', 'talentSupport'];
+    public const RELASI = ['talent.user', 'jobRequirement.klien', 'talentSupport', 'pengajuan'];
 
     public function __construct(private readonly RekomendasiService $rekomendasi) {}
 
     /**
-     * @param  array{id_job_req?: int|null, id_talent?: int|null, hasil?: string|null, search?: string|null, per_page?: int|null}  $filter
+     * @param  array{id_job_req?: int|null, id_talent?: int|null, hasil?: string|null, belum_diajukan?: bool|null, search?: string|null, per_page?: int|null}  $filter
      */
     public function daftar(array $filter): LengthAwarePaginator
     {
@@ -35,6 +35,7 @@ class ScreeningService
             ->when($filter['id_job_req'] ?? null, fn (Builder $q, int|string $id) => $q->where('id_job_req', $id))
             ->when($filter['id_talent'] ?? null, fn (Builder $q, int|string $id) => $q->where('id_talent', $id))
             ->when($filter['hasil'] ?? null, fn (Builder $q, string $hasil) => $q->where('hasil_screening', $hasil))
+            ->when($filter['belum_diajukan'] ?? false, fn (Builder $q) => $q->doesntHave('pengajuan'))
             ->when($filter['search'] ?? null, fn (Builder $q, string $search) => $q->where(fn (Builder $q) => $q
                 ->whereHas('talent', fn (Builder $q) => $q->where('nama_lengkap', 'like', "%{$search}%"))
                 ->orWhereHas('jobRequirement', fn (Builder $q) => $q->where('posisi', 'like', "%{$search}%"))))

@@ -1,11 +1,15 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\EvaluasiController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\InterviewController;
 use App\Http\Controllers\Api\V1\JobRequirementController;
 use App\Http\Controllers\Api\V1\KlienController;
 use App\Http\Controllers\Api\V1\KompetensiController;
 use App\Http\Controllers\Api\V1\PegawaiController;
+use App\Http\Controllers\Api\V1\PengajuanController;
+use App\Http\Controllers\Api\V1\PlacementController;
 use App\Http\Controllers\Api\V1\ProgresController;
 use App\Http\Controllers\Api\V1\ScreeningController;
 use App\Http\Controllers\Api\V1\TalentController;
@@ -146,6 +150,64 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{screening}', [ScreeningController::class, 'update'])
             ->middleware('role:talent_support')
             ->name('screening.update');
+    });
+
+    // FR-10, FR-11, FR-12, FR-17: pengajuan kandidat, interview, evaluasi, dan placement.
+    // Talent: data miliknya; HR Client: data kliennya (Policy + scoping di service); internal: semua.
+    Route::prefix('pengajuan')->group(function () {
+        Route::get('/', [PengajuanController::class, 'index'])
+            ->name('pengajuan.index');
+
+        Route::post('/', [PengajuanController::class, 'store'])
+            ->middleware('role:account_manager')
+            ->name('pengajuan.store');
+
+        Route::get('/{pengajuan}', [PengajuanController::class, 'show'])
+            ->can('view', 'pengajuan')
+            ->name('pengajuan.show');
+
+        Route::patch('/{pengajuan}/status', [PengajuanController::class, 'updateStatus'])
+            ->middleware('role:hr_client')
+            ->name('pengajuan.status');
+    });
+
+    Route::prefix('interview')->group(function () {
+        Route::get('/', [InterviewController::class, 'index'])
+            ->name('interview.index');
+
+        Route::post('/', [InterviewController::class, 'store'])
+            ->middleware('role:account_manager,hr_client')
+            ->name('interview.store');
+
+        Route::put('/{interview}', [InterviewController::class, 'update'])
+            ->middleware('role:account_manager,hr_client')
+            ->name('interview.update');
+    });
+
+    Route::post('/evaluasi', [EvaluasiController::class, 'store'])
+        ->middleware('role:hr_client')
+        ->name('evaluasi.store');
+
+    Route::get('/evaluasi/{evaluasi}', [EvaluasiController::class, 'show'])
+        ->middleware('role:hr_client,account_manager,talent_support,manager')
+        ->can('view', 'evaluasi')
+        ->name('evaluasi.show');
+
+    Route::prefix('placement')->group(function () {
+        Route::get('/', [PlacementController::class, 'index'])
+            ->name('placement.index');
+
+        Route::post('/', [PlacementController::class, 'store'])
+            ->middleware('role:talent_support')
+            ->name('placement.store');
+
+        Route::get('/{placement}', [PlacementController::class, 'show'])
+            ->can('view', 'placement')
+            ->name('placement.show');
+
+        Route::patch('/{placement}/status', [PlacementController::class, 'updateStatus'])
+            ->middleware('role:talent_support,manager')
+            ->name('placement.status');
     });
 
     // Daftar klien (read-only) untuk pilihan klien job requirement — khusus internal.

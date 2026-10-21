@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use App\Enums\StatusInterview;
+use App\Observers\JadwalInterviewObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[ObservedBy([JadwalInterviewObserver::class])]
 class JadwalInterview extends Model
 {
     use HasFactory;

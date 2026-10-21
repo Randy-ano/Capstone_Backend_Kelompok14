@@ -21,6 +21,7 @@ class ScreeningResource extends JsonResource
             'tanggal_screening' => $this->tanggal_screening?->toIso8601String(),
             'catatan_screening' => $this->catatan_screening,
             'hasil_screening' => $this->hasil_screening,
+            'id_pengajuan' => $this->whenLoaded('pengajuan', fn () => $this->pengajuan?->id_pengajuan),
             'talent' => [
                 'id_talent' => $this->talent->id_talent,
                 'nama_lengkap' => $this->talent->nama_lengkap,
