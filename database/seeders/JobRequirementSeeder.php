@@ -2,21 +2,20 @@
 
 namespace Database\Seeders;
 
-use App\Enums\IndikatorSla;
 use App\Enums\StatusReq;
 use App\Enums\StatusTahapan;
 use App\Models\Klien;
 use App\Models\Kompetensi;
 use App\Models\User;
+use App\Services\ProgresService;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Carbon;
 
 /**
  * 5 job requirement dengan variasi SLA (aman, mendekati, terlambat) untuk keperluan demo.
  */
 class JobRequirementSeeder extends Seeder
 {
-    public function run(): void
+    public function run(ProgresService $progres): void
     {
         $am = User::where('email', 'am@intellisys.test')->firstOrFail()->pegawai;
 
@@ -40,27 +39,10 @@ class JobRequirementSeeder extends Seeder
             ]);
             $job->kompetensi()->attach(Kompetensi::whereIn('nama_kompetensi', $kompetensi)->pluck('id_kompetensi'));
 
-            // R8: job berstatus diajukan punya log progres "kebutuhan_dibuat".
+            // R8: job berstatus diajukan punya log progres "kebutuhan_dibuat" (model event dimatikan saat seeding).
             if ($status === StatusReq::Diajukan) {
-                $job->progres()->create([
-                    'id_penanggung_jawab' => $am->id_pegawai,
-                    'status_tahapan' => StatusTahapan::KebutuhanDibuat,
-                    'indikator_sla' => $this->indikatorSla($job->sla_deadline),
-                    'log_waktu_pembaruan' => now(),
-                ]);
+                $progres->catat($job, StatusTahapan::KebutuhanDibuat, idPenanggungJawab: $am->id_pegawai);
             }
         }
-    }
-
-    /**
-     * Versi sederhana R13 untuk data seed; logika resminya dibuat di Fase 4.
-     */
-    private function indikatorSla(Carbon $deadline): IndikatorSla
-    {
-        return match (true) {
-            now()->greaterThan($deadline) => IndikatorSla::Terlambat,
-            now()->diffInDays($deadline) <= 3 => IndikatorSla::Mendekati,
-            default => IndikatorSla::Aman,
-        };
     }
 }
