@@ -570,8 +570,8 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Profil Talent & Kompetensi (FR-03, FR-04)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /kompetensi | semua | master kompetensi |
-| POST/PUT/DELETE | /kompetensi, /kompetensi/{id} | TS, M | kelola master |
+| GET | /kompetensi | semua | master kompetensi; filter `search`, `kategori`; `meta.kategori` = semua kategori terpakai; `dengan_pemakaian=1` menambah `jumlah_talent` & `jumlah_job_requirement` |
+| POST/PUT/DELETE | /kompetensi, /kompetensi/{id} | TS, M | kelola master; nama unik tanpa membedakan huruf besar/kecil; DELETE ditolak 422 jika masih dipakai talent/job requirement |
 | GET | /talent/profil | T | profil sendiri + kompetensi |
 | PUT | /talent/profil | T | update profil (R4, R5); `riwayat_pendidikan[]` & `riwayat_pengalaman_kerja[]` jika dikirim menggantikan daftar lama |
 | PUT | /talent/profil/kompetensi | T | sync daftar `id_kompetensi` |
