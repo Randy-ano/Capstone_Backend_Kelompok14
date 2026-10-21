@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Enums\StatusKandidat;
 use App\Enums\StatusKelengkapan;
 use App\Models\Kompetensi;
+use App\Models\RiwayatPendidikan;
 use App\Models\Talent;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -29,7 +30,7 @@ class TalentFactory extends Factory
     }
 
     /**
-     * Profil lengkap sesuai R4: data diri terisi dan minimal 1 kompetensi.
+     * Profil lengkap sesuai R4: nama terisi, minimal 1 riwayat pendidikan, dan minimal 1 kompetensi.
      */
     public function lengkap(): static
     {
@@ -38,6 +39,10 @@ class TalentFactory extends Factory
             'pengalaman_kerja' => fake()->paragraph(),
             'status_kelengkapan' => StatusKelengkapan::Lengkap,
         ])->afterCreating(function (Talent $talent) {
+            if ($talent->riwayatPendidikan()->doesntExist()) {
+                RiwayatPendidikan::factory()->for($talent)->create();
+            }
+
             if ($talent->kompetensi()->doesntExist()) {
                 $talent->kompetensi()->attach(Kompetensi::factory()->count(2)->create());
             }

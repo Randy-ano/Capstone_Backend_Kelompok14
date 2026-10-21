@@ -6,16 +6,12 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class SyncTalentKompetensiRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->talent !== null;
-    }
-
     public function rules(): array
     {
         return [
+            // Boleh kosong ([]) untuk menghapus semua kompetensi; status kelengkapan ikut turun (R4).
             'id_kompetensi' => [
-                'required',
+                'present',
                 'array',
             ],
             'id_kompetensi.*' => [
@@ -30,7 +26,7 @@ class SyncTalentKompetensiRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'id_kompetensi.required' =>
+            'id_kompetensi.present' =>
                 'Daftar kompetensi wajib dikirim.',
             'id_kompetensi.array' =>
                 'Daftar kompetensi harus berupa array.',
@@ -42,6 +38,14 @@ class SyncTalentKompetensiRequest extends FormRequest
                 'Kompetensi tidak boleh dipilih berulang kali.',
             'id_kompetensi.*.exists' =>
                 'Kompetensi yang dipilih tidak ditemukan.',
+        ];
+    }
+
+    public function bodyParameters(): array
+    {
+        return [
+            'id_kompetensi' => ['description' => 'Daftar lengkap id kompetensi talent (menggantikan daftar lama).', 'example' => [1, 4, 7]],
+            'id_kompetensi.*' => ['example' => 1],
         ];
     }
 }

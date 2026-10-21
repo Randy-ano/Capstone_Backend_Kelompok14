@@ -41,9 +41,13 @@ it('memasukkan hanya talent berprofil lengkap ke talent pool', function () {
         ->and(Talent::where('status_kelengkapan', StatusKelengkapan::BelumLengkap)->count())->toBeGreaterThan(0)
         ->and(Talent::has('talentPool')->count())->toBe($lengkap->count());
 
-    $lengkap->each(fn (Talent $talent) => expect($talent->pendidikan)->not->toBeEmpty()
-        ->and($talent->pengalaman_kerja)->not->toBeEmpty()
+    // Definisi lengkap R4.
+    $lengkap->each(fn (Talent $talent) => expect($talent->nama_lengkap)->not->toBeEmpty()
+        ->and($talent->riwayatPendidikan)->not->toBeEmpty()
         ->and($talent->kompetensi)->not->toBeEmpty());
+
+    Talent::where('status_kelengkapan', StatusKelengkapan::BelumLengkap)->get()
+        ->each(fn (Talent $talent) => expect($talent->riwayatPendidikan->isEmpty() || $talent->kompetensi->isEmpty())->toBeTrue());
 });
 
 it('membuat job requirement dengan minimal 1 kompetensi dan log progres untuk yang diajukan', function () {

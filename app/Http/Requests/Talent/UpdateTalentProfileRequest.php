@@ -3,15 +3,15 @@
 namespace App\Http\Requests\Talent;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\Validator;
 
+/**
+ * Semua kolom opsional. Role talent dicek middleware route.
+ * riwayat_pendidikan / riwayat_pengalaman_kerja, jika dikirim, menggantikan seluruh daftar lama.
+ */
 class UpdateTalentProfileRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        // Hanya user yang memiliki profil talent yang boleh mengubahnya.
-        return $this->user()?->talent !== null;
-    }
-
     public function rules(): array
     {
         return [
@@ -122,6 +122,103 @@ class UpdateTalentProfileRequest extends FormRequest
                 'url',
                 'max:255',
             ],
+
+            // Riwayat pendidikan (R4: minimal 1 agar profil lengkap)
+            'riwayat_pendidikan' => ['sometimes', 'array', 'max:20'],
+            'riwayat_pendidikan.*.jenjang' => ['required', 'string', 'max:50'],
+            'riwayat_pendidikan.*.nama_institusi' => ['required', 'string', 'max:255'],
+            'riwayat_pendidikan.*.jurusan' => ['nullable', 'string', 'max:255'],
+            'riwayat_pendidikan.*.tahun_mulai' => ['nullable', 'integer', 'min:1900', 'max:'.now()->year],
+            'riwayat_pendidikan.*.tahun_selesai' => ['nullable', 'integer', 'min:1900', 'max:'.(now()->year + 10)],
+            'riwayat_pendidikan.*.deskripsi' => ['nullable', 'string', 'max:5000'],
+
+            // Riwayat pengalaman kerja (dipakai R9 untuk lama pengalaman)
+            'riwayat_pengalaman_kerja' => ['sometimes', 'array', 'max:30'],
+            'riwayat_pengalaman_kerja.*.nama_perusahaan' => ['required', 'string', 'max:255'],
+            'riwayat_pengalaman_kerja.*.posisi' => ['required', 'string', 'max:255'],
+            'riwayat_pengalaman_kerja.*.jenis_pekerjaan' => ['nullable', 'string', 'max:50'],
+            'riwayat_pengalaman_kerja.*.lokasi' => ['nullable', 'string', 'max:255'],
+            'riwayat_pengalaman_kerja.*.tanggal_mulai' => ['required', 'date', 'before_or_equal:today'],
+            'riwayat_pengalaman_kerja.*.masih_bekerja' => ['sometimes', 'boolean'],
+            'riwayat_pengalaman_kerja.*.tanggal_selesai' => ['nullable', 'required_unless:riwayat_pengalaman_kerja.*.masih_bekerja,true', 'date', 'before_or_equal:today'],
+            'riwayat_pengalaman_kerja.*.deskripsi' => ['nullable', 'string', 'max:5000'],
+        ];
+    }
+
+    /**
+     * Cek urutan tahun/tanggal per baris (tidak bisa lewat rule biasa karena kolom pembanding boleh kosong).
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator) {
+                foreach ($this->input('riwayat_pendidikan', []) as $i => $baris) {
+                    $mulai = $baris['tahun_mulai'] ?? null;
+                    $selesai = $baris['tahun_selesai'] ?? null;
+
+                    if (is_numeric($mulai) && is_numeric($selesai) && $selesai < $mulai) {
+                        $validator->errors()->add("riwayat_pendidikan.$i.tahun_selesai", 'Tahun selesai tidak boleh sebelum tahun mulai.');
+                    }
+                }
+
+                foreach ($this->input('riwayat_pengalaman_kerja', []) as $i => $baris) {
+                    $mulai = $baris['tanggal_mulai'] ?? null;
+                    $selesai = $baris['tanggal_selesai'] ?? null;
+
+                    if (! is_string($mulai) || ! is_string($selesai) || $validator->errors()->has("riwayat_pengalaman_kerja.$i.*")) {
+                        continue;
+                    }
+
+                    if (strtotime($mulai) !== false && strtotime($selesai) !== false && Carbon::parse($selesai)->lt(Carbon::parse($mulai))) {
+                        $validator->errors()->add("riwayat_pengalaman_kerja.$i.tanggal_selesai", 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
+                    }
+                }
+            },
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'riwayat_pendidikan.*.jenjang' => 'jenjang pendidikan',
+            'riwayat_pendidikan.*.nama_institusi' => 'nama institusi',
+            'riwayat_pendidikan.*.jurusan' => 'jurusan',
+            'riwayat_pendidikan.*.tahun_mulai' => 'tahun mulai',
+            'riwayat_pendidikan.*.tahun_selesai' => 'tahun selesai',
+            'riwayat_pendidikan.*.deskripsi' => 'deskripsi pendidikan',
+            'riwayat_pengalaman_kerja.*.nama_perusahaan' => 'nama perusahaan',
+            'riwayat_pengalaman_kerja.*.posisi' => 'posisi',
+            'riwayat_pengalaman_kerja.*.jenis_pekerjaan' => 'jenis pekerjaan',
+            'riwayat_pengalaman_kerja.*.lokasi' => 'lokasi',
+            'riwayat_pengalaman_kerja.*.tanggal_mulai' => 'tanggal mulai',
+            'riwayat_pengalaman_kerja.*.masih_bekerja' => 'masih bekerja',
+            'riwayat_pengalaman_kerja.*.tanggal_selesai' => 'tanggal selesai',
+            'riwayat_pengalaman_kerja.*.deskripsi' => 'deskripsi pekerjaan',
+        ];
+    }
+
+    public function bodyParameters(): array
+    {
+        return [
+            'nama_lengkap' => ['example' => 'Budi Santoso'],
+            'tanggal_lahir' => ['example' => '1999-05-12'],
+            'nomor_telepon' => ['example' => '0812-3456-7890'],
+            'domisili' => ['example' => 'Jakarta Selatan'],
+            'tentang_saya' => ['example' => 'Backend developer yang fokus pada Laravel dan REST API.'],
+            'gaji_harapan' => ['example' => 9000000],
+            'linkedin' => ['example' => 'https://www.linkedin.com/in/budi-santoso'],
+            'riwayat_pendidikan' => ['description' => 'Jika dikirim, menggantikan seluruh riwayat pendidikan lama. Minimal 1 agar profil lengkap (R4).'],
+            'riwayat_pendidikan.*.jenjang' => ['example' => 'S1'],
+            'riwayat_pendidikan.*.nama_institusi' => ['example' => 'Universitas Indonesia'],
+            'riwayat_pendidikan.*.jurusan' => ['example' => 'Teknik Informatika'],
+            'riwayat_pendidikan.*.tahun_mulai' => ['example' => 2017],
+            'riwayat_pendidikan.*.tahun_selesai' => ['example' => 2021],
+            'riwayat_pengalaman_kerja' => ['description' => 'Jika dikirim, menggantikan seluruh riwayat pengalaman kerja lama.'],
+            'riwayat_pengalaman_kerja.*.nama_perusahaan' => ['example' => 'PT Niaga Digital'],
+            'riwayat_pengalaman_kerja.*.posisi' => ['example' => 'Backend Developer'],
+            'riwayat_pengalaman_kerja.*.tanggal_mulai' => ['example' => '2021-08-01'],
+            'riwayat_pengalaman_kerja.*.masih_bekerja' => ['example' => true],
+            'riwayat_pengalaman_kerja.*.tanggal_selesai' => ['description' => 'Wajib jika masih_bekerja bukan true.', 'example' => null],
         ];
     }
 

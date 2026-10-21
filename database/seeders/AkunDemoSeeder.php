@@ -43,6 +43,21 @@ class AkunDemoSeeder extends Seeder
             'pengalaman_kerja' => '3 tahun sebagai Backend Developer (Laravel) di perusahaan e-commerce.',
             'status_kelengkapan' => StatusKelengkapan::Lengkap,
         ]);
+        $talent->riwayatPendidikan()->create([
+            'jenjang' => 'S1',
+            'nama_institusi' => 'Universitas Gunadarma',
+            'jurusan' => 'Teknik Informatika',
+            'tahun_mulai' => now()->year - 7,
+            'tahun_selesai' => now()->year - 3,
+        ]);
+        $talent->pengalamanKerjaTalent()->create([
+            'nama_perusahaan' => 'PT Niaga Digital',
+            'posisi' => 'Backend Developer',
+            'jenis_pekerjaan' => 'Full-time',
+            'lokasi' => 'Jakarta',
+            'tanggal_mulai' => now()->subYears(3)->startOfMonth(),
+            'masih_bekerja' => true,
+        ]);
         $kompetensi = ['Laravel', 'MySQL', 'REST API', 'Git'];
         $talent->kompetensi()->attach(Kompetensi::whereIn('nama_kompetensi', $kompetensi)->pluck('id_kompetensi'));
         $talent->talentPool()->create([

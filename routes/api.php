@@ -1,4 +1,3 @@
-
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
@@ -33,16 +32,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me'])
         ->name('auth.me');
 
-    // Profil, kompetensi, dan Generate CV Talent.
-    Route::prefix('talent')->group(function () {
-        Route::get('/profile', [TalentController::class, 'showProfile'])
-            ->name('talent.profile.show');
+    // FR-03, FR-04: profil, kompetensi, dan generate CV — khusus Talent (data milik sendiri).
+    Route::prefix('talent')->middleware('role:talent')->group(function () {
+        Route::get('/profil', [TalentController::class, 'showProfile'])
+            ->name('talent.profil.show');
 
-        Route::put('/profile', [TalentController::class, 'updateProfile'])
-            ->name('talent.profile.update');
+        Route::put('/profil', [TalentController::class, 'updateProfile'])
+            ->name('talent.profil.update');
 
-        Route::put('/kompetensi', [TalentController::class, 'syncKompetensi'])
-            ->name('talent.kompetensi.sync');
+        Route::put('/profil/kompetensi', [TalentController::class, 'syncKompetensi'])
+            ->name('talent.profil.kompetensi');
 
         Route::post('/cv/generate', [TalentCvController::class, 'generate'])
             ->name('talent.cv.generate');

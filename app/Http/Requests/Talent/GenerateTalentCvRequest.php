@@ -4,13 +4,11 @@ namespace App\Http\Requests\Talent;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * Tanpa body. Role talent dicek middleware route; syarat profil lengkap dicek di TalentCvService.
+ */
 class GenerateTalentCvRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->talent !== null;
-    }
-
     public function rules(): array
     {
         return [];

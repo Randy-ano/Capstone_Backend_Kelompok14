@@ -163,6 +163,7 @@ Notasi: `FK→tabel` = foreign key ke primary key tabel tersebut. Semua FK `cons
 | file_cv | string, nullable | path file CV hasil generate/upload |
 | status_kelengkapan | string (enum) | `belum_lengkap` (default), `lengkap` |
 | status_kandidat | string (enum) | `tersedia` (default), `dalam_proses`, `ditempatkan`, `tidak_aktif` |
+| *kolom profil tambahan* | | lihat bagian 4.2, "Profil talent" |
 
 **notifikasi**
 | Kolom | Tipe | Keterangan |
@@ -220,6 +221,78 @@ Notasi: `FK→tabel` = foreign key ke primary key tabel tersebut. Semua FK `cons
 | tanggal_masuk | datetime | |
 | status_ketersediaan | string (enum) | `tersedia` (default), `tidak_tersedia` |
 | tag_keahlian | string, nullable | label bebas untuk pencarian cepat |
+
+#### Profil talent (tambahan SCRUM-8)
+
+Kolom dan tabel berikut ditambahkan untuk profil & CV talent (FR-03, FR-04); lihat DECISIONS 2026-10-21. Relasi:
+`talent` 1–N `riwayat_pendidikan`, 1–N `pengalaman_kerja_talent`, 1–N `sertifikat_talent`, dan M–N `bahasa` lewat `talent_bahasa`. Semua FK ke `talent` memakai cascade on delete.
+
+**talent** — kolom tambahan (semua nullable)
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| tanggal_lahir | date | |
+| nomor_telepon | string(20) | |
+| alamat | text | |
+| domisili | string | kota tempat tinggal saat ini |
+| tentang_saya | text | ringkasan diri di CV |
+| nama_institusi | string | pendidikan terakhir (ringkas) |
+| jurusan | string | pendidikan terakhir (ringkas) |
+| tahun_lulus | unsignedSmallInteger | pendidikan terakhir (ringkas) |
+| gaji_harapan | decimal(15,2) | rupiah |
+| linkedin, instagram, github, portfolio | string | URL |
+
+**riwayat_pendidikan**
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| id_riwayat_pendidikan | PK | |
+| id_talent | FK→talent, cascade | |
+| jenjang | string(50) | mis. "SMA", "D3", "S1" |
+| nama_institusi | string | |
+| jurusan | string, nullable | |
+| tahun_mulai | unsignedSmallInteger, nullable | |
+| tahun_selesai | unsignedSmallInteger, nullable | |
+| deskripsi | text, nullable | |
+
+**pengalaman_kerja_talent**
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| id_pengalaman_kerja | PK | |
+| id_talent | FK→talent, cascade | |
+| nama_perusahaan | string | |
+| posisi | string | |
+| jenis_pekerjaan | string(50), nullable | mis. "Full-time", "Magang" |
+| lokasi | string, nullable | |
+| tanggal_mulai | date, nullable | dipakai R9 (lama pengalaman) |
+| tanggal_selesai | date, nullable | kosong jika masih bekerja |
+| masih_bekerja | boolean, default false | |
+| deskripsi | text, nullable | |
+
+**sertifikat_talent**
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| id_sertifikat | PK | |
+| id_talent | FK→talent, cascade | |
+| nama_sertifikat | string | |
+| penerbit | string, nullable | |
+| tanggal_terbit | date, nullable | |
+| tanggal_kedaluwarsa | date, nullable | |
+| file_sertifikat | string, nullable | path file |
+| url_sertifikat | string, nullable | tautan verifikasi |
+
+**bahasa** — master data
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| id_bahasa | PK | |
+| nama_bahasa | string, unique | mis. "Indonesia", "Inggris" |
+
+**talent_bahasa** — penghubung M:N (dengan timestamps)
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| id_talent_bahasa | PK | |
+| id_talent | FK→talent, cascade | |
+| id_bahasa | FK→bahasa, cascade | |
+| tingkat_kemampuan | string | mis. "Dasar", "Menengah", "Fasih" |
+| *unique* | (id_talent, id_bahasa) | |
 
 ### 4.3 Proses Rekrutmen
 
@@ -398,7 +471,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
 - **R3.** User dengan `status_aktif = false` ditolak saat login (403).
 
 ### Profil & Talent Pool (FR-03, FR-04, FR-06)
-- **R4.** Profil talent dianggap **lengkap** jika: nama_lengkap, pendidikan, pengalaman_kerja terisi **dan** minimal 1 kompetensi. Status diperbarui otomatis setiap profil/kompetensi berubah.
+- **R4.** Profil talent dianggap **lengkap** jika: `nama_lengkap` terisi, ada **minimal 1** `riwayat_pendidikan`, **dan** minimal 1 kompetensi. Status diperbarui otomatis setiap profil/riwayat pendidikan/kompetensi berubah (bisa naik ke `lengkap` maupun turun ke `belum_lengkap`).
 - **R5.** Saat status berubah menjadi `lengkap` dan talent belum ada di pool → **otomatis** dibuat entri `talent_pool` (`tersedia`, tanggal_masuk = now).
 - **R6.** Generate CV: render PDF dari data profil + kompetensi (Blade view → dompdf), simpan ke storage, isi `talent.file_cv`, dan buat record `dokumen` jenis `cv`.
 
@@ -409,9 +482,21 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
   Data yang dibandingkan: kriteria di `job_requirement` (+ `job_req_kompetensi`) dengan data profil talent yang menjadi isi CV (`talent` + `talent_kompetensi`). **Tidak membaca/parsing file PDF CV.** Jangan memakai kata "AI" di nama class, endpoint, response, maupun komentar.
   ```
   skor_kompetensi = (jumlah kompetensi talent yang cocok / jumlah kompetensi job) × 100
+
+  lama_pengalaman = total tahun dari semua baris pengalaman_kerja_talent milik talent:
+                    tiap baris = tanggal_mulai s.d. tanggal_selesai
+                    (atau hari ini jika masih_bekerja = true);
+                    periode yang tumpang tindih digabung dulu, sehingga tidak dihitung dua kali;
+                    baris tanpa tanggal_mulai diabaikan
+
+  skor_pengalaman = 100                                         jika lama_pengalaman >= pengalaman_min
+                  = (lama_pengalaman / pengalaman_min) × 100    selain itu
+                    (pengalaman_min = 0 → selalu 100)
+
+  skor_kecocokan  = 0,8 × skor_kompetensi + 0,2 × skor_pengalaman   (dibulatkan 2 desimal)
   ```
-  Kandidat yang ditampilkan: `talent_pool.status_ketersediaan = tersedia`, `talent.status_kandidat = tersedia`, belum pernah di-screening untuk job ini, skor > 0. Urutkan skor tertinggi. Kembalikan juga daftar kompetensi yang cocok & yang kurang.
-  *(Talent belum punya data lama pengalaman dalam angka, sehingga `pengalaman_min` belum ikut dihitung — lihat bagian 11.)*
+  Contoh: job butuh 4 kompetensi dan `pengalaman_min` 2 tahun; talent cocok 3 kompetensi dan pengalaman 1 tahun (Jan–Jun 2023 dan Apr–Des 2023 → digabung Jan–Des 2023). Skor = 0,8 × 75 + 0,2 × 50 = 70.
+  Kandidat yang ditampilkan: `talent_pool.status_ketersediaan = tersedia`, `talent.status_kandidat = tersedia`, belum pernah di-screening untuk job ini, `skor_kompetensi` > 0 (pengalaman saja tidak cukup untuk muncul). Urutkan skor tertinggi. Kembalikan juga daftar kompetensi yang cocok & yang kurang, serta `lama_pengalaman` (tahun, 1 desimal).
 
 ### Screening & Progres (FR-08, FR-09)
 - **R10.** Screening dibuat oleh TS; `skor_kecocokan` diisi dari R9. Saat screening dibuat → talent.status_kandidat = `dalam_proses`, job_requirement.status_req = `diproses` (jika masih `diajukan`).
@@ -484,9 +569,9 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | GET | /kompetensi | semua | master kompetensi |
 | POST/PUT/DELETE | /kompetensi, /kompetensi/{id} | TS, M | kelola master |
 | GET | /talent/profil | T | profil sendiri + kompetensi |
-| PUT | /talent/profil | T | update profil (R4, R5) |
+| PUT | /talent/profil | T | update profil (R4, R5); `riwayat_pendidikan[]` & `riwayat_pengalaman_kerja[]` jika dikirim menggantikan daftar lama |
 | PUT | /talent/profil/kompetensi | T | sync daftar `id_kompetensi` |
-| POST | /talent/cv/generate | T | R6 |
+| POST | /talent/cv/generate | T | R6; 422 jika profil belum lengkap (R4) |
 | GET | /talent/cv/download | T, Internal | download CV |
 
 ### Talent Pool (FR-06)
@@ -713,5 +798,5 @@ Setiap fase: kerjakan → jalankan `php artisan test` → semua hijau → commit
 | Semua tabel diberi `created_at` & `updated_at` | Standar Laravel, berguna untuk audit |
 | `jadwal_interview.tanggal_interview` jadi **date** dan `waktu_interview` jadi **time** | Menghapus redundansi datetime + string waktu yang sebelumnya tumpang tindih |
 | `pengajuan_kandidat.status_pengajuan` punya nilai `lanjut_interview` | Kebutuhan FR-11 (interview hanya untuk kandidat yang dinyatakan lanjut oleh klien) |
-| Belum ada data lama pengalaman talent dalam angka | `pengalaman_min` di job requirement belum bisa dipakai di skor rekomendasi. Opsional: tambah kolom `talent.lama_pengalaman_tahun` (unsignedTinyInteger) lalu masukkan ke rumus skor |
+| Tabel `riwayat_pendidikan`, `pengalaman_kerja_talent`, `sertifikat_talent`, `bahasa`, `talent_bahasa` dan 13 kolom profil di `talent` (bagian 4.2, "Profil talent") | Data profil & CV talent yang lebih rinci (SCRUM-8). Lama pengalaman untuk R9 dihitung dari `pengalaman_kerja_talent`, jadi kolom `lama_pengalaman_tahun` tidak diperlukan |
 | Tidak memakai spatie/laravel-permission | Role cukup dari `users.role` (sesuai ERD) |
