@@ -100,6 +100,50 @@ describe('GET /talent-pool', function () {
         'tag keahlian' => ['devops', 'Dodi Saputra'],
     ]);
 
+    it('menyertakan meta.ringkasan dari seluruh talent pool, tidak terpengaruh filter, pencarian, dan halaman', function () {
+        loginSebagai(Role::TalentSupport);
+        $laravel = Kompetensi::factory()->create(['nama_kompetensi' => 'Laravel']);
+
+        $dicari = Talent::factory()->create(['nama_lengkap' => 'Rina Kartika']);
+        $dicari->kompetensi()->attach($laravel);
+        TalentPool::factory()->for($dicari)->create();
+        TalentPool::factory()->count(2)->create();
+        TalentPool::factory()->count(2)->create(['status_ketersediaan' => StatusKetersediaan::TidakTersedia]);
+        // Talent belum lengkap (tidak di pool) tidak ikut dihitung.
+        Talent::factory()->count(2)->create();
+
+        $ringkasan = ['total' => 5, 'tersedia' => 3, 'tidak_tersedia' => 2];
+
+        $this->getJson('/api/v1/talent-pool')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 5)
+            ->assertJsonPath('meta.ringkasan', $ringkasan);
+
+        $permintaan = [
+            'status' => ['status=tidak_tersedia', 2],
+            'kompetensi' => ["kompetensi[]={$laravel->id_kompetensi}", 1],
+            'search' => ['search=kartika', 1],
+            'halaman' => ['per_page=2&page=3', 1],
+            'gabungan' => ["status=tersedia&kompetensi[]={$laravel->id_kompetensi}&search=rina", 1],
+            'tanpa hasil' => ['search=tidak-ada-yang-cocok', 0],
+        ];
+
+        foreach ($permintaan as $nama => [$query, $jumlahData]) {
+            $this->getJson("/api/v1/talent-pool?{$query}")
+                ->assertOk()
+                ->assertJsonCount($jumlahData, 'data')
+                ->assertJsonPath('meta.ringkasan', $ringkasan, "Ringkasan berubah untuk filter: {$nama}");
+        }
+    });
+
+    it('meta.ringkasan bernilai nol jika talent pool kosong', function () {
+        loginSebagai(Role::Manager);
+
+        $this->getJson('/api/v1/talent-pool')
+            ->assertOk()
+            ->assertJsonPath('meta.ringkasan', ['total' => 0, 'tersedia' => 0, 'tidak_tersedia' => 0]);
+    });
+
     it('menolak filter tidak valid (422)', function () {
         loginSebagai(Role::TalentSupport);
 

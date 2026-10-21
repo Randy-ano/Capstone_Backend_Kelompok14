@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\StatusKetersediaan;
 use App\Models\TalentPool;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -41,6 +42,26 @@ class TalentPoolService
             ->orderByDesc('id_talent_pool')
             ->paginate($filter['per_page'] ?? 15)
             ->withQueryString();
+    }
+
+    /**
+     * Jumlah entri per status dari seluruh talent pool (tidak terpengaruh filter/pencarian/halaman).
+     *
+     * @return array{total: int, tersedia: int, tidak_tersedia: int}
+     */
+    public function ringkasan(): array
+    {
+        $perStatus = TalentPool::query()
+            ->selectRaw('status_ketersediaan, count(*) as jumlah')
+            ->groupBy('status_ketersediaan')
+            ->pluck('jumlah', 'status_ketersediaan');
+
+        $ringkasan = ['total' => (int) $perStatus->sum()];
+        foreach (StatusKetersediaan::cases() as $status) {
+            $ringkasan[$status->value] = (int) ($perStatus[$status->value] ?? 0);
+        }
+
+        return $ringkasan;
     }
 
     public function detail(TalentPool $talentPool): TalentPool

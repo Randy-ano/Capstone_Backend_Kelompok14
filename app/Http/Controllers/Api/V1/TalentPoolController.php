@@ -29,11 +29,16 @@ class TalentPoolController extends Controller
      * Daftar talent pool.
      *
      * Bisa difilter status ketersediaan dan kompetensi, serta dicari berdasarkan nama, email, domisili, kompetensi, atau tag.
+     * `meta.ringkasan` berisi jumlah dari seluruh talent pool, tidak terpengaruh filter.
      */
     public function index(IndexTalentPoolRequest $request): AnonymousResourceCollection
     {
         return TalentPoolResource::collection($this->talentPool->daftar($request->validated()))
-            ->additional(['message' => 'Berhasil']);
+            ->additional([
+                'message' => 'Berhasil',
+                // Digabung (merge) ke meta pagination oleh Laravel.
+                'meta' => ['ringkasan' => $this->talentPool->ringkasan()],
+            ]);
     }
 
     /**

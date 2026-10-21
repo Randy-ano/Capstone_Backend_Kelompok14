@@ -579,7 +579,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Talent Pool (FR-06)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /talent-pool | Internal | filter: `status`, `kompetensi[]` (harus punya semua), `search`; `talent.pendidikan` = ringkasan riwayat pendidikan terbaru |
+| GET | /talent-pool | Internal | filter: `status`, `kompetensi[]` (harus punya semua), `search`; `talent.pendidikan` = ringkasan riwayat pendidikan terbaru; `meta.ringkasan` = `{ total, tersedia, tidak_tersedia }` dari seluruh pool (tidak terpengaruh filter) |
 | GET | /talent-pool/{id} | Internal | detail + profil + `riwayat_pengalaman_kerja` + `lama_pengalaman_tahun` + riwayat screening |
 | GET | /talent-pool/{id}/cv | Internal | download CV talent (PDF); 404 jika belum dibuat |
 | PATCH | /talent-pool/{id} | TS | ubah status_ketersediaan / tag_keahlian |
