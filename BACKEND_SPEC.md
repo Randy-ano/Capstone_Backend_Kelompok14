@@ -504,7 +504,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
 ### Screening & Progres (FR-08, FR-09)
 - **R10.** Screening dibuat oleh TS; `skor_kecocokan` diisi dari R9. Saat screening dibuat → talent.status_kandidat = `dalam_proses`, job_requirement.status_req = `diproses` (jika masih `diajukan`).
 - **R11.** Jika hasil `tidak_lolos` → talent.status_kandidat kembali `tersedia`.
-- **R12.** **Progres otomatis** (Observer): setiap perubahan tahapan (screening dibuat, pengajuan dibuat, interview dijadwalkan, evaluasi disimpan, placement dibuat, atau kandidat ditolak di tahap mana pun) membuat 1 baris `progres_pemenuhan`.
+- **R12.** **Progres otomatis** (Observer): setiap perubahan tahapan (screening dibuat, pengajuan dibuat, interview dijadwalkan, evaluasi disimpan, placement dibuat, atau kandidat ditolak di tahap mana pun) membuat 1 baris `progres_pemenuhan`. Pemetaan: screening dibuat → `screening`; screening `tidak_lolos` → `ditolak`; pengajuan dibuat → `diajukan`; pengajuan ditolak klien → `ditolak`; tiap interview dijadwalkan → `interview`; evaluasi `diterima` → `evaluasi`, `ditolak` → `ditolak`; placement dibuat → `placement`.
 - **R13. Indikator SLA** dari `job_requirement.sla_deadline`:
   - `terlambat` jika sekarang > deadline dan status_req bukan `terpenuhi`/`dibatalkan`
   - `mendekati` jika sisa ≤ 3 hari (dan status_req bukan `terpenuhi`/`dibatalkan`)
@@ -609,22 +609,23 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Pengajuan, Interview, Evaluasi (FR-10, FR-11, FR-12)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /pengajuan | HC, Internal, T | sesuai scope |
-| POST | /pengajuan | AM | R14 |
-| PATCH | /pengajuan/{id}/status | HC | R15 |
-| GET | /interview | HC, Internal, T | sesuai scope, filter tanggal |
-| POST | /interview | AM, HC | R16 |
-| PUT | /interview/{id} | AM, HC | jadwal ulang / ubah status |
-| POST | /evaluasi | HC | R17 |
+| GET | /pengajuan | HC, Internal, T | sesuai scope; filter `status`, `id_job_req`, `search`; talent tidak melihat catatan screening & nilai evaluasi |
+| GET | /pengajuan/{id} | HC, Internal, T | detail + `interviews` + `evaluasi` + `id_placement` (sesuai scope) |
+| POST | /pengajuan | AM | R14; body `id_screening`; job harus `diproses` |
+| PATCH | /pengajuan/{id}/status | HC | R15; hanya dari `diajukan` ke `lanjut_interview`/`ditolak` |
+| GET | /interview | HC, Internal, T | sesuai scope, filter `dari`/`sampai` (tanggal), `status`, `id_pengajuan`; urut tanggal & waktu |
+| POST | /interview | AM, HC | R16; pengajuan `lanjut_interview` yang belum dievaluasi; tanggal ≥ hari ini, waktu `H:i` |
+| PUT | /interview/{id} | AM, HC | jadwal ulang (tanggal/waktu berubah → `dijadwal_ulang`) **atau** ubah status `selesai`/`dibatalkan` (final; `selesai` tidak boleh sebelum tanggalnya) |
+| POST | /evaluasi | HC | R17; body `id_pengajuan`, `nilai_score` 0–100, `catatan_evaluasi`, `status_evaluasi` |
 | GET | /evaluasi/{id} | HC, Internal | |
 
 ### Placement (FR-17)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /placement | HC, Internal, T | sesuai scope |
-| POST | /placement | TS | R18, R19 |
-| GET | /placement/{id} | HC, Internal, T | + cuti, shift, monitoring, keluhan ringkas |
-| PATCH | /placement/{id}/status | TS, M | R20 |
+| GET | /placement | HC, Internal, T | sesuai scope; filter `status`, `id_klien` (internal), `search` |
+| POST | /placement | TS | R18, R19; body `id_evaluasi`, `tanggal_mulai`, `tanggal_selesai`, `posisi_penempatan` (default posisi job) |
+| GET | /placement/{id} | HC, Internal, T | + `ringkasan` (jumlah cuti, shift, monitoring, keluhan) |
+| PATCH | /placement/{id}/status | TS, M | R20; `selesai`/`dihentikan` dari `aktif`; `tanggal_selesai` default tanggal kontrak atau hari ini |
 
 ### Cuti, Shift, Monitoring, Keluhan (FR-14, FR-15, FR-18, FR-19)
 | Method | Path | Role | Keterangan |
