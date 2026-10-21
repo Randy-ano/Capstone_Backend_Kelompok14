@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             AkunDemoSeeder::class,
             TalentSeeder::class,
             JobRequirementSeeder::class,
+            ScreeningSeeder::class,
         ]);
     }
 }

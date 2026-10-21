@@ -2,13 +2,19 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\JobRequirementController;
+use App\Http\Controllers\Api\V1\KlienController;
 use App\Http\Controllers\Api\V1\KompetensiController;
 use App\Http\Controllers\Api\V1\PegawaiController;
+use App\Http\Controllers\Api\V1\ProgresController;
+use App\Http\Controllers\Api\V1\ScreeningController;
 use App\Http\Controllers\Api\V1\TalentController;
 use App\Http\Controllers\Api\V1\TalentCvController;
 use App\Http\Controllers\Api\V1\TalentPoolController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Models\JobRequirement;
 use App\Models\Pegawai;
+use App\Models\ScreeningTalent;
 use App\Models\TalentPool;
 use Illuminate\Support\Facades\Route;
 
@@ -76,6 +82,64 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('role:talent_support')
             ->name('talent-pool.update');
     });
+
+    // FR-05, FR-07, FR-09: job requirement, rekomendasi kandidat, dan log progres.
+    // HR Client hanya job milik kliennya (Policy + scoping di service); internal semua.
+    Route::prefix('job-requirements')->middleware('role:hr_client,account_manager,talent_support,manager')->group(function () {
+        Route::get('/', [JobRequirementController::class, 'index'])
+            ->can('viewAny', JobRequirement::class)
+            ->name('job-requirements.index');
+
+        Route::post('/', [JobRequirementController::class, 'store'])
+            ->middleware('role:hr_client,account_manager')
+            ->name('job-requirements.store');
+
+        Route::get('/{jobRequirement}', [JobRequirementController::class, 'show'])
+            ->can('view', 'jobRequirement')
+            ->name('job-requirements.show');
+
+        Route::put('/{jobRequirement}', [JobRequirementController::class, 'update'])
+            ->middleware('role:hr_client,account_manager')
+            ->name('job-requirements.update');
+
+        Route::patch('/{jobRequirement}/status', [JobRequirementController::class, 'updateStatus'])
+            ->middleware('role:hr_client,account_manager')
+            ->name('job-requirements.status');
+
+        Route::get('/{jobRequirement}/rekomendasi', [JobRequirementController::class, 'rekomendasi'])
+            ->middleware('role:talent_support')
+            ->can('rekomendasi', 'jobRequirement')
+            ->name('job-requirements.rekomendasi');
+
+        Route::get('/{jobRequirement}/progres', [JobRequirementController::class, 'progres'])
+            ->can('view', 'jobRequirement')
+            ->name('job-requirements.progres');
+    });
+
+    // FR-09: tabel monitoring progres semua job — khusus internal.
+    Route::get('/progres', [ProgresController::class, 'index'])
+        ->middleware('role:account_manager,talent_support,manager')
+        ->name('progres.index');
+
+    // FR-08: screening — dilihat internal, dibuat & diubah khusus TS.
+    Route::prefix('screening')->middleware('role:account_manager,talent_support,manager')->group(function () {
+        Route::get('/', [ScreeningController::class, 'index'])
+            ->can('viewAny', ScreeningTalent::class)
+            ->name('screening.index');
+
+        Route::post('/', [ScreeningController::class, 'store'])
+            ->middleware('role:talent_support')
+            ->name('screening.store');
+
+        Route::put('/{screening}', [ScreeningController::class, 'update'])
+            ->middleware('role:talent_support')
+            ->name('screening.update');
+    });
+
+    // Daftar klien (read-only) untuk pilihan klien job requirement — khusus internal.
+    Route::get('/klien', [KlienController::class, 'index'])
+        ->middleware('role:account_manager,talent_support,manager')
+        ->name('klien.index');
 
     // Kelola akun internal — khusus Manager.
     Route::middleware('role:manager')->group(function () {
