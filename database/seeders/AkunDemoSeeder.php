@@ -60,7 +60,8 @@ class AkunDemoSeeder extends Seeder
         ]);
         $kompetensi = ['Laravel', 'MySQL', 'REST API', 'Git'];
         $talent->kompetensi()->attach(Kompetensi::whereIn('nama_kompetensi', $kompetensi)->pluck('id_kompetensi'));
-        $talent->talentPool()->create([
+        // updateOrCreate: aman jika TalentObserver (R5) sudah membuat entri pool.
+        $talent->talentPool()->updateOrCreate([], [
             'tanggal_masuk' => now(),
             'status_ketersediaan' => StatusKetersediaan::Tersedia,
             'tag_keahlian' => implode(', ', $kompetensi),

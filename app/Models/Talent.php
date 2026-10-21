@@ -4,7 +4,8 @@ namespace App\Models;
 
 use App\Enums\StatusKandidat;
 use App\Enums\StatusKelengkapan;
-use App\Models\RiwayatPendidikan;
+use App\Observers\TalentObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+#[ObservedBy([TalentObserver::class])]
 class Talent extends Model
 {
     use HasFactory;
@@ -67,6 +69,26 @@ class Talent extends Model
             'status_kelengkapan' => StatusKelengkapan::class,
             'status_kandidat' => StatusKandidat::class,
         ];
+    }
+
+    /**
+     * Ringkasan pendidikan terakhir, mis. "S1 Informatika – Telkom University".
+     * Diambil dari riwayat pendidikan terbaru (yang masih berjalan dianggap paling baru);
+     * jika riwayat kosong, memakai kolom teks pendidikan.
+     */
+    public function ringkasanPendidikan(): ?string
+    {
+        $terbaru = $this->riwayatPendidikan
+            ->sortByDesc(fn (RiwayatPendidikan $r) => [$r->tahun_selesai ?? PHP_INT_MAX, $r->tahun_mulai ?? 0, $r->id_riwayat_pendidikan])
+            ->first();
+
+        if ($terbaru === null) {
+            return $this->pendidikan;
+        }
+
+        $jenjang = trim($terbaru->jenjang.' '.($terbaru->jurusan ?? ''));
+
+        return "{$jenjang} – {$terbaru->nama_institusi}";
     }
 
     // Relasi ke akun pengguna
