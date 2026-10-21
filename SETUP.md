@@ -113,11 +113,21 @@ Buat branch sendiri dari `main`. **Jangan commit langsung ke `main`.**
 ```
 git checkout main
 git pull origin main
-git checkout -b nama-kamu
+git checkout -b fitur/nama-singkat
 ```
 
-- Format pesan commit: `SCRUM-<nomor issue Jira> deskripsi singkat`, contoh `SCRUM-12 Endpoint profil talent`. Belum ada issue → `SCRUM-0`.
-- Selesai → `git push origin nama-kamu`, lalu buat **Pull Request** ke `main`.
+- Nama branch: `<jenis>/<nama-singkat>`, contoh `fitur/profil-talent`, `perbaikan/login-error`.
+- Format pesan commit: `<jenis>: <deskripsi singkat dalam Bahasa Indonesia>`, contoh `fitur: endpoint profil talent`. Jangan pakai kode Jira (`SCRUM-xx`).
+
+| Jenis | Dipakai saat | Contoh |
+|---|---|---|
+| `fitur` | menambah fitur/halaman/endpoint baru | `fitur: halaman talent pool dengan filter kompetensi` |
+| `perbaikan` | memperbaiki bug | `perbaikan: badge status tidak muncul di layar HP` |
+| `pembaruan` | mengubah/menyempurnakan yang sudah ada | `pembaruan: rapikan header dan hapus menu mockup` |
+| `test` | hanya menambah/mengubah test | `test: skenario filter kompetensi talent pool` |
+| `dokumen` | README, spec, DECISIONS, black box | `dokumen: catat keputusan rumus skor rekomendasi` |
+
+- Selesai → `git push origin <nama-branch>`, lalu buat **Pull Request** ke `main`.
 - Sebelum membuat PR, ambil perubahan terbaru dari `main` dan pastikan `php artisan test` tetap hijau.
 
 ## 6. Aturan tim
