@@ -3,13 +3,16 @@
 namespace App\Services;
 
 use App\Enums\JenisDokumen;
+use App\Exceptions\DataTidakDitemukanException;
 use App\Enums\StatusKelengkapan;
 use App\Models\Dokumen;
 use App\Models\Talent;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TalentCvService
 {
@@ -55,5 +58,20 @@ class TalentCvService
         });
 
         return $talent->fresh()->load(['dokumen' => fn ($query) => $query->where('jenis_dokumen', JenisDokumen::Cv)]);
+    }
+
+    /**
+     * Mengirim file CV talent dari disk private. 404 jika CV belum pernah dibuat
+     * atau filenya hilang dari storage.
+     */
+    public function download(Talent $talent): StreamedResponse
+    {
+        if ($talent->file_cv === null || ! Storage::disk(self::DISK)->exists($talent->file_cv)) {
+            throw new DataTidakDitemukanException('CV belum tersedia. Generate CV terlebih dahulu.');
+        }
+
+        $namaFile = 'CV-'.Str::slug($talent->nama_lengkap).'.pdf';
+
+        return Storage::disk(self::DISK)->download($talent->file_cv, $namaFile, ['Content-Type' => 'application/pdf']);
     }
 }
