@@ -74,7 +74,20 @@ it('membuat screening demo yang konsisten dengan R9–R12', function () {
         ->and($hasil['pending']->talent->status_kandidat)->toBe(StatusKandidat::DalamProses)
         ->and($hasil['tidak_lolos']->talent->status_kandidat)->toBe(StatusKandidat::Tersedia)
         ->and((float) $hasil['lolos']->skor_kecocokan)->toBeGreaterThanOrEqual((float) $hasil['tidak_lolos']->skor_kecocokan)
-        // kebutuhan_dibuat + 3 screening + 1 ditolak.
+        // kebutuhan_dibuat + 3 screening + 1 ditolak (Fase 4) + diajukan, interview, evaluasi (Fase 5).
         ->and($job->progres->countBy(fn ($p) => $p->status_tahapan->value)->all())
-        ->toBe(['kebutuhan_dibuat' => 1, 'screening' => 3, 'ditolak' => 1]);
+        ->toBe(['kebutuhan_dibuat' => 1, 'screening' => 3, 'ditolak' => 1, 'diajukan' => 1, 'interview' => 1, 'evaluasi' => 1]);
+});
+
+it('membuat demo Fase 5: kandidat lolos diajukan, interview selesai, evaluasi diterima, belum placement', function () {
+    $pengajuan = App\Models\PengajuanKandidat::with(['interviews', 'evaluasi.placement', 'talent', 'jobRequirement'])->sole();
+
+    expect($pengajuan->status_pengajuan)->toBe(App\Enums\StatusPengajuan::LanjutInterview)
+        ->and($pengajuan->screening->hasil_screening)->toBe(App\Enums\HasilScreening::Lolos)
+        ->and($pengajuan->interviews->sole()->status_interview)->toBe(App\Enums\StatusInterview::Selesai)
+        ->and($pengajuan->evaluasi->status_evaluasi)->toBe(App\Enums\StatusEvaluasi::Diterima)
+        ->and($pengajuan->evaluasi->hrClient->user->email)->toBe('hr@intellisys.test')
+        ->and($pengajuan->evaluasi->placement)->toBeNull()
+        ->and($pengajuan->talent->status_kandidat)->toBe(StatusKandidat::DalamProses)
+        ->and($pengajuan->jobRequirement->status_req)->toBe(StatusReq::Diproses);
 });
