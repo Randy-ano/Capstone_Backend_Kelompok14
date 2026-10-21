@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Talent\GenerateTalentCvRequest;
 use App\Http\Resources\TalentCvResource;
 use App\Services\TalentCvService;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * @group Profil Talent & Kompetensi
@@ -32,5 +34,15 @@ class TalentCvController extends Controller
         return (new TalentCvResource($talent))->additional([
             'message' => 'CV berhasil dibuat.',
         ]);
+    }
+
+    /**
+     * Unduh CV saya.
+     *
+     * Mengirim file PDF CV milik talent yang sedang login. 404 jika CV belum dibuat.
+     */
+    public function download(Request $request): StreamedResponse
+    {
+        return $this->talentCvService->download($request->user()->talent);
     }
 }

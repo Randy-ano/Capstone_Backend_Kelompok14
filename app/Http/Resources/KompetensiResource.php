@@ -12,6 +12,7 @@ class KompetensiResource extends JsonResource
         return [
             'id_kompetensi' => $this->id_kompetensi,
             'nama_kompetensi' => $this->nama_kompetensi,
+            'kategori' => $this->kategori,
         ];
     }
 }

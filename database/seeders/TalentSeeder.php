@@ -75,7 +75,8 @@ class TalentSeeder extends Seeder
             $talent->kompetensi()->attach($idDipilih);
 
             if ($lengkap) {
-                $talent->talentPool()->create([
+                // updateOrCreate: aman jika TalentObserver (R5) sudah membuat entri pool.
+                $talent->talentPool()->updateOrCreate([], [
                     'tanggal_masuk' => now()->subDays(fake()->numberBetween(1, 90)),
                     'status_ketersediaan' => StatusKetersediaan::Tersedia,
                     'tag_keahlian' => $kompetensi->only(array_slice($idDipilih, 0, 3))->implode(', '),

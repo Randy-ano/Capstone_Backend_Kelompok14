@@ -472,7 +472,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
 
 ### Profil & Talent Pool (FR-03, FR-04, FR-06)
 - **R4.** Profil talent dianggap **lengkap** jika: `nama_lengkap` terisi, ada **minimal 1** `riwayat_pendidikan`, **dan** minimal 1 kompetensi. Status diperbarui otomatis setiap profil/riwayat pendidikan/kompetensi berubah (bisa naik ke `lengkap` maupun turun ke `belum_lengkap`).
-- **R5.** Saat status berubah menjadi `lengkap` dan talent belum ada di pool → **otomatis** dibuat entri `talent_pool` (`tersedia`, tanggal_masuk = now).
+- **R5.** Saat status berubah menjadi `lengkap` dan talent belum ada di pool → **otomatis** dibuat entri `talent_pool` (`tersedia`, tanggal_masuk = now). Diimplementasikan di `TalentObserver` (event `updated`, `firstOrCreate`), sehingga tidak pernah membuat entri ganda.
 - **R6.** Generate CV: render PDF dari data profil + kompetensi (Blade view → dompdf), simpan ke storage, isi `talent.file_cv`, dan buat record `dokumen` jenis `cv`.
 
 ### Job Requirement & Rekomendasi (FR-05, FR-07)
@@ -487,7 +487,9 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
                     tiap baris = tanggal_mulai s.d. tanggal_selesai
                     (atau hari ini jika masih_bekerja = true);
                     periode yang tumpang tindih digabung dulu, sehingga tidak dihitung dua kali;
-                    baris tanpa tanggal_mulai diabaikan
+                    baris tanpa tanggal_mulai, atau tanpa tanggal_selesai padahal tidak masih_bekerja, diabaikan;
+                    tanggal di masa depan dipotong sampai hari ini
+                    (implementasi: PengalamanKerjaService::lamaTahun, dipakai juga di detail talent pool)
 
   skor_pengalaman = 100                                         jika lama_pengalaman >= pengalaman_min
                   = (lama_pengalaman / pengalaman_min) × 100    selain itu
@@ -572,13 +574,14 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | PUT | /talent/profil | T | update profil (R4, R5); `riwayat_pendidikan[]` & `riwayat_pengalaman_kerja[]` jika dikirim menggantikan daftar lama |
 | PUT | /talent/profil/kompetensi | T | sync daftar `id_kompetensi` |
 | POST | /talent/cv/generate | T | R6; 422 jika profil belum lengkap (R4) |
-| GET | /talent/cv/download | T, Internal | download CV |
+| GET | /talent/cv/download | T | download CV milik sendiri (PDF); 404 jika belum dibuat |
 
 ### Talent Pool (FR-06)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /talent-pool | Internal | filter: status, kompetensi, search |
-| GET | /talent-pool/{id} | Internal | detail + profil + riwayat screening |
+| GET | /talent-pool | Internal | filter: `status`, `kompetensi[]` (harus punya semua), `search`; `talent.pendidikan` = ringkasan riwayat pendidikan terbaru; `meta.ringkasan` = `{ total, tersedia, tidak_tersedia }` dari seluruh pool (tidak terpengaruh filter) |
+| GET | /talent-pool/{id} | Internal | detail + profil + `riwayat_pengalaman_kerja` + `lama_pengalaman_tahun` + riwayat screening |
+| GET | /talent-pool/{id}/cv | Internal | download CV talent (PDF); 404 jika belum dibuat |
 | PATCH | /talent-pool/{id} | TS | ubah status_ketersediaan / tag_keahlian |
 
 ### Job Requirement & Rekomendasi (FR-05, FR-07)

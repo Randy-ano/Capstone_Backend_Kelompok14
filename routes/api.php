@@ -2,11 +2,14 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\KompetensiController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\TalentController;
 use App\Http\Controllers\Api\V1\TalentCvController;
+use App\Http\Controllers\Api\V1\TalentPoolController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Models\Pegawai;
+use App\Models\TalentPool;
 use Illuminate\Support\Facades\Route;
 
 // Semua route otomatis berprefix /api/v1.
@@ -45,6 +48,33 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/cv/generate', [TalentCvController::class, 'generate'])
             ->name('talent.cv.generate');
+
+        // FR-06: unduh CV milik sendiri.
+        Route::get('/cv/download', [TalentCvController::class, 'download'])
+            ->name('talent.cv.download');
+    });
+
+    // FR-06: master kompetensi (read-only) — semua role.
+    Route::get('/kompetensi', [KompetensiController::class, 'index'])
+        ->name('kompetensi.index');
+
+    // FR-06: talent pool — dilihat internal (AM, TS, Manager), diubah khusus TS.
+    Route::prefix('talent-pool')->middleware('role:account_manager,talent_support,manager')->group(function () {
+        Route::get('/', [TalentPoolController::class, 'index'])
+            ->can('viewAny', TalentPool::class)
+            ->name('talent-pool.index');
+
+        Route::get('/{talentPool}', [TalentPoolController::class, 'show'])
+            ->can('view', 'talentPool')
+            ->name('talent-pool.show');
+
+        Route::get('/{talentPool}/cv', [TalentPoolController::class, 'downloadCv'])
+            ->can('view', 'talentPool')
+            ->name('talent-pool.cv');
+
+        Route::patch('/{talentPool}', [TalentPoolController::class, 'update'])
+            ->middleware('role:talent_support')
+            ->name('talent-pool.update');
     });
 
     // Kelola akun internal — khusus Manager.

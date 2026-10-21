@@ -56,7 +56,6 @@ class TalentService
             }
 
             $this->updateKelengkapan($talent);
-            $this->syncTalentPool($talent);
 
             return $talent->fresh()->load(self::RELASI_PROFIL);
         });
@@ -78,7 +77,6 @@ class TalentService
             $talent->kompetensi()->sync($idKompetensi);
 
             $this->updateKelengkapan($talent);
-            $this->syncTalentPool($talent);
 
             return $talent->fresh()->load(self::RELASI_PROFIL);
         });
@@ -117,6 +115,7 @@ class TalentService
     /**
      * R4: profil lengkap jika nama lengkap terisi, minimal satu
      * riwayat pendidikan, dan minimal satu kompetensi.
+     * R5 (masuk talent pool) dijalankan TalentObserver saat status berubah.
      */
     private function updateKelengkapan(Talent $talent): void
     {
@@ -130,21 +129,5 @@ class TalentService
                 ? StatusKelengkapan::Lengkap
                 : StatusKelengkapan::BelumLengkap,
         ]);
-    }
-
-    /**
-     * R5: membuat entri Talent Pool ketika profil sudah lengkap
-     * dan talent belum memiliki entri.
-     */
-    private function syncTalentPool(Talent $talent): void
-    {
-        if (
-            $talent->status_kelengkapan === StatusKelengkapan::Lengkap &&
-            !$talent->talentPool()->exists()
-        ) {
-            $talent->talentPool()->create([
-                'tanggal_masuk' => now(),
-            ]);
-        }
     }
 }

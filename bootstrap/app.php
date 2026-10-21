@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\DataTidakDitemukanException;
 use App\Http\Middleware\EnsureRole;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -40,8 +41,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 : $e->getMessage()], 403)
             : null);
 
+        // FR-06: DataTidakDitemukanException membawa pesan sendiri (mis. CV belum dibuat).
         $exceptions->render(fn (NotFoundHttpException $e, Request $request) => $request->is('api/*')
-            ? response()->json(['message' => 'Data tidak ditemukan.'], 404)
+            ? response()->json(['message' => $e instanceof DataTidakDitemukanException ? $e->getMessage() : 'Data tidak ditemukan.'], 404)
             : null);
 
         $exceptions->render(fn (ThrottleRequestsException $e, Request $request) => $request->is('api/*')
