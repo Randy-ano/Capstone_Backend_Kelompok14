@@ -11,7 +11,7 @@
 2. Kalau menemukan kebutuhan yang tidak tercakup di dokumen ini, **jangan menebak diam-diam**: buat solusi paling sederhana, lalu catat di file `DECISIONS.md` (tanggal, keputusan, alasan).
 3. Semua logika bisnis di **Service class** (`app/Services`), bukan di controller. Controller hanya: validasi (FormRequest) → panggil service → kembalikan API Resource.
 4. Setiap endpoint wajib punya **Feature test (Pest)** minimal untuk: sukses, validasi gagal (422), akses ditolak role lain (403), dan akses data milik pihak lain (403/404).
-5. Commit per fitur kecil. Format pesan commit: `SCRUM-<nomor issue Jira> <deskripsi singkat>` (kode project Jira = `SCRUM`; kalau belum ada issue-nya, pakai `SCRUM-0`).
+5. Commit per fitur kecil. Format pesan commit: `<jenis>: <deskripsi singkat dalam Bahasa Indonesia>`, dengan jenis `fitur`, `perbaikan`, `pembaruan`, `test`, atau `dokumen` (contoh `fitur: endpoint talent pool`). Nama branch `<jenis>/<nama-singkat>` (contoh `fitur/talent-pool`). Jangan pakai kode Jira (`SCRUM-xx`) di branch maupun commit.
 6. Bahasa: nama tabel/kolom/enum dalam **Bahasa Indonesia** (sesuai ERD). Nama class, method, dan variabel PHP boleh Bahasa Inggris. Pesan error/sukses ke pengguna dalam **Bahasa Indonesia**.
 
 ---
