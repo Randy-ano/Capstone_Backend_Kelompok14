@@ -490,6 +490,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
                     baris tanpa tanggal_mulai, atau tanpa tanggal_selesai padahal tidak masih_bekerja, diabaikan;
                     tanggal di masa depan dipotong sampai hari ini
                     (implementasi: PengalamanKerjaService::lamaTahun, dipakai juga di detail talent pool)
+                    lalu dibulatkan 1 desimal sebelum dipakai di skor_pengalaman
 
   skor_pengalaman = 100                                         jika lama_pengalaman >= pengalaman_min
                   = (lama_pengalaman / pengalaman_min) × 100    selain itu
@@ -505,9 +506,10 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
 - **R11.** Jika hasil `tidak_lolos` → talent.status_kandidat kembali `tersedia`.
 - **R12.** **Progres otomatis** (Observer): setiap perubahan tahapan (screening dibuat, pengajuan dibuat, interview dijadwalkan, evaluasi disimpan, placement dibuat, atau kandidat ditolak di tahap mana pun) membuat 1 baris `progres_pemenuhan`.
 - **R13. Indikator SLA** dari `job_requirement.sla_deadline`:
-  - `terlambat` jika sekarang > deadline dan status_req belum `terpenuhi`
-  - `mendekati` jika sisa ≤ 3 hari
+  - `terlambat` jika sekarang > deadline dan status_req bukan `terpenuhi`/`dibatalkan`
+  - `mendekati` jika sisa ≤ 3 hari (dan status_req bukan `terpenuhi`/`dibatalkan`)
   - `aman` selain itu
+  (implementasi: `ProgresService::indikatorSla`; padanan SQL untuk filter: `ProgresService::filterIndikatorSla`)
 
 ### Pengajuan, Interview, Evaluasi (FR-10, FR-11, FR-12)
 - **R14.** Pengajuan hanya bisa dibuat dari screening dengan hasil `lolos`. `id_talent` & `id_job_req` disalin dari screening.
@@ -587,21 +589,22 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Job Requirement & Rekomendasi (FR-05, FR-07)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /job-requirements | HC, Internal | HC hanya miliknya |
-| POST | /job-requirements | HC, AM | R7 |
-| GET | /job-requirements/{id} | HC, Internal | + kompetensi + ringkasan progres |
-| PUT | /job-requirements/{id} | HC, AM | hanya saat `draft`/`diajukan` |
-| PATCH | /job-requirements/{id}/status | HC, AM | ajukan / batalkan |
-| GET | /job-requirements/{id}/rekomendasi | TS | R9 |
+| GET | /job-requirements | HC, Internal | HC hanya miliknya; filter `status`, `indikator_sla`, `id_klien` (internal), `search` (posisi/klien); `meta.ringkasan` = jumlah per status + `sla_terlambat`, `sla_mendekati` (tidak terpengaruh filter) |
+| POST | /job-requirements | HC, AM | R7; `status_req` awal `draft` (default) atau `diajukan` |
+| GET | /job-requirements/{id} | HC, Internal | + kompetensi + `ringkasan_progres` (jumlah screening per hasil, terpenuhi, sisa) + `progres_terakhir` |
+| PUT | /job-requirements/{id} | HC, AM | hanya saat `draft`/`diajukan`; parsial; `kompetensi` jika dikirim menggantikan daftar lama; klien tidak bisa diganti |
+| PATCH | /job-requirements/{id}/status | HC, AM | body `status_req`: `diajukan` (dari draft, deadline belum lewat) / `dibatalkan` (dari draft/diajukan/diproses; talent yang sedang diproses untuk job ini kembali `tersedia`) |
+| GET | /job-requirements/{id}/rekomendasi | TS | R9; job harus `diajukan`/`diproses` |
+| GET | /klien | Internal | daftar klien read-only (`search`) untuk pilihan klien saat AM membuat job requirement |
 
 ### Screening & Progres (FR-08, FR-09)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /screening | TS, AM, M | filter id_job_req, hasil |
-| POST | /screening | TS | R10 |
-| PUT | /screening/{id} | TS | ubah hasil/catatan (R11) |
-| GET | /job-requirements/{id}/progres | Internal, HC | log progres + indikator SLA |
-| GET | /progres | Internal | semua job + SLA terkini (untuk tabel monitoring) |
+| GET | /screening | TS, AM, M | filter id_job_req, id_talent, hasil, search |
+| POST | /screening | TS | R10; body `id_job_req`, `id_talent`, `catatan_screening`; job harus `diajukan`/`diproses`, talent harus tersedia |
+| PUT | /screening/{id} | TS | ubah hasil/catatan (R11); `tidak_lolos` final; ditolak jika sudah diajukan ke klien atau job selesai |
+| GET | /job-requirements/{id}/progres | Internal, HC | data job + indikator SLA terkini + `log_progres` (terbaru dulu) |
+| GET | /progres | Internal | semua job + SLA terkini + `progres_terakhir` + `jumlah_screening`, urut deadline terdekat (untuk tabel monitoring); filter sama dengan GET /job-requirements |
 
 ### Pengajuan, Interview, Evaluasi (FR-10, FR-11, FR-12)
 | Method | Path | Role | Keterangan |
