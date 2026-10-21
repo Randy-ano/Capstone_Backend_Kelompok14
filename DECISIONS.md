@@ -27,3 +27,5 @@ Catatan keputusan teknis di luar / pelengkap `BACKEND_SPEC.md`.
 | 2026-10-17 | Role dicek dua lapis: middleware `role:` (lapis route) **dan** Policy (lapis data, mis. `UserPolicy::updateStatus`). FormRequest memakai `Gate::inspect()` agar pesan penolakan dari Policy sampai ke client. | Sesuai bagian 2 & 5 spec; `bool` di `authorize()` membuang pesan Policy. |
 | 2026-10-17 | Semua error API dibalas JSON berbahasa Indonesia (401, 403, 404, 429) lewat `bootstrap/app.php`, ditambah `lang/id/validation.php` untuk pesan validasi. Guest tidak di-redirect ke route `login`. | Aturan 6 spec (pesan ke pengguna dalam Bahasa Indonesia); API tidak punya halaman login. |
 | 2026-10-17 | `TalentResource` menampilkan `ada_cv` (boolean), bukan path `file_cv`. | Path file ada di disk private; CV diunduh lewat endpoint terproteksi (Fase 3). |
+| 2026-10-18 | Repo dipisah: `Capstone_Kelompok14` menjadi repo **khusus backend** (isi `backend/` dipindah ke root repo dengan riwayat tetap tersambung); frontend pindah ke repo baru yang dimulai dari satu commit. | Keputusan tim agar backend dan frontend dikelola terpisah. Panduan pindah untuk yang sudah clone ada di `SETUP.md`. |
+

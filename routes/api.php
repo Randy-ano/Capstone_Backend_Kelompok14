@@ -1,16 +1,16 @@
+
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\TalentController;
-use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\TalentCvController;
+use App\Http\Controllers\Api\V1\UserController;
 use App\Models\Pegawai;
 use Illuminate\Support\Facades\Route;
 
 // Semua route otomatis berprefix /api/v1.
-
 Route::get('/health', HealthController::class)->name('health');
 
 // Auth publik.
@@ -33,7 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me'])
         ->name('auth.me');
 
-    // Profil dan kompetensi Talent.
+    // Profil, kompetensi, dan Generate CV Talent.
     Route::prefix('talent')->group(function () {
         Route::get('/profile', [TalentController::class, 'showProfile'])
             ->name('talent.profile.show');
@@ -43,11 +43,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::put('/kompetensi', [TalentController::class, 'syncKompetensi'])
             ->name('talent.kompetensi.sync');
-        
+
         Route::post('/cv/generate', [TalentCvController::class, 'generate'])
             ->name('talent.cv.generate');
     });
-
 
     // Kelola akun internal — khusus Manager.
     Route::middleware('role:manager')->group(function () {
