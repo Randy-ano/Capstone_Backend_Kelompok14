@@ -60,9 +60,21 @@ Route::middleware('auth:sanctum')->group(function () {
             ->name('talent.cv.download');
     });
 
-    // FR-06: master kompetensi (read-only) — semua role.
+    // FR-04: master kompetensi — dibaca semua role, dikelola TS & Manager.
     Route::get('/kompetensi', [KompetensiController::class, 'index'])
         ->name('kompetensi.index');
+
+    Route::middleware('role:talent_support,manager')->group(function () {
+        Route::post('/kompetensi', [KompetensiController::class, 'store'])
+            ->name('kompetensi.store');
+
+        Route::put('/kompetensi/{kompetensi}', [KompetensiController::class, 'update'])
+            ->name('kompetensi.update');
+
+        Route::delete('/kompetensi/{kompetensi}', [KompetensiController::class, 'destroy'])
+            ->can('delete', 'kompetensi')
+            ->name('kompetensi.destroy');
+    });
 
     // FR-06: talent pool — dilihat internal (AM, TS, Manager), diubah khusus TS.
     Route::prefix('talent-pool')->middleware('role:account_manager,talent_support,manager')->group(function () {

@@ -13,6 +13,8 @@ class KompetensiResource extends JsonResource
             'id_kompetensi' => $this->id_kompetensi,
             'nama_kompetensi' => $this->nama_kompetensi,
             'kategori' => $this->kategori,
+            'jumlah_talent' => $this->whenCounted('talents'),
+            'jumlah_job_requirement' => $this->whenCounted('jobRequirements'),
         ];
     }
 }
