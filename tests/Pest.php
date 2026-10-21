@@ -78,3 +78,52 @@ function roleSelain(App\Enums\Role ...$diizinkan): array
         ->mapWithKeys(fn (App\Enums\Role $role) => [$role->value => [$role]])
         ->all();
 }
+
+/*
+|--------------------------------------------------------------------------
+| Fase 5: rantai rekrutmen (pengajuan → interview → evaluasi → placement)
+|--------------------------------------------------------------------------
+| Job berstatus diproses + talent di pool yang sedang diproses, lalu tiap tahap
+| dibuat lewat factory dengan status yang diminta.
+*/
+
+function rekrutmenJob(?int $idKlien = null, array $atribut = []): App\Models\JobRequirement
+{
+    return App\Models\JobRequirement::factory()->create([
+        'status_req' => App\Enums\StatusReq::Diproses,
+        'id_klien' => $idKlien ?? App\Models\Klien::factory(),
+        ...$atribut,
+    ]);
+}
+
+function rekrutmenScreeningLolos(App\Models\JobRequirement $job, ?App\Models\Talent $talent = null): App\Models\ScreeningTalent
+{
+    $talent ??= App\Models\Talent::factory()->lengkap()->create();
+    $talent->update(['status_kandidat' => App\Enums\StatusKandidat::DalamProses]);
+    if (! $talent->talentPool) {
+        App\Models\TalentPool::factory()->for($talent)->create();
+    }
+
+    return App\Models\ScreeningTalent::factory()->for($job)->for($talent)->lolos()->create();
+}
+
+function rekrutmenPengajuan(App\Models\JobRequirement $job, App\Enums\StatusPengajuan $status = App\Enums\StatusPengajuan::Diajukan, ?App\Models\Talent $talent = null): App\Models\PengajuanKandidat
+{
+    return App\Models\PengajuanKandidat::factory()->create([
+        'id_screening' => rekrutmenScreeningLolos($job, $talent)->id_screening,
+        'status_pengajuan' => $status,
+    ]);
+}
+
+function rekrutmenInterview(App\Models\PengajuanKandidat $pengajuan, App\Enums\StatusInterview $status = App\Enums\StatusInterview::Dijadwalkan, ?string $tanggal = null): App\Models\JadwalInterview
+{
+    return App\Models\JadwalInterview::factory()->for($pengajuan, 'pengajuan')->create([
+        'status_interview' => $status,
+        'tanggal_interview' => $tanggal ?? now()->addDays(3)->toDateString(),
+    ]);
+}
+
+function rekrutmenEvaluasi(App\Models\PengajuanKandidat $pengajuan, App\Enums\StatusEvaluasi $status = App\Enums\StatusEvaluasi::Diterima): App\Models\EvaluasiKandidat
+{
+    return App\Models\EvaluasiKandidat::factory()->create(['id_pengajuan' => $pengajuan->id_pengajuan, 'status_evaluasi' => $status]);
+}
