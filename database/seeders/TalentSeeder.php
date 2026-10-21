@@ -33,15 +33,38 @@ class TalentSeeder extends Seeder
                 'role' => Role::Talent,
             ]);
 
-            // Profil belum lengkap: bergantian tanpa pengalaman kerja atau tanpa kompetensi (R4).
-            $tanpaPengalaman = ! $lengkap && $i % 2 === 0;
-            $tanpaKompetensi = ! $lengkap && ! $tanpaPengalaman;
+            // Profil belum lengkap: bergantian tanpa riwayat pendidikan atau tanpa kompetensi (R4).
+            $tanpaPendidikan = ! $lengkap && $i % 2 === 0;
+            $tanpaKompetensi = ! $lengkap && ! $tanpaPendidikan;
+            $jenjang = fake()->randomElement($pendidikan);
+            $tahunPengalaman = fake()->numberBetween(1, 8);
 
             $talent = $user->talent()->create([
                 'nama_lengkap' => fake()->name(),
-                'pendidikan' => fake()->randomElement($pendidikan),
-                'pengalaman_kerja' => $tanpaPengalaman ? null : fake()->numberBetween(1, 8).' tahun pengalaman di bidang IT. '.fake()->sentence(),
+                'pendidikan' => $jenjang,
+                'pengalaman_kerja' => $tahunPengalaman.' tahun pengalaman di bidang IT. '.fake()->sentence(),
                 'status_kelengkapan' => $lengkap ? StatusKelengkapan::Lengkap : StatusKelengkapan::BelumLengkap,
+            ]);
+
+            if (! $tanpaPendidikan) {
+                [$tingkat, $jurusan] = explode(' ', $jenjang, 2);
+                $talent->riwayatPendidikan()->create([
+                    'jenjang' => $tingkat,
+                    'nama_institusi' => 'Universitas '.fake()->city(),
+                    'jurusan' => $jurusan,
+                    'tahun_mulai' => now()->year - $tahunPengalaman - 4,
+                    'tahun_selesai' => now()->year - $tahunPengalaman,
+                ]);
+            }
+
+            // Lama pengalaman (R9) = isi teks pengalaman_kerja: satu pekerjaan yang masih berjalan.
+            $talent->pengalamanKerjaTalent()->create([
+                'nama_perusahaan' => 'PT '.fake()->company(),
+                'posisi' => fake()->randomElement(['Backend Developer', 'Frontend Developer', 'QA Engineer', 'Data Analyst', 'DevOps Engineer']),
+                'jenis_pekerjaan' => 'Full-time',
+                'lokasi' => fake()->city(),
+                'tanggal_mulai' => now()->subYears($tahunPengalaman)->startOfMonth(),
+                'masih_bekerja' => true,
             ]);
 
             if ($tanpaKompetensi) {

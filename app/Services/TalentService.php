@@ -5,30 +5,33 @@ namespace App\Services;
 use App\Enums\StatusKelengkapan;
 use App\Models\Talent;
 use App\Models\User;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class TalentService
 {
+    /** Relasi yang ikut ditampilkan di profil talent. */
+    public const RELASI_PROFIL = [
+        'kompetensi',
+        'riwayatPendidikan',
+        'pengalamanKerjaTalent',
+        'sertifikat',
+        'bahasa',
+    ];
+
     /**
      * Mengambil profil talent yang sedang login
      * beserta data pendukung CV.
      */
     public function getProfile(User $user): Talent
     {
-        $talent = $this->getTalent($user);
-
-        return $talent->load([
-            'kompetensi',
-            'riwayatPendidikan',
-            'pengalamanKerjaTalent',
-            'sertifikat',
-            'bahasa',
-        ]);
+        return $this->getTalent($user)->load(self::RELASI_PROFIL);
     }
 
     /**
-     * Memperbarui profil utama talent.
+     * Memperbarui profil utama talent. Riwayat pendidikan/pengalaman,
+     * jika dikirim, menggantikan seluruh daftar lama.
      */
     public function updateProfile(
         User $user,
@@ -37,18 +40,25 @@ class TalentService
         $talent = $this->getTalent($user);
 
         return DB::transaction(function () use ($talent, $data) {
-            $talent->update($data);
+            $talent->update(Arr::except($data, ['riwayat_pendidikan', 'riwayat_pengalaman_kerja']));
+
+            if (array_key_exists('riwayat_pendidikan', $data)) {
+                $talent->riwayatPendidikan()->delete();
+                $talent->riwayatPendidikan()->createMany($data['riwayat_pendidikan']);
+            }
+
+            if (array_key_exists('riwayat_pengalaman_kerja', $data)) {
+                $talent->pengalamanKerjaTalent()->delete();
+                $talent->pengalamanKerjaTalent()->createMany(array_map(
+                    fn (array $baris) => $this->normalisasiPengalaman($baris),
+                    $data['riwayat_pengalaman_kerja']
+                ));
+            }
 
             $this->updateKelengkapan($talent);
             $this->syncTalentPool($talent);
 
-            return $talent->fresh()->load([
-                'kompetensi',
-                'riwayatPendidikan',
-                'pengalamanKerjaTalent',
-                'sertifikat',
-                'bahasa',
-            ]);
+            return $talent->fresh()->load(self::RELASI_PROFIL);
         });
     }
 
@@ -70,13 +80,7 @@ class TalentService
             $this->updateKelengkapan($talent);
             $this->syncTalentPool($talent);
 
-            return $talent->fresh()->load([
-                'kompetensi',
-                'riwayatPendidikan',
-                'pengalamanKerjaTalent',
-                'sertifikat',
-                'bahasa',
-            ]);
+            return $talent->fresh()->load(self::RELASI_PROFIL);
         });
     }
 
@@ -97,23 +101,29 @@ class TalentService
     }
 
     /**
-     * Memeriksa kelengkapan profil berdasarkan aturan backend.
-     *
-     * Syarat:
-     * - Nama lengkap terisi.
-     * - Pendidikan terisi.
-     * - Pengalaman kerja terisi.
-     * - Minimal satu kompetensi.
+     * Pekerjaan yang masih berjalan tidak punya tanggal selesai.
+     */
+    private function normalisasiPengalaman(array $baris): array
+    {
+        $baris['masih_bekerja'] = (bool) ($baris['masih_bekerja'] ?? false);
+
+        if ($baris['masih_bekerja']) {
+            $baris['tanggal_selesai'] = null;
+        }
+
+        return $baris;
+    }
+
+    /**
+     * R4: profil lengkap jika nama lengkap terisi, minimal satu
+     * riwayat pendidikan, dan minimal satu kompetensi.
      */
     private function updateKelengkapan(Talent $talent): void
     {
-        $talent->load('kompetensi');
-
         $lengkap =
-            !empty($talent->nama_lengkap) &&
-            !empty($talent->pendidikan) &&
-            !empty($talent->pengalaman_kerja) &&
-            $talent->kompetensi->isNotEmpty();
+            trim((string) $talent->nama_lengkap) !== '' &&
+            $talent->riwayatPendidikan()->exists() &&
+            $talent->kompetensi()->exists();
 
         $talent->update([
             'status_kelengkapan' => $lengkap
@@ -123,7 +133,7 @@ class TalentService
     }
 
     /**
-     * Membuat entri Talent Pool ketika profil sudah lengkap
+     * R5: membuat entri Talent Pool ketika profil sudah lengkap
      * dan talent belum memiliki entri.
      */
     private function syncTalentPool(Talent $talent): void

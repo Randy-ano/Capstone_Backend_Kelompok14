@@ -9,6 +9,11 @@ use App\Http\Resources\TalentResource;
 use App\Services\TalentService;
 use Illuminate\Http\Request;
 
+/**
+ * @group Profil Talent & Kompetensi
+ *
+ * Profil milik talent yang sedang login. Khusus role talent.
+ */
 class TalentController extends Controller
 {
     public function __construct(
@@ -16,7 +21,9 @@ class TalentController extends Controller
     ) {}
 
     /**
-     * Menampilkan profil talent yang sedang login.
+     * Profil saya.
+     *
+     * Profil talent yang sedang login beserta kompetensi, riwayat pendidikan, pengalaman kerja, sertifikat, dan bahasa.
      */
     public function showProfile(Request $request): TalentResource
     {
@@ -30,7 +37,9 @@ class TalentController extends Controller
     }
 
     /**
-     * Memperbarui profil utama talent.
+     * Ubah profil.
+     *
+     * Semua kolom opsional. Status kelengkapan dihitung ulang (R4) dan talent otomatis masuk talent pool saat lengkap (R5).
      */
     public function updateProfile(
         UpdateTalentProfileRequest $request
@@ -46,7 +55,9 @@ class TalentController extends Controller
     }
 
     /**
-     * Menyinkronkan kompetensi talent.
+     * Atur kompetensi.
+     *
+     * Mengganti seluruh daftar kompetensi talent; status kelengkapan dihitung ulang (R4, R5).
      */
     public function syncKompetensi(
         SyncTalentKompetensiRequest $request
