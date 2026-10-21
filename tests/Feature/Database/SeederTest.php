@@ -1,8 +1,10 @@
 <?php
 
 use App\Enums\Role;
+use App\Enums\StatusKandidat;
 use App\Enums\StatusKelengkapan;
 use App\Enums\StatusReq;
+use App\Enums\StatusTahapan;
 use App\Models\JobRequirement;
 use App\Models\Klien;
 use App\Models\Kompetensi;
@@ -50,9 +52,29 @@ it('memasukkan hanya talent berprofil lengkap ke talent pool', function () {
         ->each(fn (Talent $talent) => expect($talent->riwayatPendidikan->isEmpty() || $talent->kompetensi->isEmpty())->toBeTrue());
 });
 
-it('membuat job requirement dengan minimal 1 kompetensi dan log progres untuk yang diajukan', function () {
-    JobRequirement::with('kompetensi', 'progres')->get()->each(function (JobRequirement $job) {
-        expect($job->kompetensi)->not->toBeEmpty()
-            ->and($job->progres)->toHaveCount($job->status_req === StatusReq::Diajukan ? 1 : 0);
+it('membuat job requirement dengan minimal 1 kompetensi dan log progres untuk yang sudah diajukan', function () {
+    JobRequirement::with(['kompetensi', 'progres' => fn ($q) => $q->orderBy('id_progres')])->get()->each(function (JobRequirement $job) {
+        expect($job->kompetensi)->not->toBeEmpty();
+
+        if ($job->status_req === StatusReq::Draft) {
+            expect($job->progres)->toBeEmpty();
+        } else {
+            expect($job->progres->first()->status_tahapan)->toBe(StatusTahapan::KebutuhanDibuat);
+        }
     });
+});
+
+it('membuat screening demo yang konsisten dengan R9–R12', function () {
+    $job = JobRequirement::with(['screenings.talent', 'progres'])->where('posisi', 'Backend Developer')->sole();
+    $hasil = $job->screenings->mapWithKeys(fn ($s) => [$s->hasil_screening->value => $s]);
+
+    expect($job->status_req)->toBe(StatusReq::Diproses)
+        ->and($hasil->keys()->sort()->values()->all())->toBe(['lolos', 'pending', 'tidak_lolos'])
+        ->and($hasil['lolos']->talent->status_kandidat)->toBe(StatusKandidat::DalamProses)
+        ->and($hasil['pending']->talent->status_kandidat)->toBe(StatusKandidat::DalamProses)
+        ->and($hasil['tidak_lolos']->talent->status_kandidat)->toBe(StatusKandidat::Tersedia)
+        ->and((float) $hasil['lolos']->skor_kecocokan)->toBeGreaterThanOrEqual((float) $hasil['tidak_lolos']->skor_kecocokan)
+        // kebutuhan_dibuat + 3 screening + 1 ditolak.
+        ->and($job->progres->countBy(fn ($p) => $p->status_tahapan->value)->all())
+        ->toBe(['kebutuhan_dibuat' => 1, 'screening' => 3, 'ditolak' => 1]);
 });
