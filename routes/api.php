@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CutiController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DokumenController;
 use App\Http\Controllers\Api\V1\EvaluasiController;
 use App\Http\Controllers\Api\V1\HealthController;
@@ -303,6 +304,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{dokumen}/tanda-tangan', [DokumenController::class, 'tandaTangan'])
             ->name('dokumen.tanda-tangan');
     });
+
+    // FR-20: dashboard — agregasi Manager (R32) dan ringkasan beranda per role.
+    Route::get('/dashboard/manager', [DashboardController::class, 'manager'])
+        ->middleware('role:manager')
+        ->name('dashboard.manager');
+
+    Route::get('/dashboard/ringkasan', [DashboardController::class, 'ringkasan'])
+        ->name('dashboard.ringkasan');
 
     // FR-16: notifikasi milik user yang login (semua role).
     Route::prefix('notifikasi')->group(function () {
