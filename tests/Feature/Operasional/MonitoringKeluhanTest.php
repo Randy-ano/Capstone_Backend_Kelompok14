@@ -34,6 +34,7 @@ describe('GET & POST /monitoring (R23)', function () {
     });
 
     it('AM dan Manager melihat daftar terbaru dulu, bisa difilter placement dan dicari nama talent', function (Role $role) {
+        $this->freezeTime();
         $budi = Placement::factory()->for(Talent::factory()->lengkap()->create(['nama_lengkap' => 'Budi Monitor']))->create();
         MonitoringTalent::factory()->for($budi)->create(['tanggal_monitoring' => now()->subDays(2)]);
         MonitoringTalent::factory()->for($budi)->create(['tanggal_monitoring' => now()]);
