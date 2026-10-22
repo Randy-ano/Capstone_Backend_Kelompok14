@@ -667,8 +667,8 @@ Scheduler: `php artisan notifikasi:pengingat` (terjadwal 07:00 WIB, R31). Jalank
 ### Dashboard (FR-20)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /dashboard/manager | M | R32 |
-| GET | /dashboard/ringkasan | semua | ringkasan kecil per role untuk halaman beranda |
+| GET | /dashboard/manager | M | R32: `job_requirement` (total & per status), `sla` (terlambat/mendekati, job diajukan/diproses), `kandidat_per_tahapan` (tersedia, screening, lolos_screening, diajukan, interview, diterima, ditempatkan), `placement_aktif`, `laporan_keluhan_terbuka`, `tren_placement` (12 bulan, per bulan mulai) |
+| GET | /dashboard/ringkasan | semua | `kartu[]` (`kunci`, `label`, `nilai`, `keterangan`, `tujuan`) sesuai role + `notifikasi_belum_dibaca` |
 
 ---
 
