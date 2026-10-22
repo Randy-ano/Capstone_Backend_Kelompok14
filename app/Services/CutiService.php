@@ -22,6 +22,8 @@ class CutiService
 {
     public const RELASI = [...PlacementResource::RELASI_RINGKAS, 'approverKlien', 'approverManager'];
 
+    public function __construct(private readonly PemberitahuanService $pemberitahuan) {}
+
     /** Talent miliknya, HR Client cuti talent yang ditempatkan di kliennya, Manager semua. */
     public static function scope(Builder $query, User $user): Builder
     {
@@ -75,6 +77,7 @@ class CutiService
             'tanggal_selesai' => $data['tanggal_selesai'],
             'alasan_cuti' => $data['alasan_cuti'],
         ]);
+        $this->pemberitahuan->cutiDiajukan($cuti);
 
         return $cuti->load(self::RELASI);
     }
@@ -99,6 +102,7 @@ class CutiService
             : ['status_approval_manager' => $keputusan, 'id_approver_manager' => $user->pegawai->id_pegawai]);
         $cuti->status_cuti = self::statusCuti($cuti->status_approval_klien, $cuti->status_approval_manager);
         $cuti->save();
+        $this->pemberitahuan->cutiDiputuskan($cuti);
 
         return $cuti->load(self::RELASI);
     }

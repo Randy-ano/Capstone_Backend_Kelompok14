@@ -36,6 +36,8 @@ class DokumenService
     /** Jenis yang dibuat dari template (R26). */
     public const JENIS_TEMPLATE = [JenisDokumen::Quotation, JenisDokumen::PurchaseOrder, JenisDokumen::Pks];
 
+    public function __construct(private readonly PemberitahuanService $pemberitahuan) {}
+
     /**
      * Internal: semua. HR Client: dokumen kliennya. Talent: dokumen miliknya.
      * Selain itu, setiap user melihat dokumen yang ia unggah atau harus ia tandatangani.
@@ -202,6 +204,7 @@ class DokumenService
                 $dokumen->tandaTangan()->create(['id_user_penandatangan' => $id]);
             }
             $dokumen->update(['status_dokumen' => StatusDokumen::MenungguTtd]);
+            $this->pemberitahuan->mintaTandaTangan($dokumen, User::whereIn('id_user', $idUser)->get());
 
             return $dokumen->load(self::RELASI);
         });

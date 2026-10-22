@@ -22,6 +22,8 @@ class InterviewService
 {
     public const RELASI = ['pengajuan.talent', 'pengajuan.jobRequirement.klien'];
 
+    public function __construct(private readonly PemberitahuanService $pemberitahuan) {}
+
     /** Status akhir: interview tidak bisa diubah lagi. */
     private const STATUS_AKHIR = [StatusInterview::Selesai, StatusInterview::Dibatalkan];
 
@@ -53,6 +55,7 @@ class InterviewService
         $this->pastikanPengajuanTerbuka($pengajuan, 'id_pengajuan');
 
         $interview = $pengajuan->interviews()->create(Arr::only($data, ['tanggal_interview', 'waktu_interview', 'link_lokasi_meeting', 'instruksi']));
+        $this->pemberitahuan->interview($interview, 'dijadwalkan');
 
         return $interview->load(self::RELASI);
     }
@@ -77,6 +80,7 @@ class InterviewService
                 throw ValidationException::withMessages(['status_interview' => 'Interview belum berlangsung, sehingga belum dapat ditandai selesai.']);
             }
             $interview->update(['status_interview' => $status]);
+            $this->pemberitahuan->interview($interview, $status === StatusInterview::Selesai ? 'ditandai selesai' : 'dibatalkan');
 
             return $interview->load(self::RELASI);
         }
@@ -85,7 +89,11 @@ class InterviewService
         if ($interview->isDirty(['tanggal_interview', 'waktu_interview'])) {
             $interview->status_interview = StatusInterview::DijadwalUlang;
         }
+        $berubah = $interview->isDirty();
         $interview->save();
+        if ($berubah) {
+            $this->pemberitahuan->interview($interview, $interview->status_interview === StatusInterview::DijadwalUlang ? 'dijadwal_ulang' : 'diperbarui');
+        }
 
         return $interview->load(self::RELASI);
     }

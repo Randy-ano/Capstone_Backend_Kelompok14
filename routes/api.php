@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\KlienController;
 use App\Http\Controllers\Api\V1\KompetensiController;
 use App\Http\Controllers\Api\V1\LaporanKeluhanController;
 use App\Http\Controllers\Api\V1\MonitoringController;
+use App\Http\Controllers\Api\V1\NotifikasiController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PengajuanController;
 use App\Http\Controllers\Api\V1\PlacementController;
@@ -301,6 +302,22 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/{dokumen}/tanda-tangan', [DokumenController::class, 'tandaTangan'])
             ->name('dokumen.tanda-tangan');
+    });
+
+    // FR-16: notifikasi milik user yang login (semua role).
+    Route::prefix('notifikasi')->group(function () {
+        Route::get('/', [NotifikasiController::class, 'index'])
+            ->name('notifikasi.index');
+
+        Route::get('/belum-dibaca/jumlah', [NotifikasiController::class, 'jumlahBelumDibaca'])
+            ->name('notifikasi.jumlah');
+
+        Route::patch('/baca-semua', [NotifikasiController::class, 'bacaSemua'])
+            ->name('notifikasi.baca-semua');
+
+        Route::patch('/{notifikasi}/baca', [NotifikasiController::class, 'baca'])
+            ->can('update', 'notifikasi')
+            ->name('notifikasi.baca');
     });
 
     // Daftar klien (read-only) untuk pilihan klien job requirement — khusus internal.

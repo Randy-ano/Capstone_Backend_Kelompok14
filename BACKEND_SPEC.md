@@ -657,10 +657,12 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Notifikasi (FR-16)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /notifikasi | semua | milik sendiri, filter status_baca |
-| GET | /notifikasi/belum-dibaca/jumlah | semua | untuk badge lonceng |
-| PATCH | /notifikasi/{id}/baca | semua | |
-| PATCH | /notifikasi/baca-semua | semua | |
+| GET | /notifikasi | semua | milik sendiri, terbaru dulu; filter `status_baca`; notifikasi berjadwal tampil setelah `jadwal_kirim` |
+| GET | /notifikasi/belum-dibaca/jumlah | semua | untuk badge lonceng: `{ jumlah }` |
+| PATCH | /notifikasi/{id}/baca | semua | hanya penerima (403 untuk lainnya) |
+| PATCH | /notifikasi/baca-semua | semua | `{ jumlah }` yang ditandai |
+
+Scheduler: `php artisan notifikasi:pengingat` (terjadwal 07:00 WIB, R31). Jalankan `php artisan schedule:work` dan `php artisan queue:work` di server agar pengingat & email terkirim.
 
 ### Dashboard (FR-20)
 | Method | Path | Role | Keterangan |
