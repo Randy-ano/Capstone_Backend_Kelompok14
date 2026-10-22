@@ -1,17 +1,21 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CutiController;
 use App\Http\Controllers\Api\V1\EvaluasiController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InterviewController;
 use App\Http\Controllers\Api\V1\JobRequirementController;
 use App\Http\Controllers\Api\V1\KlienController;
 use App\Http\Controllers\Api\V1\KompetensiController;
+use App\Http\Controllers\Api\V1\LaporanKeluhanController;
+use App\Http\Controllers\Api\V1\MonitoringController;
 use App\Http\Controllers\Api\V1\PegawaiController;
 use App\Http\Controllers\Api\V1\PengajuanController;
 use App\Http\Controllers\Api\V1\PlacementController;
 use App\Http\Controllers\Api\V1\ProgresController;
 use App\Http\Controllers\Api\V1\ScreeningController;
+use App\Http\Controllers\Api\V1\ShiftController;
 use App\Http\Controllers\Api\V1\TalentController;
 use App\Http\Controllers\Api\V1\TalentCvController;
 use App\Http\Controllers\Api\V1\TalentPoolController;
@@ -208,6 +212,66 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/{placement}/status', [PlacementController::class, 'updateStatus'])
             ->middleware('role:talent_support,manager')
             ->name('placement.status');
+    });
+
+    // FR-14, FR-15, FR-18, FR-19: operasional talent yang sudah ditempatkan (cuti, shift, monitoring, keluhan).
+    // Talent: data miliknya; HR Client: placement di kliennya (scoping di service + Policy); internal sesuai role.
+    Route::prefix('cuti')->group(function () {
+        Route::get('/', [CutiController::class, 'index'])
+            ->middleware('role:talent,hr_client,manager')
+            ->name('cuti.index');
+
+        Route::post('/', [CutiController::class, 'store'])
+            ->middleware('role:talent')
+            ->name('cuti.store');
+
+        Route::patch('/{cuti}/approval', [CutiController::class, 'approval'])
+            ->middleware('role:hr_client,manager')
+            ->name('cuti.approval');
+
+        Route::patch('/{cuti}/batal', [CutiController::class, 'batal'])
+            ->middleware('role:talent')
+            ->can('batal', 'cuti')
+            ->name('cuti.batal');
+    });
+
+    Route::prefix('shift')->group(function () {
+        Route::get('/', [ShiftController::class, 'index'])
+            ->middleware('role:talent,hr_client,manager')
+            ->name('shift.index');
+
+        Route::middleware('role:hr_client,manager')->group(function () {
+            Route::post('/', [ShiftController::class, 'store'])
+                ->name('shift.store');
+
+            Route::put('/{shift}', [ShiftController::class, 'update'])
+                ->name('shift.update');
+
+            Route::delete('/{shift}', [ShiftController::class, 'destroy'])
+                ->name('shift.destroy');
+        });
+    });
+
+    Route::get('/monitoring', [MonitoringController::class, 'index'])
+        ->middleware('role:manager,account_manager')
+        ->name('monitoring.index');
+
+    Route::post('/monitoring', [MonitoringController::class, 'store'])
+        ->middleware('role:manager')
+        ->name('monitoring.store');
+
+    Route::prefix('laporan-keluhan')->group(function () {
+        Route::get('/', [LaporanKeluhanController::class, 'index'])
+            ->middleware('role:hr_client,account_manager,manager')
+            ->name('laporan-keluhan.index');
+
+        Route::post('/', [LaporanKeluhanController::class, 'store'])
+            ->middleware('role:hr_client')
+            ->name('laporan-keluhan.store');
+
+        Route::patch('/{laporanKeluhan}/tindak-lanjut', [LaporanKeluhanController::class, 'tindakLanjut'])
+            ->middleware('role:account_manager,manager')
+            ->name('laporan-keluhan.tindak-lanjut');
     });
 
     // Daftar klien (read-only) untuk pilihan klien job requirement — khusus internal.

@@ -70,16 +70,17 @@ it('membuat screening demo yang konsisten dengan R9–R12', function () {
 
     expect($job->status_req)->toBe(StatusReq::Diproses)
         ->and($hasil->keys()->sort()->values()->all())->toBe(['lolos', 'pending', 'tidak_lolos'])
-        ->and($hasil['lolos']->talent->status_kandidat)->toBe(StatusKandidat::DalamProses)
+        // Kandidat lolos (Budi) sudah ditempatkan oleh OperasionalSeeder.
+        ->and($hasil['lolos']->talent->status_kandidat)->toBe(StatusKandidat::Ditempatkan)
         ->and($hasil['pending']->talent->status_kandidat)->toBe(StatusKandidat::DalamProses)
         ->and($hasil['tidak_lolos']->talent->status_kandidat)->toBe(StatusKandidat::Tersedia)
         ->and((float) $hasil['lolos']->skor_kecocokan)->toBeGreaterThanOrEqual((float) $hasil['tidak_lolos']->skor_kecocokan)
-        // kebutuhan_dibuat + 3 screening + 1 ditolak (Fase 4) + diajukan, interview, evaluasi (Fase 5).
+        // kebutuhan_dibuat + 3 screening + 1 ditolak (Fase 4) + diajukan, interview, evaluasi (Fase 5) + placement (Fase 6).
         ->and($job->progres->countBy(fn ($p) => $p->status_tahapan->value)->all())
-        ->toBe(['kebutuhan_dibuat' => 1, 'screening' => 3, 'ditolak' => 1, 'diajukan' => 1, 'interview' => 1, 'evaluasi' => 1]);
+        ->toBe(['kebutuhan_dibuat' => 1, 'screening' => 3, 'ditolak' => 1, 'diajukan' => 1, 'interview' => 1, 'evaluasi' => 1, 'placement' => 1]);
 });
 
-it('membuat demo Fase 5: kandidat lolos diajukan, interview selesai, evaluasi diterima, belum placement', function () {
+it('membuat demo Fase 5: kandidat lolos diajukan, interview selesai, evaluasi diterima, lalu ditempatkan (Fase 6)', function () {
     $pengajuan = App\Models\PengajuanKandidat::with(['interviews', 'evaluasi.placement', 'talent', 'jobRequirement'])->sole();
 
     expect($pengajuan->status_pengajuan)->toBe(App\Enums\StatusPengajuan::LanjutInterview)
@@ -87,7 +88,21 @@ it('membuat demo Fase 5: kandidat lolos diajukan, interview selesai, evaluasi di
         ->and($pengajuan->interviews->sole()->status_interview)->toBe(App\Enums\StatusInterview::Selesai)
         ->and($pengajuan->evaluasi->status_evaluasi)->toBe(App\Enums\StatusEvaluasi::Diterima)
         ->and($pengajuan->evaluasi->hrClient->user->email)->toBe('hr@intellisys.test')
-        ->and($pengajuan->evaluasi->placement)->toBeNull()
-        ->and($pengajuan->talent->status_kandidat)->toBe(StatusKandidat::DalamProses)
+        ->and($pengajuan->evaluasi->placement->status_placement)->toBe(App\Enums\StatusPlacement::Aktif)
+        ->and($pengajuan->talent->status_kandidat)->toBe(StatusKandidat::Ditempatkan)
+        // Kebutuhan 2, baru 1 placement: job tetap diproses.
         ->and($pengajuan->jobRequirement->status_req)->toBe(StatusReq::Diproses);
+});
+
+it('membuat demo Fase 6 untuk placement Budi: shift 2 minggu, cuti menunggu, monitoring, dan keluhan baru', function () {
+    $placement = App\Models\Placement::with(['shifts', 'cuti', 'monitorings', 'laporanKeluhan', 'talent.user', 'klien'])->sole();
+
+    expect($placement->talent->user->email)->toBe('talent@intellisys.test')
+        ->and($placement->klien->nama_perusahaan)->toBe('PT Maju Jaya')
+        ->and($placement->shifts)->toHaveCount(14)
+        ->and($placement->shifts->where('jenis_shift', App\Enums\JenisShift::Libur))->toHaveCount(4)
+        ->and($placement->cuti->sole()->status_cuti)->toBe(App\Enums\StatusCuti::Menunggu)
+        ->and($placement->monitorings)->toHaveCount(1)
+        ->and($placement->laporanKeluhan->sole()->status_laporan)->toBe(App\Enums\StatusLaporan::Baru)
+        ->and($placement->talent->talentPool->status_ketersediaan)->toBe(App\Enums\StatusKetersediaan::TidakTersedia);
 });

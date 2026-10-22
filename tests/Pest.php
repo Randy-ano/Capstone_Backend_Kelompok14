@@ -127,3 +127,27 @@ function rekrutmenEvaluasi(App\Models\PengajuanKandidat $pengajuan, App\Enums\St
 {
     return App\Models\EvaluasiKandidat::factory()->create(['id_pengajuan' => $pengajuan->id_pengajuan, 'status_evaluasi' => $status]);
 }
+
+/*
+|--------------------------------------------------------------------------
+| Fase 6: operasional (cuti, shift, monitoring, keluhan)
+|--------------------------------------------------------------------------
+*/
+
+/** Login sebagai talent pemilik placement. */
+function loginTalentPlacement(App\Models\Placement $placement): App\Models\User
+{
+    $user = $placement->talent->user;
+    Laravel\Sanctum\Sanctum::actingAs($user);
+
+    return $user;
+}
+
+/** Login sebagai HR Client dari klien tempat talent ditempatkan. */
+function loginHrKlien(App\Models\Placement $placement): App\Models\User
+{
+    $user = App\Models\HrClient::factory()->create(['id_klien' => $placement->id_klien])->user;
+    Laravel\Sanctum\Sanctum::actingAs($user);
+
+    return $user;
+}
