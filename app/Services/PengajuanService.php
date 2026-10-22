@@ -24,6 +24,8 @@ class PengajuanService
 {
     public const RELASI = ['talent.user', 'talent.riwayatPendidikan', 'jobRequirement.klien', 'accountManager', 'screening', 'evaluasi.placement'];
 
+    public function __construct(private readonly PemberitahuanService $pemberitahuan) {}
+
     /**
      * Batasi query pengajuan sesuai role (bagian 5.2 spec).
      */
@@ -95,6 +97,7 @@ class PengajuanService
             'id_am' => $user->pegawai->id_pegawai,
             'tanggal_pengajuan' => now(),
         ]);
+        $this->pemberitahuan->pengajuanDibuat($pengajuan);
 
         return $this->detail($pengajuan);
     }
@@ -115,6 +118,7 @@ class PengajuanService
             if ($status === StatusPengajuan::Ditolak) {
                 $pengajuan->talent->update(['status_kandidat' => StatusKandidat::Tersedia]);
             }
+            $this->pemberitahuan->statusPengajuan($pengajuan);
 
             return $this->detail($pengajuan);
         });

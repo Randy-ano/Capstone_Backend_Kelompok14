@@ -23,7 +23,10 @@ class PlacementService
 {
     public const RELASI = ['talent.user', 'klien', 'jobRequirement'];
 
-    public function __construct(private readonly JobRequirementService $jobRequirement) {}
+    public function __construct(
+        private readonly JobRequirementService $jobRequirement,
+        private readonly PemberitahuanService $pemberitahuan,
+    ) {}
 
     /** Batasi query placement sesuai role: talent miliknya, HR Client kliennya, internal semua. */
     public static function scope(Builder $query, User $user): Builder
@@ -104,6 +107,7 @@ class PlacementService
                 $job->update(['status_req' => StatusReq::Terpenuhi]);
                 $this->jobRequirement->lepasTalentDalamProses($job);
             }
+            $this->pemberitahuan->placementDibuat($placement);
 
             return $this->detail($placement);
         });

@@ -22,6 +22,8 @@ class EvaluasiService
 {
     public const RELASI = ['hrClient', 'pengajuan.talent', 'pengajuan.jobRequirement.klien', 'placement'];
 
+    public function __construct(private readonly PemberitahuanService $pemberitahuan) {}
+
     /**
      * @param  array{id_pengajuan: int, nilai_score: int, catatan_evaluasi?: string|null, status_evaluasi: string}  $data
      */
@@ -52,6 +54,8 @@ class EvaluasiService
             if ($evaluasi->status_evaluasi === StatusEvaluasi::Ditolak) {
                 $pengajuan->talent->update(['status_kandidat' => StatusKandidat::Tersedia]);
             }
+
+            $this->pemberitahuan->evaluasiDisimpan($evaluasi);
 
             return $evaluasi->load(self::RELASI);
         });

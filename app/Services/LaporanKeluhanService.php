@@ -20,6 +20,8 @@ class LaporanKeluhanService
 {
     public const RELASI = [...PlacementResource::RELASI_RINGKAS, 'hrClient', 'penindakLanjut'];
 
+    public function __construct(private readonly PemberitahuanService $pemberitahuan) {}
+
     public static function scope(Builder $query, User $user): Builder
     {
         return $query->whereHas('placement', fn (Builder $q) => PlacementService::scope($q, $user));
@@ -79,6 +81,7 @@ class LaporanKeluhanService
             'deskripsi_keluhan' => $data['deskripsi_keluhan'],
             'tanggal_laporan' => now(),
         ]);
+        $this->pemberitahuan->keluhanBaru($laporan);
 
         return $laporan->load(self::RELASI);
     }
