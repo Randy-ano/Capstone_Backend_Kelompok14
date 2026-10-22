@@ -100,6 +100,19 @@ class AuthService
         }
     }
 
+    /**
+     * Ubah password sendiri. Sesi lain (token di perangkat lain) dihapus; token yang sedang dipakai tetap berlaku.
+     */
+    public function ubahPassword(User $user, string $passwordBaru): void
+    {
+        $user->update(['password' => $passwordBaru]);
+
+        $token = $user->currentAccessToken();
+        $user->tokens()
+            ->when($token instanceof PersonalAccessToken, fn ($q) => $q->whereKeyNot($token->getKey()))
+            ->delete();
+    }
+
     private function buatUser(string $email, string $password, Role $role): User
     {
         return User::create([

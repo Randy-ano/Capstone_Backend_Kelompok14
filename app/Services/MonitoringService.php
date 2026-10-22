@@ -10,7 +10,8 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * FR-18, R23: monitoring kinerja talent dicatat Manager untuk placement mana pun; dilihat Manager & AM.
+ * FR-15, FR-18, R23: monitoring kinerja talent dicatat Manager untuk placement mana pun; dilihat Manager & AM,
+ * dan talent untuk placement miliknya saja (read-only).
  */
 class MonitoringService
 {
@@ -19,9 +20,10 @@ class MonitoringService
     /**
      * @param  array{id_placement?: int|null, search?: string|null, per_page?: int|null}  $filter
      */
-    public function daftar(array $filter): LengthAwarePaginator
+    public function daftar(User $user, array $filter): LengthAwarePaginator
     {
         return MonitoringTalent::query()
+            ->whereHas('placement', fn (Builder $q) => PlacementService::scope($q, $user))
             ->with(self::RELASI)
             ->when($filter['id_placement'] ?? null, fn (Builder $q, int|string $id) => $q->where('id_placement', $id))
             ->when($filter['search'] ?? null, fn (Builder $q, string $search) => $q->whereHas('placement', fn (Builder $q) => $q->where(fn (Builder $q) => $q

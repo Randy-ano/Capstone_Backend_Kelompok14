@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\StatusKelengkapan;
+use App\Models\Bahasa;
 use App\Models\Talent;
 use App\Models\User;
 use Illuminate\Support\Arr;
@@ -30,8 +31,8 @@ class TalentService
     }
 
     /**
-     * Memperbarui profil utama talent. Riwayat pendidikan/pengalaman,
-     * jika dikirim, menggantikan seluruh daftar lama.
+     * Memperbarui profil utama talent. Riwayat pendidikan/pengalaman, sertifikat,
+     * dan bahasa, jika dikirim, menggantikan seluruh daftar lama.
      */
     public function updateProfile(
         User $user,
@@ -40,7 +41,7 @@ class TalentService
         $talent = $this->getTalent($user);
 
         return DB::transaction(function () use ($talent, $data) {
-            $talent->update(Arr::except($data, ['riwayat_pendidikan', 'riwayat_pengalaman_kerja']));
+            $talent->update(Arr::except($data, ['riwayat_pendidikan', 'riwayat_pengalaman_kerja', 'sertifikat', 'bahasa']));
 
             if (array_key_exists('riwayat_pendidikan', $data)) {
                 $talent->riwayatPendidikan()->delete();
@@ -53,6 +54,17 @@ class TalentService
                     fn (array $baris) => $this->normalisasiPengalaman($baris),
                     $data['riwayat_pengalaman_kerja']
                 ));
+            }
+
+            if (array_key_exists('sertifikat', $data)) {
+                $talent->sertifikat()->delete();
+                $talent->sertifikat()->createMany($data['sertifikat']);
+            }
+
+            if (array_key_exists('bahasa', $data)) {
+                $talent->bahasa()->sync(collect($data['bahasa'])->mapWithKeys(fn (array $baris) => [
+                    $this->idBahasa($baris['nama_bahasa']) => ['tingkat_kemampuan' => $baris['tingkat_kemampuan']],
+                ])->all());
             }
 
             $this->updateKelengkapan($talent);
@@ -96,6 +108,17 @@ class TalentService
         }
 
         return $talent;
+    }
+
+    /**
+     * Master bahasa dicocokkan tanpa membedakan huruf besar/kecil; nama baru ditambahkan ke master.
+     */
+    private function idBahasa(string $nama): int
+    {
+        $nama = trim($nama);
+
+        return Bahasa::whereRaw('LOWER(nama_bahasa) = ?', [mb_strtolower($nama)])->value('id_bahasa')
+            ?? Bahasa::create(['nama_bahasa' => $nama])->id_bahasa;
     }
 
     /**

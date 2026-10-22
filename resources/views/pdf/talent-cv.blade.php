@@ -345,6 +345,11 @@
                         <p class="item-subtitle">
                             Issued:
                             {{ \Carbon\Carbon::parse($sertifikat->tanggal_terbit)->format('M Y') }}
+
+                            @if ($sertifikat->tanggal_kedaluwarsa)
+                                | Valid until:
+                                {{ \Carbon\Carbon::parse($sertifikat->tanggal_kedaluwarsa)->format('M Y') }}
+                            @endif
                         </p>
                     @endif
 

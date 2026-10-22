@@ -13,7 +13,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 /**
  * @group Operasional
  *
- * Monitoring kinerja talent (FR-18, R23). Dicatat Manager, dilihat Manager & Account Manager.
+ * Monitoring kinerja talent (FR-15, FR-18, R23). Dicatat Manager, dilihat Manager & Account Manager; talent hanya melihat catatan placement miliknya.
  */
 class MonitoringController extends Controller
 {
@@ -21,10 +21,12 @@ class MonitoringController extends Controller
 
     /**
      * Daftar monitoring.
+     *
+     * Talent hanya menerima catatan untuk placement miliknya.
      */
     public function index(IndexMonitoringRequest $request): AnonymousResourceCollection
     {
-        return MonitoringResource::collection($this->monitoring->daftar($request->validated()))
+        return MonitoringResource::collection($this->monitoring->daftar($request->user(), $request->validated()))
             ->additional(['message' => 'Berhasil']);
     }
 

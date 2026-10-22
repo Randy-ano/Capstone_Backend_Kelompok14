@@ -52,6 +52,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me'])
         ->name('auth.me');
 
+    // Pengaturan akun: ubah password sendiri (semua role).
+    Route::put('/auth/password', [AuthController::class, 'ubahPassword'])
+        ->middleware('throttle:10,1')
+        ->name('auth.password');
+
     // FR-03, FR-04: profil, kompetensi, dan generate CV — khusus Talent (data milik sendiri).
     Route::prefix('talent')->middleware('role:talent')->group(function () {
         Route::get('/profil', [TalentController::class, 'showProfile'])
@@ -256,7 +261,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::get('/monitoring', [MonitoringController::class, 'index'])
-        ->middleware('role:manager,account_manager')
+        ->middleware('role:manager,account_manager,talent')
         ->name('monitoring.index');
 
     Route::post('/monitoring', [MonitoringController::class, 'store'])
