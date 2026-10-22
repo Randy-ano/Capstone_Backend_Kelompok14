@@ -48,8 +48,28 @@ describe('GET & POST /monitoring (R23)', function () {
         $this->getJson('/api/v1/monitoring?search=budi monitor')->assertJsonCount(2, 'data');
     })->with([Role::AccountManager, Role::Manager]);
 
+    it('FR-15: talent hanya melihat monitoring placement miliknya (read-only)', function () {
+        $user = loginSebagai(Role::Talent);
+        $milik = Placement::factory()->for($user->talent)->create();
+        MonitoringTalent::factory()->for($milik)->create(['hasil_monitoring' => 'Kinerja baik.', 'catatan_tindak_lanjut' => 'Pertahankan.']);
+        MonitoringTalent::factory()->for(Placement::factory()->create())->create();
+
+        $this->getJson('/api/v1/monitoring')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.hasil_monitoring', 'Kinerja baik.')
+            ->assertJsonPath('data.0.catatan_tindak_lanjut', 'Pertahankan.')
+            ->assertJsonPath('data.0.placement.id_placement', $milik->id_placement);
+
+        $lain = Placement::factory()->create();
+        MonitoringTalent::factory()->for($lain)->create();
+        $this->getJson("/api/v1/monitoring?id_placement={$lain->id_placement}")->assertOk()->assertJsonCount(0, 'data');
+
+        $this->postJson('/api/v1/monitoring', ['id_placement' => $milik->id_placement, 'hasil_monitoring' => 'X'])->assertForbidden();
+    });
+
     it('menolak role lain melihat (403) dan selain Manager mencatat (403)', function () {
-        foreach ([Role::Talent, Role::HrClient, Role::TalentSupport] as $role) {
+        foreach ([Role::HrClient, Role::TalentSupport] as $role) {
             loginSebagai($role);
             $this->getJson('/api/v1/monitoring')->assertForbidden()->assertExactJson(['message' => 'Anda tidak memiliki akses ke fitur ini.']);
         }
