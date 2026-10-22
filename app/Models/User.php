@@ -82,6 +82,14 @@ class User extends Authenticatable
         };
     }
 
+    // FR-13 (dokumen): nama tampilan dari profil sesuai role; fallback ke email.
+    public function namaTampilan(): string
+    {
+        $profil = $this->profil();
+
+        return $profil?->nama_lengkap ?? $profil?->nama_hr ?? $profil?->nama_pegawai ?? $this->email;
+    }
+
     public function pegawai(): HasOne
     {
         return $this->hasOne(Pegawai::class, 'id_user', 'id_user');

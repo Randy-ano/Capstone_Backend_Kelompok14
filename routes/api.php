@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CutiController;
+use App\Http\Controllers\Api\V1\DokumenController;
 use App\Http\Controllers\Api\V1\EvaluasiController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InterviewController;
@@ -272,6 +273,34 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/{laporanKeluhan}/tindak-lanjut', [LaporanKeluhanController::class, 'tindakLanjut'])
             ->middleware('role:account_manager,manager')
             ->name('laporan-keluhan.tindak-lanjut');
+    });
+
+    // FR-13: dokumen & tanda tangan digital (R25–R28). Scope per data lewat DokumenPolicy.
+    Route::prefix('dokumen')->group(function () {
+        Route::get('/', [DokumenController::class, 'index'])
+            ->name('dokumen.index');
+
+        Route::post('/upload', [DokumenController::class, 'upload'])
+            ->middleware('role:account_manager,hr_client,manager,talent')
+            ->name('dokumen.upload');
+
+        Route::post('/generate', [DokumenController::class, 'generate'])
+            ->middleware('role:account_manager')
+            ->name('dokumen.generate');
+
+        Route::get('/{dokumen}/download', [DokumenController::class, 'download'])
+            ->can('view', 'dokumen')
+            ->name('dokumen.download');
+
+        Route::get('/{dokumen}/calon-penandatangan', [DokumenController::class, 'calonPenandatangan'])
+            ->can('aturPenandatangan', 'dokumen')
+            ->name('dokumen.calon-penandatangan');
+
+        Route::post('/{dokumen}/penandatangan', [DokumenController::class, 'penandatangan'])
+            ->name('dokumen.penandatangan');
+
+        Route::post('/{dokumen}/tanda-tangan', [DokumenController::class, 'tandaTangan'])
+            ->name('dokumen.tanda-tangan');
     });
 
     // Daftar klien (read-only) untuk pilihan klien job requirement — khusus internal.
