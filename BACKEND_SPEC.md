@@ -528,7 +528,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
   - `status_cuti` = `disetujui` jika **keduanya** disetujui; `ditolak` jika **salah satu** menolak; selain itu `menunggu`.
   - Talent boleh membatalkan selama masih `menunggu`.
 - **R22. Shift:** dikelola HR Client (klien yang sama) atau Manager. Dukung input massal (satu request untuk banyak tanggal). Talent hanya melihat shift miliknya.
-- **R23. Monitoring:** dicatat oleh Manager untuk placement mana pun.
+- **R23. Monitoring:** dicatat oleh Manager untuk placement mana pun; dilihat Manager & AM, dan talent untuk placement miliknya (read-only, FR-15).
 - **R24. Laporan keluhan:** dibuat HR Client untuk placement di kliennya (status `baru`). AM/Manager menindaklanjuti: isi `id_penindak_lanjut`, `hasil_tindak_lanjut`, `tanggal_tindak_lanjut`, ubah status.
 
 ### Dokumen (FR-13)
@@ -564,6 +564,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | POST | /auth/login | publik | mengembalikan token + data user + role |
 | POST | /auth/logout | semua | hapus token aktif |
 | GET | /auth/me | semua | user + profil sesuai role |
+| PUT | /auth/password | semua | ubah password sendiri: `password_lama`, `password` (min. 8, beda dari lama), `password_confirmation`; sesi lain dihapus, sesi saat ini tetap |
 | GET/POST/PUT | /pegawai, /pegawai/{id} | M | kelola akun internal (R2) |
 | PATCH | /users/{id}/status | M | aktif/nonaktifkan akun |
 
@@ -573,7 +574,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | GET | /kompetensi | semua | master kompetensi; filter `search`, `kategori`; `meta.kategori` = semua kategori terpakai; `dengan_pemakaian=1` menambah `jumlah_talent` & `jumlah_job_requirement` |
 | POST/PUT/DELETE | /kompetensi, /kompetensi/{id} | TS, M | kelola master; nama unik tanpa membedakan huruf besar/kecil; DELETE ditolak 422 jika masih dipakai talent/job requirement |
 | GET | /talent/profil | T | profil sendiri + kompetensi |
-| PUT | /talent/profil | T | update profil (R4, R5); `riwayat_pendidikan[]` & `riwayat_pengalaman_kerja[]` jika dikirim menggantikan daftar lama |
+| PUT | /talent/profil | T | update profil (R4, R5); `riwayat_pendidikan[]`, `riwayat_pengalaman_kerja[]`, `sertifikat[]`, `bahasa[]` (`nama_bahasa`, `tingkat_kemampuan`) jika dikirim menggantikan daftar lama |
 | PUT | /talent/profil/kompetensi | T | sync daftar `id_kompetensi` |
 | POST | /talent/cv/generate | T | R6; 422 jika profil belum lengkap (R4) |
 | GET | /talent/cv/download | T | download CV milik sendiri (PDF); 404 jika belum dibuat |
@@ -637,7 +638,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | GET | /shift | T, HC, M | filter `id_placement`, `dari`, `sampai`; urut tanggal, default 31 per halaman |
 | POST | /shift | HC, M | input massal (R22): `id_placement`, `tanggal[]` (maks 62), `jenis_shift`, `keterangan`; tanggal yang sudah ada diperbarui; respons `{ dibuat, diperbarui }` |
 | PUT/DELETE | /shift/{id} | HC, M | placement harus `aktif`; tanggal dalam periode placement |
-| GET | /monitoring | M, AM | filter `id_placement`, `search` |
+| GET | /monitoring | M, AM, T | filter `id_placement`, `search`; talent hanya catatan placement miliknya (FR-15, read-only) |
 | POST | /monitoring | M | R23; `tanggal_monitoring` default sekarang, tidak boleh di masa depan |
 | GET | /laporan-keluhan | HC, AM, M | sesuai scope; filter `status`, `id_placement`, `search`; `meta.ringkasan` per status |
 | POST | /laporan-keluhan | HC | R24 |
