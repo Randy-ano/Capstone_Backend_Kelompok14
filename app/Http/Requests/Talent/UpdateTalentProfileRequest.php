@@ -12,6 +12,8 @@ use Illuminate\Validation\Validator;
  */
 class UpdateTalentProfileRequest extends FormRequest
 {
+    public const TINGKAT_BAHASA = ['Dasar', 'Menengah', 'Fasih', 'Penutur Asli'];
+
     public function rules(): array
     {
         return [
@@ -142,6 +144,19 @@ class UpdateTalentProfileRequest extends FormRequest
             'riwayat_pengalaman_kerja.*.masih_bekerja' => ['sometimes', 'boolean'],
             'riwayat_pengalaman_kerja.*.tanggal_selesai' => ['nullable', 'required_unless:riwayat_pengalaman_kerja.*.masih_bekerja,true', 'date', 'before_or_equal:today'],
             'riwayat_pengalaman_kerja.*.deskripsi' => ['nullable', 'string', 'max:5000'],
+
+            // Sertifikat (jika dikirim, menggantikan seluruh daftar lama)
+            'sertifikat' => ['sometimes', 'array', 'max:30'],
+            'sertifikat.*.nama_sertifikat' => ['required', 'string', 'max:255'],
+            'sertifikat.*.penerbit' => ['nullable', 'string', 'max:255'],
+            'sertifikat.*.tanggal_terbit' => ['nullable', 'date', 'before_or_equal:today'],
+            'sertifikat.*.tanggal_kedaluwarsa' => ['nullable', 'date'],
+            'sertifikat.*.url_sertifikat' => ['nullable', 'url', 'max:255'],
+
+            // Bahasa (jika dikirim, menggantikan seluruh daftar lama; nama dicocokkan ke master bahasa)
+            'bahasa' => ['sometimes', 'array', 'max:20'],
+            'bahasa.*.nama_bahasa' => ['required', 'string', 'max:100'],
+            'bahasa.*.tingkat_kemampuan' => ['required', 'string', 'in:'.implode(',', self::TINGKAT_BAHASA)],
         ];
     }
 
@@ -173,6 +188,31 @@ class UpdateTalentProfileRequest extends FormRequest
                         $validator->errors()->add("riwayat_pengalaman_kerja.$i.tanggal_selesai", 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
                     }
                 }
+
+                foreach ($this->input('sertifikat', []) as $i => $baris) {
+                    $terbit = $baris['tanggal_terbit'] ?? null;
+                    $kedaluwarsa = $baris['tanggal_kedaluwarsa'] ?? null;
+
+                    if (! is_string($terbit) || ! is_string($kedaluwarsa) || $validator->errors()->has("sertifikat.$i.*")) {
+                        continue;
+                    }
+
+                    if (strtotime($terbit) !== false && strtotime($kedaluwarsa) !== false && Carbon::parse($kedaluwarsa)->lt(Carbon::parse($terbit))) {
+                        $validator->errors()->add("sertifikat.$i.tanggal_kedaluwarsa", 'Tanggal kedaluwarsa tidak boleh sebelum tanggal terbit.');
+                    }
+                }
+
+                $namaBahasa = [];
+                foreach ($this->input('bahasa', []) as $i => $baris) {
+                    $nama = is_array($baris) && is_string($baris['nama_bahasa'] ?? null) ? mb_strtolower(trim($baris['nama_bahasa'])) : null;
+                    if ($nama === null || $nama === '') {
+                        continue;
+                    }
+                    if (in_array($nama, $namaBahasa, true)) {
+                        $validator->errors()->add("bahasa.$i.nama_bahasa", 'Bahasa tidak boleh dicantumkan lebih dari satu kali.');
+                    }
+                    $namaBahasa[] = $nama;
+                }
             },
         ];
     }
@@ -194,6 +234,13 @@ class UpdateTalentProfileRequest extends FormRequest
             'riwayat_pengalaman_kerja.*.masih_bekerja' => 'masih bekerja',
             'riwayat_pengalaman_kerja.*.tanggal_selesai' => 'tanggal selesai',
             'riwayat_pengalaman_kerja.*.deskripsi' => 'deskripsi pekerjaan',
+            'sertifikat.*.nama_sertifikat' => 'nama sertifikat',
+            'sertifikat.*.penerbit' => 'penerbit',
+            'sertifikat.*.tanggal_terbit' => 'tanggal terbit',
+            'sertifikat.*.tanggal_kedaluwarsa' => 'tanggal kedaluwarsa',
+            'sertifikat.*.url_sertifikat' => 'tautan sertifikat',
+            'bahasa.*.nama_bahasa' => 'nama bahasa',
+            'bahasa.*.tingkat_kemampuan' => 'tingkat kemampuan',
         ];
     }
 
@@ -228,6 +275,15 @@ class UpdateTalentProfileRequest extends FormRequest
             'riwayat_pengalaman_kerja.*.tanggal_mulai' => ['example' => '2021-08-01'],
             'riwayat_pengalaman_kerja.*.masih_bekerja' => ['example' => true],
             'riwayat_pengalaman_kerja.*.tanggal_selesai' => ['description' => 'Wajib jika masih_bekerja bukan true.', 'example' => null],
+            'sertifikat' => ['description' => 'Jika dikirim, menggantikan seluruh daftar sertifikat lama.'],
+            'sertifikat.*.nama_sertifikat' => ['example' => 'AWS Certified Developer – Associate'],
+            'sertifikat.*.penerbit' => ['example' => 'Amazon Web Services'],
+            'sertifikat.*.tanggal_terbit' => ['example' => '2024-03-01'],
+            'sertifikat.*.tanggal_kedaluwarsa' => ['description' => 'Kosongkan jika tidak kedaluwarsa.', 'example' => '2027-03-01'],
+            'sertifikat.*.url_sertifikat' => ['example' => 'https://www.credly.com/badges/contoh'],
+            'bahasa' => ['description' => 'Jika dikirim, menggantikan seluruh daftar bahasa lama. Nama dicocokkan ke master bahasa (tanpa membedakan huruf besar/kecil); nama baru ditambahkan ke master.'],
+            'bahasa.*.nama_bahasa' => ['example' => 'Inggris'],
+            'bahasa.*.tingkat_kemampuan' => ['description' => 'Dasar, Menengah, Fasih, atau Penutur Asli.', 'example' => 'Menengah'],
         ];
     }
 
