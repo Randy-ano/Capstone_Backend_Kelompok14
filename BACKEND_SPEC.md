@@ -630,18 +630,18 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Cuti, Shift, Monitoring, Keluhan (FR-14, FR-15, FR-18, FR-19)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /cuti | T, HC, M | sesuai scope |
-| POST | /cuti | T | R21 |
-| PATCH | /cuti/{id}/approval | HC, M | body: `keputusan` (disetujui/ditolak) |
-| PATCH | /cuti/{id}/batal | T | |
-| GET | /shift | T, HC, M | filter id_placement, rentang tanggal |
-| POST | /shift | HC, M | input massal (R22) |
-| PUT/DELETE | /shift/{id} | HC, M | |
-| GET | /monitoring | M, AM | filter id_placement |
-| POST | /monitoring | M | R23 |
-| GET | /laporan-keluhan | HC, AM, M | sesuai scope |
+| GET | /cuti | T, HC, M | sesuai scope; filter `status`, `id_placement` |
+| POST | /cuti | T | R21; body `id_placement`, `tanggal_mulai` (≥ hari ini), `tanggal_selesai`, `alasan_cuti` |
+| PATCH | /cuti/{id}/approval | HC, M | body: `keputusan` (disetujui/ditolak); satu kali per pihak, hanya saat `menunggu` |
+| PATCH | /cuti/{id}/batal | T | pemilik, hanya saat `menunggu` |
+| GET | /shift | T, HC, M | filter `id_placement`, `dari`, `sampai`; urut tanggal, default 31 per halaman |
+| POST | /shift | HC, M | input massal (R22): `id_placement`, `tanggal[]` (maks 62), `jenis_shift`, `keterangan`; tanggal yang sudah ada diperbarui; respons `{ dibuat, diperbarui }` |
+| PUT/DELETE | /shift/{id} | HC, M | placement harus `aktif`; tanggal dalam periode placement |
+| GET | /monitoring | M, AM | filter `id_placement`, `search` |
+| POST | /monitoring | M | R23; `tanggal_monitoring` default sekarang, tidak boleh di masa depan |
+| GET | /laporan-keluhan | HC, AM, M | sesuai scope; filter `status`, `id_placement`, `search`; `meta.ringkasan` per status |
 | POST | /laporan-keluhan | HC | R24 |
-| PATCH | /laporan-keluhan/{id}/tindak-lanjut | AM, M | R24 |
+| PATCH | /laporan-keluhan/{id}/tindak-lanjut | AM, M | R24; `status_laporan` diproses/selesai, `hasil_tindak_lanjut` wajib saat selesai; laporan selesai final |
 
 ### Dokumen (FR-13)
 | Method | Path | Role | Keterangan |
