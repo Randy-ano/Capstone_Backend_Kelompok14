@@ -106,3 +106,14 @@ it('membuat demo Fase 6 untuk placement Budi: shift 2 minggu, cuti menunggu, mon
         ->and($placement->laporanKeluhan->sole()->status_laporan)->toBe(App\Enums\StatusLaporan::Baru)
         ->and($placement->talent->talentPool->status_ketersediaan)->toBe(App\Enums\StatusKetersediaan::TidakTersedia);
 });
+
+it('membuat demo Fase 7: quotation menunggu tanda tangan Manager & HR, PO masih draft', function () {
+    $dokumen = App\Models\Dokumen::with('tandaTangan.penandatangan')->orderBy('id_dokumen')->get();
+
+    expect($dokumen)->toHaveCount(2)
+        ->and($dokumen[0]->jenis_dokumen)->toBe(App\Enums\JenisDokumen::Quotation)
+        ->and($dokumen[0]->status_dokumen)->toBe(App\Enums\StatusDokumen::MenungguTtd)
+        ->and($dokumen[0]->tandaTangan->map(fn ($t) => $t->penandatangan->email)->sort()->values()->all())->toBe(['hr@intellisys.test', 'manager@intellisys.test'])
+        ->and($dokumen[1]->jenis_dokumen)->toBe(App\Enums\JenisDokumen::PurchaseOrder)
+        ->and($dokumen[1]->status_dokumen)->toBe(App\Enums\StatusDokumen::Draft);
+});
