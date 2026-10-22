@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterHrClientRequest;
 use App\Http\Requests\Auth\RegisterTalentRequest;
+use App\Http\Requests\Auth\UbahPasswordRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\AuthService;
@@ -77,6 +78,22 @@ class AuthController extends Controller
         $this->auth->logout($request->user());
 
         return response()->json(['data' => null, 'message' => 'Logout berhasil']);
+    }
+
+    /**
+     * Ubah password.
+     *
+     * Berlaku untuk semua role. Sesi di perangkat lain otomatis keluar; sesi saat ini tetap aktif.
+     *
+     * @bodyParam password_confirmation string required Harus sama dengan password baru. Example: rahasiabaru123
+     *
+     * @response {"data": null, "message": "Password berhasil diubah."}
+     */
+    public function ubahPassword(UbahPasswordRequest $request): JsonResponse
+    {
+        $this->auth->ubahPassword($request->user(), $request->validated('password'));
+
+        return response()->json(['data' => null, 'message' => 'Password berhasil diubah.']);
     }
 
     /**
