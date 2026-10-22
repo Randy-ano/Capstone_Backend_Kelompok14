@@ -22,3 +22,10 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+CLAUDE.local.md
+
+# Hasil php artisan scribe:generate (dibuat ulang, lihat README)
+/.scribe
+/resources/views/scribe
+/public/vendor/scribe

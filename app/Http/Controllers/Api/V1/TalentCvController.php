@@ -23,6 +23,8 @@ class TalentCvController extends Controller
      *
      * Membuat CV PDF dari data profil talent yang sedang login (R6). Profil harus sudah lengkap (R4);
      * generate ulang menimpa CV sebelumnya.
+     *
+     * @response 200 {"data": {"id_talent": 1, "nama_lengkap": "Budi Santoso", "ada_cv": true, "id_dokumen": 5, "tanggal_dibuat": "2026-10-22T14:12:20+07:00"}, "message": "CV berhasil dibuat."}
      */
     public function generate(
         GenerateTalentCvRequest $request
@@ -40,6 +42,8 @@ class TalentCvController extends Controller
      * Unduh CV saya.
      *
      * Mengirim file PDF CV milik talent yang sedang login. 404 jika CV belum dibuat.
+     *
+     * @response 200 scenario="File PDF" <Isi file PDF, Content-Type: application/pdf>
      */
     public function download(Request $request): StreamedResponse
     {

@@ -25,6 +25,8 @@ class AuthController extends Controller
      * Membuat akun talent dengan profil berstatus `belum_lengkap`, lalu langsung login.
      *
      * @unauthenticated
+     *
+     * @bodyParam password_confirmation string required Harus sama dengan password. Example: rahasia123
      */
     public function registerTalent(RegisterTalentRequest $request): JsonResponse
     {
@@ -39,6 +41,8 @@ class AuthController extends Controller
      * Membuat perusahaan klien baru beserta akun HR-nya, lalu langsung login.
      *
      * @unauthenticated
+     *
+     * @bodyParam password_confirmation string required Harus sama dengan password. Example: rahasia123
      */
     public function registerHrClient(RegisterHrClientRequest $request): JsonResponse
     {
@@ -65,6 +69,8 @@ class AuthController extends Controller
      * Logout.
      *
      * Menghapus token yang sedang dipakai.
+     *
+     * @response {"data": null, "message": "Logout berhasil"}
      */
     public function logout(Request $request): JsonResponse
     {

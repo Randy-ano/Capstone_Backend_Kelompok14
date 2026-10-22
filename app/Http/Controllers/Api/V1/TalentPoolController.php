@@ -67,6 +67,8 @@ class TalentPoolController extends Controller
      * Unduh CV talent.
      *
      * Mengirim file PDF CV talent. 404 jika talent belum membuat CV.
+     *
+     * @response 200 scenario="File PDF" <Isi file PDF, Content-Type: application/pdf>
      */
     public function downloadCv(TalentPool $talentPool): StreamedResponse
     {
