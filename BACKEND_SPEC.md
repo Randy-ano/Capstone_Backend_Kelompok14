@@ -646,12 +646,13 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Dokumen (FR-13)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /dokumen | semua | sesuai scope, filter jenis/status |
-| POST | /dokumen/upload | AM, HC, M, T | R25 (multipart) |
-| POST | /dokumen/generate | AM | R26 (quotation/PO/PKS) |
-| GET | /dokumen/{id}/download | sesuai Policy | |
-| POST | /dokumen/{id}/penandatangan | pengunggah | R27 |
-| POST | /dokumen/{id}/tanda-tangan | penandatangan | R28 (multipart gambar ttd) |
+| GET | /dokumen | semua | sesuai scope (internal semua; HC dokumen kliennya; T miliknya; + yang diunggah/harus ditandatangani sendiri); filter `jenis`, `status`, `perlu_ttd`, `search`; tiap item berisi `penandatangan[]` dan `aksi` |
+| POST | /dokumen/upload | AM, HC, M, T | R25 (multipart `file`, `jenis_dokumen` selain cv, `id_placement`/`id_klien`/`id_talent`) |
+| POST | /dokumen/generate | AM | R26 (quotation/PO: `items[]`; PKS: `ketentuan`; + `id_klien`, `nomor_dokumen`, `tanggal_dokumen`, `berlaku_sampai`, `perihal`, `catatan`) |
+| GET | /dokumen/{id}/download | sesuai Policy | nama file asli |
+| GET | /dokumen/{id}/calon-penandatangan | pengunggah | pegawai internal aktif + HR Client klien dokumen + talent dokumen |
+| POST | /dokumen/{id}/penandatangan | pengunggah | R27; body `id_user[]` (1–10); hanya saat `draft` |
+| POST | /dokumen/{id}/tanda-tangan | penandatangan | R28 (multipart `keputusan` ditandatangani/ditolak + `file_tanda_tangan` png/jpg maks 2 MB) |
 
 ### Notifikasi (FR-16)
 | Method | Path | Role | Keterangan |
