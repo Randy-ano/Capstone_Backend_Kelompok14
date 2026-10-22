@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             JobRequirementSeeder::class,
             ScreeningSeeder::class,
             RekrutmenSeeder::class,
+            OperasionalSeeder::class,
         ]);
     }
 }

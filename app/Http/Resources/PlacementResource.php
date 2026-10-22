@@ -13,6 +13,25 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class PlacementResource extends JsonResource
 {
+    /** Relasi yang dibutuhkan ringkas(). */
+    public const RELASI_RINGKAS = ['placement.talent', 'placement.klien'];
+
+    /**
+     * Ringkasan placement untuk data operasional (cuti, shift, monitoring, keluhan).
+     *
+     * @return array<string, mixed>
+     */
+    public static function ringkas(Placement $placement): array
+    {
+        return [
+            'id_placement' => $placement->id_placement,
+            'posisi_penempatan' => $placement->posisi_penempatan,
+            'status_placement' => $placement->status_placement,
+            'talent' => ['id_talent' => $placement->talent->id_talent, 'nama_lengkap' => $placement->talent->nama_lengkap],
+            'klien' => ['id_klien' => $placement->klien->id_klien, 'nama_perusahaan' => $placement->klien->nama_perusahaan],
+        ];
+    }
+
     public function toArray(Request $request): array
     {
         $atribut = $this->resource->getAttributes();
