@@ -2,12 +2,12 @@
 
 Panduan menyiapkan project di laptop masing-masing (Windows) sampai siap mengerjakan FR.
 
-**Posisi saat ini:** Fase 0–2 di [BACKEND_SPEC.md](BACKEND_SPEC.md) selesai.
+**Posisi saat ini:** Fase 0–10 di [BACKEND_SPEC.md](BACKEND_SPEC.md) selesai (seluruh FR-01 s.d. FR-17).
 
 | Bagian | Sudah ada |
 |---|---|
-| Backend (repo ini) | Database lengkap (23 tabel), model, factory, seeder, auth & akun (FR-01, FR-02) |
-| Frontend (repo terpisah, lihat langkah 4) | Halaman login yang tersambung ke backend, menu sesuai role (halaman lain masih mockup) |
+| Backend (repo ini) | 23 tabel, seluruh endpoint FR, notifikasi + pengingat terjadwal, dashboard, dokumentasi API (Scribe) |
+| Frontend (repo terpisah, lihat langkah 4) | Semua halaman per role tersambung ke API asli |
 
 > Repo ini sekarang **khusus backend** (kode Laravel ada langsung di root repo). Frontend dipindah ke repo sendiri.
 > Sudah pernah clone versi lama yang masih punya folder `backend/` dan `frontend/`? Ikuti [Pindah dari struktur lama](#pindah-dari-struktur-lama) di bagian bawah.
@@ -39,8 +39,8 @@ git config --global user.email "email-github-kamu@gmail.com"
 Belum pernah clone:
 
 ```
-git clone https://github.com/Randy-ano/Capstone_Kelompok14.git
-cd Capstone_Kelompok14
+git clone https://github.com/Randy-ano/Capstone_Backend_Kelompok14.git
+cd Capstone_Backend_Kelompok14
 ```
 
 Sudah pernah clone:
@@ -52,7 +52,7 @@ git pull origin main
 
 ## 3. Setup backend
 
-Semua perintah di bawah dijalankan di root repo (folder `Capstone_Kelompok14`).
+Semua perintah di bawah dijalankan di root repo (folder `Capstone_Backend_Kelompok14`).
 
 ```
 composer install
@@ -69,7 +69,7 @@ php artisan migrate:fresh --seed
 php artisan test
 ```
 
-Hasil test harus **semua passed** (saat Fase 2: 134 passed). Kalau ada yang gagal, jangan lanjut dulu, kabari di grup.
+Hasil test harus **semua passed** (saat Fase 10: 566 passed). Kalau ada yang gagal, jangan lanjut dulu, kabari di grup.
 
 Test memakai SQLite in-memory, jadi tidak mengubah data di MySQL.
 
@@ -81,13 +81,15 @@ php artisan serve
 
 Cek http://localhost:8000/api/v1/health → harus `{"status":"ok"}`.
 
+Untuk notifikasi email & pengingat harian jalankan juga `php artisan queue:work` dan `php artisan schedule:work` di terminal lain. Dokumentasi API: `php artisan scribe:generate` lalu buka http://localhost:8000/docs. Detail keduanya ada di [README.md](README.md#queue--scheduler).
+
 ## 4. Setup frontend
 
-Frontend ada di **repo terpisah** (link menyusul dari Randy). Clone ke folder lain, **bukan** di dalam folder repo backend. Lalu di terminal kedua (backend tetap berjalan):
+Frontend ada di **repo terpisah**. Clone ke folder lain, **bukan** di dalam folder repo backend. Lalu di terminal kedua (backend tetap berjalan):
 
 ```
-git clone <URL repo frontend>
-cd <nama folder repo frontend>
+git clone https://github.com/Randy-ano/Capstone_Frontend_Kelompok14.git
+cd Capstone_Frontend_Kelompok14
 npm install
 npm run dev
 ```

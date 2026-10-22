@@ -40,6 +40,8 @@ class DokumenController extends Controller
      * Unggah dokumen.
      *
      * Multipart; pdf/doc/docx/png/jpg maks 5 MB (R25). Status awal draft.
+     *
+     * @response 201 {"data": {"id_dokumen": 1, "nama_file": "kontrak-kerja.pdf", "jenis_dokumen": "kontrak_kerja", "status_dokumen": "draft", "tanggal_unggah": "2026-10-22T14:12:20+07:00", "uploader": {"id_user": 1, "nama": "Andi Pratama", "role": "account_manager"}, "klien": {"id_klien": 1, "nama_perusahaan": "PT Maju Jaya"}, "talent": null, "id_placement": null, "penandatangan": [], "aksi": {"boleh_atur_penandatangan": true, "perlu_tanda_tangan_saya": false}}, "message": "Dokumen berhasil diunggah."}
      */
     public function upload(UploadDokumenRequest $request): JsonResponse
     {
@@ -53,6 +55,8 @@ class DokumenController extends Controller
      * Buat dokumen dari template.
      *
      * Khusus Account Manager: quotation, purchase order, atau PKS → PDF (R26). Status awal draft.
+     *
+     * @response 201 {"data": {"id_dokumen": 1, "nama_file": "quotation-quo-2026-10-001.pdf", "jenis_dokumen": "quotation", "status_dokumen": "draft", "tanggal_unggah": "2026-10-22T14:12:20+07:00", "uploader": {"id_user": 1, "nama": "Andi Pratama", "role": "account_manager"}, "klien": {"id_klien": 1, "nama_perusahaan": "PT Maju Jaya"}, "talent": null, "id_placement": null, "penandatangan": [], "aksi": {"boleh_atur_penandatangan": true, "perlu_tanda_tangan_saya": false}}, "message": "Quotation berhasil dibuat."}
      */
     public function generate(GenerateDokumenRequest $request): JsonResponse
     {
@@ -66,6 +70,11 @@ class DokumenController extends Controller
 
     /**
      * Unduh dokumen.
+     *
+     * Mengirim file asli dokumen (PDF/DOC/DOCX/PNG/JPG).
+     *
+     * @response 200 scenario="File dokumen" <Isi file biner, Content-Disposition: attachment>
+     * @response 403 {"message": "Anda tidak memiliki akses ke dokumen ini."}
      */
     public function download(Dokumen $dokumen): StreamedResponse
     {
@@ -76,6 +85,9 @@ class DokumenController extends Controller
      * Calon penandatangan.
      *
      * Khusus pengunggah: pegawai internal aktif, HR Client dari klien dokumen, dan talent pemilik dokumen.
+     *
+     * @response 200 {"data": [{"id_user": 3, "nama": "Hendra Gunawan", "role": "manager", "keterangan": "Manager"}, {"id_user": 4, "nama": "Sari Wulandari", "role": "hr_client", "keterangan": "PT Maju Jaya"}], "message": "Berhasil"}
+     * @response 403 {"message": "Hanya pengunggah dokumen yang dapat menentukan penandatangan."}
      */
     public function calonPenandatangan(Dokumen $dokumen): JsonResponse
     {
@@ -91,6 +103,9 @@ class DokumenController extends Controller
      * Tentukan penandatangan.
      *
      * Khusus pengunggah, untuk dokumen draft; status menjadi menunggu tanda tangan (R27).
+     *
+     * @response 200 {"data": {"id_dokumen": 1, "nama_file": "quotation-quo-2026-10-001.pdf", "jenis_dokumen": "quotation", "status_dokumen": "menunggu_ttd", "tanggal_unggah": "2026-10-22T14:12:20+07:00", "uploader": {"id_user": 1, "nama": "Andi Pratama", "role": "account_manager"}, "klien": {"id_klien": 1, "nama_perusahaan": "PT Maju Jaya"}, "talent": null, "id_placement": null, "penandatangan": [{"id_ttd": 1, "id_user": 3, "nama": "Hendra Gunawan", "role": "manager", "status_ttd": "menunggu", "tanggal_ttd": null}, {"id_ttd": 2, "id_user": 4, "nama": "Sari Wulandari", "role": "hr_client", "status_ttd": "menunggu", "tanggal_ttd": null}], "aksi": {"boleh_atur_penandatangan": false, "perlu_tanda_tangan_saya": false}}, "message": "Penandatangan berhasil ditentukan. Dokumen menunggu tanda tangan."}
+     * @response 403 {"message": "Hanya pengunggah dokumen yang dapat menentukan penandatangan."}
      */
     public function penandatangan(PenandatanganRequest $request, Dokumen $dokumen): DokumenResource
     {
@@ -102,6 +117,8 @@ class DokumenController extends Controller
      * Tanda tangani atau tolak.
      *
      * Multipart: keputusan + gambar tanda tangan (R28).
+     *
+     * @response 200 {"data": {"id_dokumen": 1, "nama_file": "quotation-quo-2026-10-001.pdf", "jenis_dokumen": "quotation", "status_dokumen": "menunggu_ttd", "tanggal_unggah": "2026-10-22T14:12:20+07:00", "uploader": {"id_user": 1, "nama": "Andi Pratama", "role": "account_manager"}, "klien": {"id_klien": 1, "nama_perusahaan": "PT Maju Jaya"}, "talent": null, "id_placement": null, "penandatangan": [{"id_ttd": 1, "id_user": 3, "nama": "Hendra Gunawan", "role": "manager", "status_ttd": "ditandatangani", "tanggal_ttd": "2026-10-22T15:00:00+07:00"}, {"id_ttd": 2, "id_user": 4, "nama": "Sari Wulandari", "role": "hr_client", "status_ttd": "menunggu", "tanggal_ttd": null}], "aksi": {"boleh_atur_penandatangan": false, "perlu_tanda_tangan_saya": false}}, "message": "Tanda tangan tersimpan. Menunggu penandatangan lain."}
      */
     public function tandaTangan(TandaTanganRequest $request, Dokumen $dokumen): DokumenResource
     {

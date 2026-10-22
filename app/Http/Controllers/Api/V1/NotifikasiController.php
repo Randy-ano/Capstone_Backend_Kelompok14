@@ -41,6 +41,10 @@ class NotifikasiController extends Controller
 
     /**
      * Tandai dibaca.
+     *
+     * Hanya notifikasi milik user yang login.
+     *
+     * @response 200 {"data": {"id_notifikasi": 16, "tipe_notifikasi": "tanda_tangan_diminta", "pesan": "Anda diminta menandatangani dokumen quotation-quo-2026-10-001.pdf.", "kanal": "sistem", "status_pengiriman": "terkirim", "status_baca": true, "dibuat_pada": "2026-10-22T14:12:20+07:00"}, "message": "Notifikasi ditandai dibaca."}
      */
     public function baca(Notifikasi $notifikasi): NotifikasiResource
     {

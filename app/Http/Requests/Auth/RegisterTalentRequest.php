@@ -21,7 +21,6 @@ class RegisterTalentRequest extends FormRequest
         return [
             'email' => ['example' => 'budi@example.com'],
             'password' => ['example' => 'rahasia123'],
-            'password_confirmation' => ['description' => 'Harus sama dengan password.', 'example' => 'rahasia123'],
             'nama_lengkap' => ['example' => 'Budi Santoso'],
         ];
     }

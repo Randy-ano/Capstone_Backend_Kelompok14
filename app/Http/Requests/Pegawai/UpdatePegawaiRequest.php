@@ -21,7 +21,7 @@ class UpdatePegawaiRequest extends FormRequest
         $pegawai = $this->route('pegawai');
 
         return [
-            'email' => ['sometimes', 'required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($pegawai->id_user, 'id_user')],
+            'email' => ['sometimes', 'required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($pegawai?->id_user, 'id_user')],
             'password' => ['sometimes', 'required', 'string', Password::min(8)],
             'role' => ['sometimes', 'required', Rule::in(array_map(fn (Role $role) => $role->value, Role::internal()))],
             'nama_pegawai' => ['sometimes', 'required', 'string', 'max:255'],

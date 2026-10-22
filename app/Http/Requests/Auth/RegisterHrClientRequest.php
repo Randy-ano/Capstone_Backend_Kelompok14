@@ -26,7 +26,6 @@ class RegisterHrClientRequest extends FormRequest
         return [
             'email' => ['example' => 'hr@majujaya.co.id'],
             'password' => ['example' => 'rahasia123'],
-            'password_confirmation' => ['description' => 'Harus sama dengan password.', 'example' => 'rahasia123'],
             'nama_hr' => ['example' => 'Sari Wulandari'],
             'jabatan' => ['example' => 'HR Manager'],
             'nama_perusahaan' => ['description' => 'Perusahaan klien baru yang dibuat bersama akun ini.', 'example' => 'PT Maju Jaya'],

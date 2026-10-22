@@ -788,6 +788,7 @@ Setiap fase: kerjakan → jalankan `php artisan test` → semua hijau → commit
 - Export koleksi Postman/OpenAPI untuk tim frontend.
 - `README.md` backend: cara install, akun demo, cara menjalankan queue & scheduler.
 - **Selesai jika:** dokumentasi bisa dibuka di `/docs` dan file OpenAPI tersedia.
+- Catatan: hasil generate tidak di-commit; cara membuat ulang, queue, dan scheduler ada di `README.md`, keputusan contoh respons di DECISIONS.md.
 
 ---
 
