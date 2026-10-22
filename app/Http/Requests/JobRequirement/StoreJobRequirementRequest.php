@@ -15,7 +15,8 @@ class StoreJobRequirementRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id_klien' => $this->user()->hasRole(Role::AccountManager)
+            // HR Client: klien diambil otomatis. Tanpa user (mis. saat dokumentasi API dibuat) ditampilkan sebagai wajib (aturan AM).
+            'id_klien' => ! $this->user()?->hasRole(Role::HrClient)
                 ? ['required', 'integer', 'exists:klien,id_klien']
                 : ['exclude'],
             'posisi' => ['required', 'string', 'max:255'],

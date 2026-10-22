@@ -19,7 +19,7 @@ class UpdateKompetensiRequest extends StoreKompetensiRequest
     public function rules(): array
     {
         return [
-            'nama_kompetensi' => ['sometimes', 'required', 'string', 'max:100', $this->namaUnik($this->route('kompetensi')->id_kompetensi)],
+            'nama_kompetensi' => ['sometimes', 'required', 'string', 'max:100', $this->namaUnik($this->route('kompetensi')?->id_kompetensi)],
             'kategori' => ['sometimes', 'nullable', 'string', 'max:100'],
         ];
     }
