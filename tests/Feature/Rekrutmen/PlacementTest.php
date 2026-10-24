@@ -207,14 +207,14 @@ describe('Alur penuh rekrutmen (Fase 5)', function () {
         $idPengajuan = $this->actingAs($am)->postJson('/api/v1/pengajuan', ['id_screening' => $idScreening])->assertCreated()->json('data.id_pengajuan');
         $this->actingAs($hrUser)->patchJson("/api/v1/pengajuan/{$idPengajuan}/status", ['status_pengajuan' => 'lanjut_interview'])->assertOk();
 
-        // FR-11: interview hari ini, lalu ditandai selesai.
+        // FR-11: AM menjadwalkan interview hari ini, lalu menandainya selesai.
         $idInterview = $this->actingAs($am)->postJson('/api/v1/interview', [
             'id_pengajuan' => $idPengajuan, 'tanggal_interview' => now()->toDateString(), 'waktu_interview' => '09:00',
         ])->assertCreated()->json('data.id_interview');
-        $this->actingAs($hrUser)->putJson("/api/v1/interview/{$idInterview}", ['status_interview' => 'selesai'])->assertOk();
+        $this->actingAs($am)->putJson("/api/v1/interview/{$idInterview}", ['status_interview' => 'selesai'])->assertOk();
 
         // FR-12: HR Client menerima kandidat.
-        $idEvaluasi = $this->postJson('/api/v1/evaluasi', ['id_pengajuan' => $idPengajuan, 'nilai_score' => 90, 'status_evaluasi' => 'diterima'])->assertCreated()->json('data.id_evaluasi');
+        $idEvaluasi = $this->actingAs($hrUser)->postJson('/api/v1/evaluasi', ['id_pengajuan' => $idPengajuan, 'nilai_score' => 90, 'status_evaluasi' => 'diterima'])->assertCreated()->json('data.id_evaluasi');
 
         // FR-17: TS membuat placement → job terpenuhi.
         $this->actingAs($ts)->postJson('/api/v1/placement', ['id_evaluasi' => $idEvaluasi, 'tanggal_mulai' => now()->addWeek()->toDateString()])->assertCreated();

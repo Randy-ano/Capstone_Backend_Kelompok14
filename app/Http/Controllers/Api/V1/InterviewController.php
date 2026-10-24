@@ -15,7 +15,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 /**
  * @group Jadwal Interview
  *
- * Jadwal interview kandidat (FR-11). Dilihat sesuai scope pengajuan; diatur oleh AM atau HR Client klien pemilik job.
+ * Jadwal interview kandidat (FR-11). Dilihat sesuai scope pengajuan; dibuat & diubah hanya oleh Account Manager (HR Client & talent hanya melihat).
  */
 class InterviewController extends Controller
 {
@@ -39,7 +39,7 @@ class InterviewController extends Controller
      */
     public function store(StoreInterviewRequest $request): JsonResponse
     {
-        return (new InterviewResource($this->interview->buat($request->user(), $request->validated())))
+        return (new InterviewResource($this->interview->buat($request->validated())))
             ->additional(['message' => 'Interview berhasil dijadwalkan.'])
             ->response()
             ->setStatusCode(201);

@@ -31,7 +31,7 @@ class RekrutmenSeeder extends Seeder
         $progres->catat($job, StatusTahapan::Diajukan, $diajukan->id_talent, $diajukan->id_am);
         $pengajuan->ubahStatus($diajukan, StatusPengajuan::LanjutInterview);
 
-        $jadwal = $interview->buat($am, [
+        $jadwal = $interview->buat([
             'id_pengajuan' => $diajukan->id_pengajuan,
             'tanggal_interview' => now()->subDay()->toDateString(),
             'waktu_interview' => '10:00',

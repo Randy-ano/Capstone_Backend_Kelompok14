@@ -514,7 +514,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
 ### Pengajuan, Interview, Evaluasi (FR-10, FR-11, FR-12)
 - **R14.** Pengajuan hanya bisa dibuat dari screening dengan hasil `lolos`. `id_talent` & `id_job_req` disalin dari screening.
 - **R15.** HR Client meninjau pengajuan: `lanjut_interview` atau `ditolak`. Jika ditolak → talent.status_kandidat = `tersedia`.
-- **R16.** Interview hanya bisa dijadwalkan untuk pengajuan berstatus `lanjut_interview`. Bisa lebih dari satu (ronde). Talent & HR Client menerima notifikasi.
+- **R16.** Interview hanya bisa dijadwalkan untuk pengajuan berstatus `lanjut_interview`. Bisa lebih dari satu (ronde). Interview dibuat, dijadwal ulang, dan ditandai selesai/dibatalkan **hanya oleh Account Manager**; HR Client & talent hanya melihat. Talent & HR Client menerima notifikasi.
 - **R17.** Evaluasi oleh HR Client dari klien yang sama, maksimal 1 per pengajuan, dan hanya jika minimal 1 interview berstatus `selesai`. Jika `ditolak` → talent.status_kandidat = `tersedia`.
 
 ### Placement (FR-17)
@@ -534,7 +534,11 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
 ### Dokumen (FR-13)
 - **R25.** Upload: pdf/doc/docx/png/jpg, maks 5 MB, disimpan di disk private. Download hanya lewat endpoint terproteksi (cek Policy).
 - **R26.** Buat dokumen dari template (quotation, PO, PKS): Blade view → PDF dengan data dari input + klien.
-- **R27.** Pengunggah menentukan daftar penandatangan → dibuat baris `tanda_tangan_dokumen` (`menunggu`), status_dokumen = `menunggu_ttd`, penandatangan dinotifikasi.
+- **R27.** Pengunggah menentukan daftar penandatangan → dibuat baris `tanda_tangan_dokumen` (`menunggu`), status_dokumen = `menunggu_ttd`, penandatangan dinotifikasi. Calon penandatangan (akun aktif) sesuai jenis dokumen:
+  - `quotation`, `purchase_order`, `pks`: Account Manager, Manager, dan HR Client dari klien dokumen;
+  - `kontrak_kerja`, `surat_peringatan`: talent terkait dokumen, Account Manager, dan Manager;
+  - `lainnya`: Account Manager, Manager, HR Client klien dokumen, dan talent terkait.
+  Talent Support tidak menandatangani dokumen. **Dokumen yang diunggah talent:** penandatangan otomatis talent itu sendiri (dibuat saat unggah, status langsung `menunggu_ttd`); talent tidak dapat mengatur penandatangan (403).
 - **R28.** Penandatangan mengunggah gambar tanda tangan → status_ttd `ditandatangani`. Jika semua sudah → status_dokumen `ditandatangani`. Jika ada yang menolak → `ditolak`.
 
 ### Notifikasi & Reminder (FR-16)
@@ -615,8 +619,8 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | POST | /pengajuan | AM | R14; body `id_screening`; job harus `diproses` |
 | PATCH | /pengajuan/{id}/status | HC | R15; hanya dari `diajukan` ke `lanjut_interview`/`ditolak` |
 | GET | /interview | HC, Internal, T | sesuai scope, filter `dari`/`sampai` (tanggal), `status`, `id_pengajuan`; urut tanggal & waktu |
-| POST | /interview | AM, HC | R16; pengajuan `lanjut_interview` yang belum dievaluasi; tanggal ≥ hari ini, waktu `H:i` |
-| PUT | /interview/{id} | AM, HC | jadwal ulang (tanggal/waktu berubah → `dijadwal_ulang`) **atau** ubah status `selesai`/`dibatalkan` (final; `selesai` tidak boleh sebelum tanggalnya) |
+| POST | /interview | AM | R16; pengajuan `lanjut_interview` yang belum dievaluasi; tanggal ≥ hari ini, waktu `H:i` |
+| PUT | /interview/{id} | AM | jadwal ulang (tanggal/waktu berubah → `dijadwal_ulang`) **atau** ubah status `selesai`/`dibatalkan` (final; `selesai` tidak boleh sebelum tanggalnya) |
 | POST | /evaluasi | HC | R17; body `id_pengajuan`, `nilai_score` 0–100, `catatan_evaluasi`, `status_evaluasi` |
 | GET | /evaluasi/{id} | HC, Internal | |
 
@@ -648,11 +652,11 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
 | GET | /dokumen | semua | sesuai scope (internal semua; HC dokumen kliennya; T miliknya; + yang diunggah/harus ditandatangani sendiri); filter `jenis`, `status`, `perlu_ttd`, `search`; tiap item berisi `penandatangan[]` dan `aksi` |
-| POST | /dokumen/upload | AM, HC, M, T | R25 (multipart `file`, `jenis_dokumen` selain cv, `id_placement`/`id_klien`/`id_talent`) |
+| POST | /dokumen/upload | AM, HC, M, T | R25 (multipart `file`, `jenis_dokumen` selain cv, `id_placement`/`id_klien`/`id_talent`); unggahan talent langsung `menunggu_ttd` dengan penandatangan talent itu sendiri (R27) |
 | POST | /dokumen/generate | AM | R26 (quotation/PO: `items[]`; PKS: `ketentuan`; + `id_klien`, `nomor_dokumen`, `tanggal_dokumen`, `berlaku_sampai`, `perihal`, `catatan`) |
 | GET | /dokumen/{id}/download | sesuai Policy | nama file asli |
-| GET | /dokumen/{id}/calon-penandatangan | pengunggah | pegawai internal aktif + HR Client klien dokumen + talent dokumen |
-| POST | /dokumen/{id}/penandatangan | pengunggah | R27; body `id_user[]` (1–10); hanya saat `draft` |
+| GET | /dokumen/{id}/calon-penandatangan | pengunggah (bukan talent) | sesuai jenis dokumen (R27): komersial → AM, M, HC klien; kepegawaian → talent terkait, AM, M; lainnya → AM, M, HC klien, talent terkait |
+| POST | /dokumen/{id}/penandatangan | pengunggah (bukan talent) | R27; body `id_user[]` (1–10) dari calon penandatangan; hanya saat `draft` |
 | POST | /dokumen/{id}/tanda-tangan | penandatangan | R28 (multipart `keputusan` ditandatangani/ditolak + `file_tanda_tangan` png/jpg maks 2 MB) |
 
 ### Notifikasi (FR-16)

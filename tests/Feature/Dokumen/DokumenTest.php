@@ -279,7 +279,7 @@ describe('Penandatangan & tanda tangan (R27, R28)', function () {
         foreach ([$hrLain, $nonaktif] as $calon) {
             $this->postJson("/api/v1/dokumen/{$dokumen->id_dokumen}/penandatangan", ['id_user' => [$calon->id_user]])
                 ->assertUnprocessable()
-                ->assertJsonPath('errors.id_user.0', 'Penandatangan harus pegawai internal aktif, HR Client dari klien dokumen, atau talent pemilik dokumen.');
+                ->assertJsonPath('errors.id_user.0', 'Penandatangan tidak sesuai jenis dokumen. Pilih dari daftar calon penandatangan.');
         }
 
         $this->postJson("/api/v1/dokumen/{$dokumen->id_dokumen}/penandatangan", ['id_user' => [$am->id_user, $am->id_user]])

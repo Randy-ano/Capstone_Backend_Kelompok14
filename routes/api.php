@@ -187,12 +187,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [InterviewController::class, 'index'])
             ->name('interview.index');
 
+        // Interview diatur Account Manager; HR Client & talent hanya melihat.
         Route::post('/', [InterviewController::class, 'store'])
-            ->middleware('role:account_manager,hr_client')
+            ->middleware('role:account_manager')
             ->name('interview.store');
 
         Route::put('/{interview}', [InterviewController::class, 'update'])
-            ->middleware('role:account_manager,hr_client')
+            ->middleware('role:account_manager')
             ->name('interview.update');
     });
 
