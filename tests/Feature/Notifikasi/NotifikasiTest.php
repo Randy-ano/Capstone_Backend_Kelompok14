@@ -119,7 +119,7 @@ describe('R30: notifikasi otomatis dari event', function () {
         $job = rekrutmenJob();
         $pengajuan = rekrutmenPengajuan($job, StatusPengajuan::LanjutInterview);
         $hr = HrClient::factory()->create(['id_klien' => $job->id_klien])->user;
-        $this->actingAs($hr);
+        loginSebagai(Role::AccountManager);
 
         $id = $this->postJson('/api/v1/interview', ['id_pengajuan' => $pengajuan->id_pengajuan, 'tanggal_interview' => now()->addDays(2)->toDateString(), 'waktu_interview' => '09:30'])
             ->assertCreated()->json('data.id_interview');

@@ -54,9 +54,9 @@ describe('GET /interview', function () {
 });
 
 describe('POST /interview', function () {
-    it('AM atau HR Client klien sendiri menjadwalkan interview dan progres dicatat (R16, R12)', function (Role $role) {
-        $user = loginSebagai($role);
-        $pengajuan = rekrutmenPengajuan(rekrutmenJob($role === Role::HrClient ? $user->idKlien() : null), StatusPengajuan::LanjutInterview);
+    it('AM menjadwalkan interview dan progres dicatat (R16, R12)', function () {
+        loginSebagai(Role::AccountManager);
+        $pengajuan = rekrutmenPengajuan(rekrutmenJob(), StatusPengajuan::LanjutInterview);
 
         $this->postJson('/api/v1/interview', dataInterview($pengajuan->id_pengajuan))
             ->assertCreated()
@@ -69,7 +69,7 @@ describe('POST /interview', function () {
 
         expect($pengajuan->interviews()->count())->toBe(2)
             ->and($pengajuan->jobRequirement->progres()->where('status_tahapan', StatusTahapan::Interview)->count())->toBe(2);
-    })->with([Role::AccountManager, Role::HrClient]);
+    });
 
     it('menolak pengajuan yang belum lanjut interview atau sudah dievaluasi (422)', function (string $kasus, string $pesan) {
         loginSebagai(Role::AccountManager);
@@ -96,13 +96,12 @@ describe('POST /interview', function () {
             ->assertJsonPath('errors.waktu_interview.0', 'Format waktu interview harus jam:menit, misalnya 10:00.');
     });
 
-    it('menolak HR Client klien lain (403) dan role lain (403)', function () {
-        $pengajuan = rekrutmenPengajuan(rekrutmenJob(), StatusPengajuan::LanjutInterview);
-
-        loginSebagai(Role::HrClient);
+    it('hanya AM: HR Client (termasuk klien sendiri) dan role lain ditolak (403)', function () {
+        $hr = loginSebagai(Role::HrClient);
+        $pengajuan = rekrutmenPengajuan(rekrutmenJob($hr->idKlien()), StatusPengajuan::LanjutInterview);
         $this->postJson('/api/v1/interview', dataInterview($pengajuan->id_pengajuan))
             ->assertForbidden()
-            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke pengajuan ini.']);
+            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke fitur ini.']);
 
         foreach ([Role::TalentSupport, Role::Manager, Role::Talent] as $role) {
             loginSebagai($role);
@@ -132,9 +131,9 @@ describe('PUT /interview/{id}', function () {
             ->assertJsonPath('data.link_lokasi_meeting', 'Kantor klien lt. 5');
     });
 
-    it('menandai selesai interview yang sudah berlangsung; status akhir tidak dapat diubah lagi', function () {
-        $hr = loginSebagai(Role::HrClient);
-        $interview = rekrutmenInterview(rekrutmenPengajuan(rekrutmenJob($hr->idKlien()), StatusPengajuan::LanjutInterview), tanggal: now()->toDateString());
+    it('AM menandai selesai interview yang sudah berlangsung; status akhir tidak dapat diubah lagi', function () {
+        loginSebagai(Role::AccountManager);
+        $interview = rekrutmenInterview(rekrutmenPengajuan(rekrutmenJob(), StatusPengajuan::LanjutInterview), tanggal: now()->toDateString());
 
         $this->putJson("/api/v1/interview/{$interview->id_interview}", ['status_interview' => 'selesai'])
             ->assertOk()
@@ -158,16 +157,21 @@ describe('PUT /interview/{id}', function () {
         'gabungan' => [['waktu_interview' => '09:00', 'status_interview' => 'dibatalkan'], 'Ubah jadwal dan ubah status interview dilakukan terpisah.'],
     ]);
 
-    it('menolak HR Client klien lain dan role lain (403)', function () {
-        $interview = rekrutmenInterview(rekrutmenPengajuan(rekrutmenJob(), StatusPengajuan::LanjutInterview));
+    it('hanya AM: HR Client (termasuk klien sendiri), talent, dan role lain ditolak (403)', function () {
+        $hr = loginSebagai(Role::HrClient);
+        $interview = rekrutmenInterview(rekrutmenPengajuan(rekrutmenJob($hr->idKlien()), StatusPengajuan::LanjutInterview), tanggal: now()->toDateString());
 
-        loginSebagai(Role::HrClient);
-        $this->putJson("/api/v1/interview/{$interview->id_interview}", ['status_interview' => 'dibatalkan'])
-            ->assertForbidden()
-            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke jadwal interview ini.']);
+        foreach (['selesai', 'dibatalkan'] as $status) {
+            $this->putJson("/api/v1/interview/{$interview->id_interview}", ['status_interview' => $status])
+                ->assertForbidden()
+                ->assertExactJson(['message' => 'Anda tidak memiliki akses ke fitur ini.']);
+        }
+        $this->putJson("/api/v1/interview/{$interview->id_interview}", ['waktu_interview' => '09:00'])->assertForbidden();
 
-        loginSebagai(Role::TalentSupport);
-        $this->putJson("/api/v1/interview/{$interview->id_interview}", ['status_interview' => 'dibatalkan'])->assertForbidden();
+        foreach ([Role::TalentSupport, Role::Manager, Role::Talent] as $role) {
+            loginSebagai($role);
+            $this->putJson("/api/v1/interview/{$interview->id_interview}", ['status_interview' => 'dibatalkan'])->assertForbidden();
+        }
 
         expect($interview->fresh()->status_interview)->toBe(StatusInterview::Dijadwalkan);
     });
