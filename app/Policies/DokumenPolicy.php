@@ -2,13 +2,15 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\Dokumen;
 use App\Models\User;
 use App\Services\DokumenService;
 use Illuminate\Auth\Access\Response;
 
 /**
- * Dokumen: dilihat/diunduh sesuai scope (DokumenService::scope); penandatangan diatur pengunggah;
+ * Dokumen: dilihat/diunduh sesuai scope (DokumenService::scope); penandatangan diatur pengunggah
+ * (kecuali talent: penandatangan dokumen unggahannya otomatis dirinya sendiri);
  * tanda tangan oleh user yang terdaftar sebagai penandatangan.
  */
 class DokumenPolicy
@@ -22,6 +24,10 @@ class DokumenPolicy
 
     public function aturPenandatangan(User $user, Dokumen $dokumen): Response
     {
+        if ($user->hasRole(Role::Talent)) {
+            return Response::deny('Penandatangan dokumen yang diunggah talent ditentukan otomatis (talent itu sendiri).');
+        }
+
         return $dokumen->id_user_uploader === $user->id_user
             ? Response::allow()
             : Response::deny('Hanya pengunggah dokumen yang dapat menentukan penandatangan.');

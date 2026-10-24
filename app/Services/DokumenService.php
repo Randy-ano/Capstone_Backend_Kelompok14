@@ -124,6 +124,12 @@ class DokumenService
             'tanggal_unggah' => now(),
         ]);
 
+        // Dokumen unggahan talent: penandatangan otomatis talent itu sendiri, langsung menunggu tanda tangan.
+        if ($user->hasRole(Role::Talent)) {
+            $dokumen->tandaTangan()->create(['id_user_penandatangan' => $user->id_user]);
+            $dokumen->update(['status_dokumen' => StatusDokumen::MenungguTtd]);
+        }
+
         return $dokumen->load(self::RELASI);
     }
 
@@ -162,21 +168,38 @@ class DokumenService
         return $dokumen->load(self::RELASI);
     }
 
+    /** Dokumen komersial: ditandatangani AM, Manager, dan HR Client klien dokumen. */
+    public const JENIS_KOMERSIAL = [JenisDokumen::Quotation, JenisDokumen::PurchaseOrder, JenisDokumen::Pks];
+
+    /** Dokumen kepegawaian: ditandatangani talent terkait, AM, dan Manager. */
+    public const JENIS_KEPEGAWAIAN = [JenisDokumen::KontrakKerja, JenisDokumen::SuratPeringatan];
+
     /**
-     * User yang boleh menjadi penandatangan: pegawai internal aktif, HR Client dari klien dokumen,
-     * dan talent pemilik dokumen (harus bisa melihat dokumen).
+     * Calon penandatangan sesuai jenis dokumen (semua harus akun aktif):
+     * - komersial (quotation, PO, PKS): AM, Manager, HR Client dari klien dokumen;
+     * - kepegawaian (kontrak kerja, surat peringatan): talent terkait, AM, Manager;
+     * - lainnya: AM, Manager, HR Client klien dokumen, dan talent terkait.
+     * Talent Support tidak menandatangani dokumen. Dokumen unggahan talent: hanya talent itu sendiri.
      *
      * @return Collection<int, User>
      */
     public function calonPenandatangan(Dokumen $dokumen): Collection
     {
-        return User::query()
-            ->with(['talent', 'hrClient.klien', 'pegawai'])
-            ->where('status_aktif', true)
+        $query = User::query()->with(['talent', 'hrClient.klien', 'pegawai'])->where('status_aktif', true);
+
+        if ($dokumen->uploader?->hasRole(Role::Talent)) {
+            return $query->whereKey($dokumen->id_user_uploader)->get();
+        }
+
+        $jenis = $dokumen->jenis_dokumen;
+        $denganHr = ! in_array($jenis, self::JENIS_KEPEGAWAIAN, true);
+        $denganTalent = ! in_array($jenis, self::JENIS_KOMERSIAL, true);
+
+        return $query
             ->where(fn (Builder $q) => $q
-                ->whereIn('role', array_map(fn (Role $r) => $r->value, Role::internal()))
-                ->when($dokumen->id_klien, fn (Builder $q, int $id) => $q->orWhereHas('hrClient', fn (Builder $q) => $q->where('id_klien', $id)))
-                ->when($dokumen->id_talent, fn (Builder $q, int $id) => $q->orWhereHas('talent', fn (Builder $q) => $q->whereKey($id))))
+                ->whereIn('role', [Role::AccountManager->value, Role::Manager->value])
+                ->when($denganHr && $dokumen->id_klien, fn (Builder $q) => $q->orWhereHas('hrClient', fn (Builder $q) => $q->where('id_klien', $dokumen->id_klien)))
+                ->when($denganTalent && $dokumen->id_talent, fn (Builder $q) => $q->orWhereHas('talent', fn (Builder $q) => $q->whereKey($dokumen->id_talent))))
             ->orderBy('role')
             ->orderBy('email')
             ->get();
@@ -196,7 +219,7 @@ class DokumenService
         $boleh = $this->calonPenandatangan($dokumen)->modelKeys();
         $tidakBoleh = array_diff($idUser, $boleh);
         if ($tidakBoleh !== []) {
-            throw ValidationException::withMessages(['id_user' => 'Penandatangan harus pegawai internal aktif, HR Client dari klien dokumen, atau talent pemilik dokumen.']);
+            throw ValidationException::withMessages(['id_user' => 'Penandatangan tidak sesuai jenis dokumen. Pilih dari daftar calon penandatangan.']);
         }
 
         return DB::transaction(function () use ($dokumen, $idUser) {

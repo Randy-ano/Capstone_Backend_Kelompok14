@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\Role;
 use App\Enums\StatusDokumen;
 use App\Enums\StatusTtd;
 use App\Models\Dokumen;
@@ -40,7 +41,7 @@ class DokumenResource extends JsonResource
                 'tanggal_ttd' => $t->tanggal_ttd?->toIso8601String(),
             ])->values(),
             'aksi' => [
-                'boleh_atur_penandatangan' => $this->id_user_uploader === $user?->id_user && $this->status_dokumen === StatusDokumen::Draft,
+                'boleh_atur_penandatangan' => $this->id_user_uploader === $user?->id_user && $this->status_dokumen === StatusDokumen::Draft && ! $user->hasRole(Role::Talent),
                 'perlu_tanda_tangan_saya' => $this->status_dokumen === StatusDokumen::MenungguTtd && $milikSaya?->status_ttd === StatusTtd::Menunggu,
             ],
         ];
