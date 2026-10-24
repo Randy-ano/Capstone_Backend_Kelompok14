@@ -8,15 +8,13 @@ use App\Models\User;
 use Illuminate\Auth\Access\Response;
 
 /**
- * Jadwal interview diubah oleh AM, atau HR Client dari klien pemilik job (R16).
+ * Jadwal interview dibuat & diubah (termasuk ditandai selesai/dibatalkan) hanya oleh Account Manager (R16).
+ * HR Client & talent hanya melihat.
  */
 class JadwalInterviewPolicy
 {
     public function update(User $user, JadwalInterview $interview): Response
     {
-        $boleh = $user->hasRole(Role::AccountManager)
-            || ($user->hasRole(Role::HrClient) && $interview->pengajuan->jobRequirement->id_klien === $user->idKlien());
-
-        return $boleh ? Response::allow() : Response::deny('Anda tidak memiliki akses ke jadwal interview ini.');
+        return $user->hasRole(Role::AccountManager) ? Response::allow() : Response::deny('Anda tidak memiliki akses ke jadwal interview ini.');
     }
 }

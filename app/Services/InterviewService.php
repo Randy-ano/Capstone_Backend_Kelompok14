@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Enums\Role;
 use App\Enums\StatusInterview;
 use App\Enums\StatusPengajuan;
 use App\Models\JadwalInterview;
@@ -12,7 +11,6 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
  * FR-11, R16: jadwal interview (bisa beberapa ronde) untuk pengajuan berstatus lanjut_interview.
@@ -48,10 +46,9 @@ class InterviewService
     /**
      * @param  array{id_pengajuan: int, tanggal_interview: string, waktu_interview: string, link_lokasi_meeting?: string|null, instruksi?: string|null}  $data
      */
-    public function buat(User $user, array $data): JadwalInterview
+    public function buat(array $data): JadwalInterview
     {
         $pengajuan = PengajuanKandidat::with(['jobRequirement', 'evaluasi'])->findOrFail($data['id_pengajuan']);
-        $this->pastikanBolehMengatur($user, $pengajuan);
         $this->pastikanPengajuanTerbuka($pengajuan, 'id_pengajuan');
 
         $interview = $pengajuan->interviews()->create(Arr::only($data, ['tanggal_interview', 'waktu_interview', 'link_lokasi_meeting', 'instruksi']));
@@ -96,14 +93,6 @@ class InterviewService
         }
 
         return $interview->load(self::RELASI);
-    }
-
-    /** AM boleh semua; HR Client hanya pengajuan ke job kliennya. Role lain sudah ditolak di route. */
-    public function pastikanBolehMengatur(User $user, PengajuanKandidat $pengajuan): void
-    {
-        if ($user->hasRole(Role::HrClient) && $pengajuan->jobRequirement->id_klien !== $user->idKlien()) {
-            throw new AccessDeniedHttpException('Anda tidak memiliki akses ke pengajuan ini.');
-        }
     }
 
     private function pastikanPengajuanTerbuka(PengajuanKandidat $pengajuan, string $field): void
