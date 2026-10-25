@@ -12,6 +12,11 @@ use Illuminate\Validation\Rule;
  */
 class StoreJobRequirementRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        JobRequirementRules::rapikanKompetensiBaru($this);
+    }
+
     public function rules(): array
     {
         return [
@@ -25,8 +30,7 @@ class StoreJobRequirementRequest extends FormRequest
             'pengalaman_min' => ['sometimes', 'integer', 'min:0', 'max:50'],
             'sla_deadline' => ['required', 'date', 'after:now'],
             'status_req' => ['sometimes', Rule::in([StatusReq::Draft->value, StatusReq::Diajukan->value])],
-            'kompetensi' => ['required', 'array', 'min:1', 'max:30'],
-            'kompetensi.*' => ['integer', 'distinct', 'exists:kompetensi,id_kompetensi'],
+            ...JobRequirementRules::kompetensi($this),
         ];
     }
 
@@ -50,8 +54,10 @@ class StoreJobRequirementRequest extends FormRequest
             'pengalaman_min' => ['description' => 'Pengalaman minimal dalam tahun (default 0).', 'example' => 2],
             'sla_deadline' => ['description' => 'Batas waktu pemenuhan, harus setelah sekarang.', 'example' => '2026-12-31 17:00:00'],
             'status_req' => ['description' => 'draft (default) atau diajukan.', 'example' => 'diajukan'],
-            'kompetensi' => ['description' => 'Daftar id kompetensi yang dibutuhkan (minimal 1).', 'example' => [1, 12]],
+            'kompetensi' => ['description' => 'Daftar id kompetensi dari master. Minimal 1 kompetensi dari gabungan kompetensi + kompetensi_baru.', 'example' => [1, 12]],
             'kompetensi.*' => ['example' => 1],
+            'kompetensi_baru' => ['description' => 'R33: nama kompetensi yang belum ada di master (maks. 10, tiap nama 2–100 karakter). Nama yang sama setelah normalisasi (huruf kecil, tanpa spasi/titik/tanda hubung/garis bawah) memakai kompetensi yang sudah ada.', 'example' => ['Golang']],
+            'kompetensi_baru.*' => ['example' => 'Golang'],
         ];
     }
 }

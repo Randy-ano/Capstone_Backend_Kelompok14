@@ -50,6 +50,53 @@ class KompetensiService
     }
 
     /**
+     * R33: kompetensi baru dari form job requirement. Nama yang sama setelah normalisasi ("React.js" = "reactjs" = "React JS")
+     * memakai kompetensi yang sudah ada; selebihnya dibuat dengan kategori kosong. Dipanggil di dalam transaksi job requirement.
+     *
+     * @param  list<string>  $daftarNama
+     * @return list<int> id kompetensi, unik
+     */
+    public function cariAtauBuat(array $daftarNama): array
+    {
+        if ($daftarNama === []) {
+            return [];
+        }
+
+        // Jika beberapa kompetensi lama punya kunci yang sama, yang paling lama dipakai.
+        $master = Kompetensi::query()
+            ->orderByDesc('id_kompetensi')
+            ->get(['id_kompetensi', 'nama_kompetensi'])
+            ->keyBy(fn (Kompetensi $k) => self::kunciNama($k->nama_kompetensi));
+
+        $id = [];
+        foreach ($daftarNama as $nama) {
+            $nama = self::rapikanNama($nama);
+            $kunci = self::kunciNama($nama);
+            if ($kunci === '') {
+                continue;
+            }
+
+            $kompetensi = $master->get($kunci) ?? Kompetensi::create(['nama_kompetensi' => $nama, 'kategori' => null]);
+            $master->put($kunci, $kompetensi);
+            $id[] = $kompetensi->id_kompetensi;
+        }
+
+        return array_values(array_unique($id));
+    }
+
+    /** Trim dan rapikan spasi ganda; dipakai sebagai nama kompetensi baru. */
+    public static function rapikanNama(string $nama): string
+    {
+        return preg_replace('/\s+/u', ' ', trim($nama));
+    }
+
+    /** Kunci pencocokan: huruf kecil tanpa spasi, titik, tanda hubung, dan garis bawah. */
+    public static function kunciNama(string $nama): string
+    {
+        return preg_replace('/[\s._-]+/u', '', mb_strtolower($nama));
+    }
+
+    /**
      * @param  array{nama_kompetensi?: string, kategori?: string|null}  $data
      */
     public function ubah(Kompetensi $kompetensi, array $data): Kompetensi

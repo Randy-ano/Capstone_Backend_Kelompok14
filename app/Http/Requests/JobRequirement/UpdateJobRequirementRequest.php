@@ -16,16 +16,27 @@ class UpdateJobRequirementRequest extends FormRequest
         return Gate::inspect('update', $this->route('jobRequirement'));
     }
 
+    protected function prepareForValidation(): void
+    {
+        JobRequirementRules::rapikanKompetensiBaru($this);
+    }
+
     public function rules(): array
     {
+        $kompetensi = JobRequirementRules::kompetensi($this);
+
         return [
             'posisi' => ['sometimes', 'required', 'string', 'max:255'],
             'jumlah_kebutuhan' => ['sometimes', 'required', 'integer', 'min:1', 'max:100'],
             'kualifikasi' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'pengalaman_min' => ['sometimes', 'required', 'integer', 'min:0', 'max:50'],
             'sla_deadline' => ['sometimes', 'required', 'date', 'after:now'],
-            'kompetensi' => ['sometimes', 'required', 'array', 'min:1', 'max:30'],
-            'kompetensi.*' => ['integer', 'distinct', 'exists:kompetensi,id_kompetensi'],
+            // kompetensi_baru hanya diproses bersama kompetensi; keduanya menggantikan daftar lama.
+            'kompetensi' => ['sometimes', ...$kompetensi['kompetensi']],
+            'kompetensi.*' => $kompetensi['kompetensi.*'],
+            // (exclude_without tidak dipakai karena menganggap kompetensi [] sebagai tidak dikirim.)
+            'kompetensi_baru' => $this->has('kompetensi') ? $kompetensi['kompetensi_baru'] : ['exclude'],
+            'kompetensi_baru.*' => $this->has('kompetensi') ? $kompetensi['kompetensi_baru.*'] : ['exclude'],
         ];
     }
 
@@ -47,8 +58,10 @@ class UpdateJobRequirementRequest extends FormRequest
             'kualifikasi' => ['example' => 'Menguasai Laravel, MySQL, dan Docker.'],
             'pengalaman_min' => ['example' => 3],
             'sla_deadline' => ['example' => '2027-01-15 17:00:00'],
-            'kompetensi' => ['description' => 'Jika dikirim, menggantikan daftar kompetensi lama.', 'example' => [1, 12, 15]],
+            'kompetensi' => ['description' => 'Jika dikirim, menggantikan daftar kompetensi lama (bersama kompetensi_baru). Kirim [] jika hanya memakai kompetensi_baru.', 'example' => [1, 12, 15]],
             'kompetensi.*' => ['example' => 1],
+            'kompetensi_baru' => ['description' => 'R33: nama kompetensi baru; hanya diproses jika kompetensi juga dikirim.', 'example' => ['Golang']],
+            'kompetensi_baru.*' => ['example' => 'Golang'],
         ];
     }
 }
