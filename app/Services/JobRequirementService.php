@@ -32,7 +32,10 @@ class JobRequirementService
     /** Status yang masih boleh dibatalkan. */
     private const STATUS_BISA_DIBATALKAN = [StatusReq::Draft, StatusReq::Diajukan, StatusReq::Diproses];
 
-    public function __construct(private readonly ProgresService $progres) {}
+    public function __construct(
+        private readonly ProgresService $progres,
+        private readonly KompetensiService $kompetensi,
+    ) {}
 
     /** withCount untuk jumlah placement aktif (kolom "terpenuhi"). */
     public static function hitungTerpenuhi(): array
@@ -110,9 +113,10 @@ class JobRequirementService
     }
 
     /**
-     * R7: HR Client → klien miliknya; AM → klien pilihan dan menjadi AM penanggung jawab. Minimal 1 kompetensi.
+     * R7: HR Client → klien miliknya; AM → klien pilihan dan menjadi AM penanggung jawab. Minimal 1 kompetensi
+     * (gabungan `kompetensi` dan `kompetensi_baru`, R33).
      *
-     * @param  array{id_klien?: int, posisi: string, jumlah_kebutuhan: int, kualifikasi?: string|null, pengalaman_min?: int, sla_deadline: string, status_req?: string, kompetensi: list<int>}  $data
+     * @param  array{id_klien?: int, posisi: string, jumlah_kebutuhan: int, kualifikasi?: string|null, pengalaman_min?: int, sla_deadline: string, status_req?: string, kompetensi?: list<int>, kompetensi_baru?: list<string>}  $data
      */
     public function buat(User $user, array $data): JobRequirement
     {
@@ -123,14 +127,14 @@ class JobRequirementService
                 'id_am' => $user->hasRole(Role::AccountManager) ? $user->pegawai->id_pegawai : null,
                 'status_req' => $data['status_req'] ?? StatusReq::Draft->value,
             ]);
-            $job->kompetensi()->sync($data['kompetensi']);
+            $job->kompetensi()->sync($this->idKompetensi($data));
 
             return $this->detail($job);
         });
     }
 
     /**
-     * Isi job hanya bisa diubah saat draft/diajukan. `kompetensi`, jika dikirim, menggantikan daftar lama.
+     * Isi job hanya bisa diubah saat draft/diajukan. `kompetensi` (+ `kompetensi_baru`), jika dikirim, menggantikan daftar lama.
      */
     public function ubah(JobRequirement $job, array $data): JobRequirement
     {
@@ -143,7 +147,7 @@ class JobRequirementService
         return DB::transaction(function () use ($job, $data) {
             $job->update(Arr::only($data, ['posisi', 'jumlah_kebutuhan', 'kualifikasi', 'pengalaman_min', 'sla_deadline']));
             if (array_key_exists('kompetensi', $data)) {
-                $job->kompetensi()->sync($data['kompetensi']);
+                $job->kompetensi()->sync($this->idKompetensi($data));
             }
 
             return $this->detail($job);
@@ -192,6 +196,19 @@ class JobRequirementService
                 ->where('id_job_req', $job->id_job_req)
                 ->where('hasil_screening', '!=', HasilScreening::TidakLolos))
             ->update(['status_kandidat' => StatusKandidat::Tersedia]);
+    }
+
+    /**
+     * R33: id kompetensi pilihan digabung dengan kompetensi baru (dicari/dibuat lewat normalisasi nama).
+     *
+     * @return list<int>
+     */
+    private function idKompetensi(array $data): array
+    {
+        return array_values(array_unique([
+            ...array_map('intval', $data['kompetensi'] ?? []),
+            ...$this->kompetensi->cariAtauBuat($data['kompetensi_baru'] ?? []),
+        ]));
     }
 
     /** Job yang boleh dilihat user: HR Client hanya milik kliennya. */

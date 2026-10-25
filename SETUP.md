@@ -134,7 +134,7 @@ git checkout -b fitur/nama-singkat
 
 ## 6. Aturan tim
 
-1. **Baca [BACKEND_SPEC.md](BACKEND_SPEC.md)**: aturan bisnis (R1–R32) dan daftar endpoint per FR. Keputusan di luar spec dicatat di [DECISIONS.md](DECISIONS.md); tambahkan keputusanmu di sana juga.
+1. **Baca [BACKEND_SPEC.md](BACKEND_SPEC.md)**: aturan bisnis (R1–R33) dan daftar endpoint per FR. Keputusan di luar spec dicatat di [DECISIONS.md](DECISIONS.md); tambahkan keputusanmu di sana juga.
 2. **Skema database dikunci.** Jangan tambah/ubah migration tanpa persetujuan tim (sudah sesuai ERD yang disetujui dosen).
 3. **Logika bisnis di `app/Services`.** Controller hanya: FormRequest → Service → API Resource. Contoh: `AuthService` + `AuthController`.
 4. **Setiap endpoint wajib punya test**: sukses, 422 (validasi gagal), 403 (role lain), dan 403/404 (data milik pihak lain).

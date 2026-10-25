@@ -478,6 +478,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
 ### Job Requirement & Rekomendasi (FR-05, FR-07)
 - **R7.** Job requirement dibuat oleh `hr_client` (otomatis `id_klien` miliknya) atau `account_manager` (wajib memilih `id_klien`). Minimal 1 kompetensi.
 - **R8.** Saat job requirement berstatus `diajukan`, catat progres `kebutuhan_dibuat`.
+- **R33. Kompetensi baru dari job requirement.** Pembuat job requirement (`hr_client`/`account_manager`) boleh mengirim `kompetensi_baru` (nama, maks. 10, tiap nama 2–100 karakter) di samping `kompetensi` (id master); "minimal 1 kompetensi" (R7) berlaku untuk gabungan keduanya. Nama dicocokkan dengan master lewat normalisasi (huruf kecil, tanpa spasi, titik, tanda hubung, garis bawah; "React.js" = "reactjs" = "React JS"): jika cocok dipakai id yang ada, jika tidak dibuat kompetensi baru (nama di-trim & spasi ganda dirapikan, `kategori` null) dalam transaksi yang sama dengan penyimpanan job requirement. Kelola master (`POST/PUT/DELETE /kompetensi`) tetap hanya TS & Manager.
 - **R9. Skor kecocokan** (RekomendasiService) — **pencocokan berbasis aturan, BUKAN AI/machine learning.**
   Data yang dibandingkan: kriteria di `job_requirement` (+ `job_req_kompetensi`) dengan data profil talent yang menjadi isi CV (`talent` + `talent_kompetensi`). **Tidak membaca/parsing file PDF CV.** Jangan memakai kata "AI" di nama class, endpoint, response, maupun komentar.
   ```
@@ -595,9 +596,9 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
 | GET | /job-requirements | HC, Internal | HC hanya miliknya; filter `status`, `indikator_sla`, `id_klien` (internal), `search` (posisi/klien); `meta.ringkasan` = jumlah per status + `sla_terlambat`, `sla_mendekati` (tidak terpengaruh filter) |
-| POST | /job-requirements | HC, AM | R7; `status_req` awal `draft` (default) atau `diajukan` |
+| POST | /job-requirements | HC, AM | R7; `status_req` awal `draft` (default) atau `diajukan`; `kompetensi[]` (id) dan/atau `kompetensi_baru[]` (nama, R33) |
 | GET | /job-requirements/{id} | HC, Internal | + kompetensi + `ringkasan_progres` (jumlah screening per hasil, terpenuhi, sisa) + `progres_terakhir` |
-| PUT | /job-requirements/{id} | HC, AM | hanya saat `draft`/`diajukan`; parsial; `kompetensi` jika dikirim menggantikan daftar lama; klien tidak bisa diganti |
+| PUT | /job-requirements/{id} | HC, AM | hanya saat `draft`/`diajukan`; parsial; `kompetensi` (+ `kompetensi_baru`, R33) jika dikirim menggantikan daftar lama; `kompetensi_baru` diabaikan tanpa `kompetensi`; klien tidak bisa diganti |
 | PATCH | /job-requirements/{id}/status | HC, AM | body `status_req`: `diajukan` (dari draft, deadline belum lewat) / `dibatalkan` (dari draft/diajukan/diproses; talent yang sedang diproses untuk job ini kembali `tersedia`) |
 | GET | /job-requirements/{id}/rekomendasi | TS | R9; job harus `diajukan`/`diproses` |
 | GET | /klien | Internal | daftar klien read-only (`search`) untuk pilihan klien saat AM membuat job requirement |
