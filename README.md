@@ -74,7 +74,7 @@ Password semua akun: **`password`**.
 | hr@intellisys.test | HR Client (PT Maju Jaya) |
 | talent@intellisys.test | Talent (Budi Santoso, sudah placement aktif) |
 
-Tambahan: `talent01@` s.d. `talent19@intellisys.test` (password sama).
+Tambahan: `talent01@` s.d. `talent21@`, `am02@`, `ts02@`, `hr02@` s.d. `hr06@intellisys.test` (password sama).
 
 ### Queue & scheduler
 
