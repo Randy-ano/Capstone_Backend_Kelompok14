@@ -615,7 +615,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Pengajuan, Interview, Evaluasi (FR-10, FR-11, FR-12)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /pengajuan | HC, Internal, T | sesuai scope; filter `status`, `id_job_req`, `search`; talent tidak melihat catatan screening & nilai evaluasi |
+| GET | /pengajuan | HC, Internal, T | sesuai scope; filter `status` (nilai `status_tampil`, lihat bagian 8), `id_job_req`, `search`; talent tidak melihat catatan screening & nilai evaluasi |
 | GET | /pengajuan/{id} | HC, Internal, T | detail + `interviews` + `evaluasi` + `id_placement` (sesuai scope) |
 | POST | /pengajuan | AM | R14; body `id_screening`; job harus `diproses` |
 | PATCH | /pengajuan/{id}/status | HC | R15; hanya dari `diajukan` ke `lanjut_interview`/`ditolak` |
@@ -695,6 +695,21 @@ Scheduler: `php artisan notifikasi:pengingat` (terjadwal 07:00 WIB, R31). Jalank
 }
 ```
 
+**Status tampil pengajuan** — `GET /api/v1/pengajuan`, `GET /api/v1/pengajuan/{id}` dan respons aksi pengajuan menyertakan dua field turunan (bukan kolom database) selain `status_pengajuan`:
+```json
+{ "status_pengajuan": "lanjut_interview", "status_tampil": "ditempatkan", "label_status_tampil": "Ditempatkan" }
+```
+| Kondisi (dicek berurutan) | `status_tampil` | `label_status_tampil` |
+|---|---|---|
+| evaluasi sudah punya placement | `ditempatkan` | Ditempatkan |
+| evaluasi diterima | `diterima` | Diterima |
+| evaluasi ditolak | `ditolak` | Ditolak |
+| selain itu, `status_pengajuan` = `diajukan` | `diajukan` | Menunggu Tinjauan |
+| `lanjut_interview` | `lanjut_interview` | Lanjut Interview |
+| `ditolak` | `ditolak` | Ditolak |
+
+Filter `status` di `GET /pengajuan` memakai nilai `status_tampil`, sehingga hasil filter selalu sama dengan badge.
+
 **GET /api/v1/job-requirements/12/rekomendasi**
 ```json
 {
@@ -754,7 +769,7 @@ Setiap fase: kerjakan → jalankan `php artisan test` → semua hijau → commit
 - Seeder:
   - 1 akun per role (password `password`): `talent@intellisys.test`, `hr@intellisys.test`, `am@intellisys.test`, `ts@intellisys.test`, `manager@intellisys.test`
   - ±30 kompetensi IT (Laravel, React, Vue, Node.js, Java, Spring, Python, Django, Flutter, Kotlin, SQL, MySQL, PostgreSQL, MongoDB, Docker, Kubernetes, AWS, Git, REST API, UI/UX, Figma, QA Manual, Selenium, Scrum, Linux, Network, Cyber Security, Data Analysis, Power BI, Excel)
-  - 3 klien, 20 talent dengan kompetensi acak (sebagian lengkap & masuk pool), 5 job requirement
+  - Data demo presentasi (diperbarui 2026-11, lihat DECISIONS): 4 klien, 22 talent (20 lengkap & masuk pool), 8 job requirement, kandidat di setiap tahap, 5 placement aktif + 1 selesai
 - **Selesai jika:** `php artisan migrate:fresh --seed` sukses, dan test relasi model lulus.
 
 ### Fase 2 — Auth & Otorisasi

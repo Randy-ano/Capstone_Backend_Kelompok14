@@ -111,7 +111,7 @@ Route::middleware('auth:sanctum')->group(function () {
             ->name('talent-pool.update');
     });
 
-    // FR-05, FR-07, FR-09: job requirement, rekomendasi kandidat, dan log progres.
+    // FR-05, FR-07, FR-09: permintaan kebutuhan, rekomendasi kandidat, dan log progres.
     // HR Client hanya job milik kliennya (Policy + scoping di service); internal semua.
     Route::prefix('job-requirements')->middleware('role:hr_client,account_manager,talent_support,manager')->group(function () {
         Route::get('/', [JobRequirementController::class, 'index'])
@@ -335,7 +335,7 @@ Route::middleware('auth:sanctum')->group(function () {
             ->name('notifikasi.baca');
     });
 
-    // Daftar klien (read-only) untuk pilihan klien job requirement — khusus internal.
+    // Daftar klien (read-only) untuk pilihan klien permintaan kebutuhan — khusus internal.
     Route::get('/klien', [KlienController::class, 'index'])
         ->middleware('role:account_manager,talent_support,manager')
         ->name('klien.index');

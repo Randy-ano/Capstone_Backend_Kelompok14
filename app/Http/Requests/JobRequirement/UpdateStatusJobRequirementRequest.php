@@ -24,7 +24,7 @@ class UpdateStatusJobRequirementRequest extends FormRequest
 
     public function attributes(): array
     {
-        return ['status_req' => 'status job requirement'];
+        return ['status_req' => 'status permintaan kebutuhan'];
     }
 
     public function bodyParameters(): array

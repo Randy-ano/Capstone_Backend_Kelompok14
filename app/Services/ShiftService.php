@@ -110,10 +110,10 @@ class ShiftService
     private function pastikanBolehKelola(User $user, Placement $placement, string $field): void
     {
         if ($user->hasRole(Role::HrClient) && $placement->id_klien !== $user->idKlien()) {
-            throw new AccessDeniedHttpException('Anda tidak memiliki akses ke placement ini.');
+            throw new AccessDeniedHttpException('Anda tidak memiliki akses ke penempatan ini.');
         }
         if ($placement->status_placement !== StatusPlacement::Aktif) {
-            throw ValidationException::withMessages([$field => 'Shift hanya dapat diatur untuk placement yang masih aktif.']);
+            throw ValidationException::withMessages([$field => 'Shift hanya dapat diatur untuk penempatan yang masih aktif.']);
         }
     }
 
@@ -123,7 +123,7 @@ class ShiftService
         $selesai = $placement->tanggal_selesai?->toDateString();
         if ($awal < $mulai || ($selesai && $akhir > $selesai)) {
             $periode = $selesai ? "{$mulai} s.d. {$selesai}" : "mulai {$mulai}";
-            throw ValidationException::withMessages([$field => "Tanggal shift harus dalam periode placement ({$periode})."]);
+            throw ValidationException::withMessages([$field => "Tanggal shift harus dalam periode penempatan ({$periode})."]);
         }
     }
 }

@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Job requirement untuk daftar, detail, monitoring, dan log progres.
+ * Permintaan kebutuhan untuk daftar, detail, monitoring, dan log progres.
  * Bagian opsional muncul sesuai relasi/hitungan yang dimuat service.
  *
  * @mixin JobRequirement

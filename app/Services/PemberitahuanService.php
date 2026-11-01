@@ -114,7 +114,7 @@ class PemberitahuanService
         );
     }
 
-    /** Laporan keluhan baru → AM klien (AM job requirement placement) & Manager. */
+    /** Laporan keluhan baru → AM klien (AM permintaan kebutuhan placement) & Manager. */
     public function keluhanBaru(LaporanKeluhan $l): void
     {
         $l->loadMissing(['placement.talent', 'placement.klien', 'placement.jobRequirement.accountManager.user']);

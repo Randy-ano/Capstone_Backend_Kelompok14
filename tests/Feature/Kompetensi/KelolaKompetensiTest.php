@@ -150,7 +150,7 @@ describe('DELETE /kompetensi/{id}', function () {
         expect(Kompetensi::count())->toBe(0);
     })->with([Role::TalentSupport, Role::Manager]);
 
-    it('menolak menghapus kompetensi yang masih dipakai talent atau job requirement (422)', function () {
+    it('menolak menghapus kompetensi yang masih dipakai talent atau permintaan kebutuhan (422)', function () {
         loginSebagai(Role::TalentSupport);
         $k = Kompetensi::factory()->create(['nama_kompetensi' => 'Laravel']);
         Talent::factory()->create()->kompetensi()->attach($k);
@@ -158,7 +158,7 @@ describe('DELETE /kompetensi/{id}', function () {
 
         $this->deleteJson("/api/v1/kompetensi/{$k->id_kompetensi}")
             ->assertUnprocessable()
-            ->assertJsonPath('errors.id_kompetensi.0', 'Kompetensi Laravel masih dipakai oleh 1 talent dan 2 job requirement, sehingga tidak dapat dihapus.');
+            ->assertJsonPath('errors.id_kompetensi.0', 'Kompetensi Laravel masih dipakai oleh 1 talent dan 2 permintaan kebutuhan, sehingga tidak dapat dihapus.');
 
         expect(Kompetensi::count())->toBe(1);
     });

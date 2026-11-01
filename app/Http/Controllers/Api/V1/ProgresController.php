@@ -11,7 +11,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 /**
  * @group Progres
  *
- * Monitoring progres pemenuhan semua job requirement (FR-09). Khusus internal.
+ * Monitoring progres pemenuhan semua permintaan kebutuhan (FR-09). Khusus internal.
  */
 class ProgresController extends Controller
 {
@@ -20,7 +20,7 @@ class ProgresController extends Controller
     /**
      * Monitoring progres.
      *
-     * Semua job requirement dengan indikator SLA terkini, log progres terakhir, jumlah screening, dan terpenuhi. Urut deadline terdekat.
+     * Semua permintaan kebutuhan dengan indikator SLA terkini, log progres terakhir, jumlah screening, dan terpenuhi. Urut deadline terdekat.
      */
     public function index(IndexJobRequirementRequest $request): AnonymousResourceCollection
     {

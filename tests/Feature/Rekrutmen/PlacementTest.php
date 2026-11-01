@@ -29,7 +29,7 @@ describe('POST /placement', function () {
 
         $this->postJson('/api/v1/placement', ['id_evaluasi' => $evaluasi->id_evaluasi, 'tanggal_mulai' => '2026-11-01'])
             ->assertCreated()
-            ->assertJsonPath('message', 'Placement berhasil dibuat.')
+            ->assertJsonPath('message', 'Penempatan berhasil dibuat.')
             ->assertJsonPath('data.posisi_penempatan', 'Backend Developer')
             ->assertJsonPath('data.status_placement', 'aktif')
             ->assertJsonPath('data.talent.id_talent', $talent->id_talent)
@@ -69,9 +69,9 @@ describe('POST /placement', function () {
             ->assertUnprocessable()
             ->assertJsonPath('errors.id_evaluasi.0', $pesan);
     })->with([
-        ['ditolak', 'Placement hanya dapat dibuat dari evaluasi yang diterima.'],
-        ['sudah placement', 'Evaluasi ini sudah memiliki placement.'],
-        ['job terpenuhi', 'Job requirement berstatus terpenuhi; proses kandidat tidak dapat dilanjutkan.'],
+        ['ditolak', 'Penempatan hanya dapat dibuat dari evaluasi yang diterima.'],
+        ['sudah placement', 'Evaluasi ini sudah memiliki penempatan.'],
+        ['job terpenuhi', 'Permintaan kebutuhan berstatus terpenuhi; proses kandidat tidak dapat dilanjutkan.'],
     ]);
 
     it('menolak tanggal tidak valid (422)', function () {
@@ -128,7 +128,7 @@ describe('GET /placement/{id}', function () {
         foreach ([Role::HrClient, Role::Talent] as $role) {
             $this->actingAs(buatUser($role))->getJson("/api/v1/placement/{$p->id_placement}")
                 ->assertForbidden()
-                ->assertExactJson(['message' => 'Anda tidak memiliki akses ke placement ini.']);
+                ->assertExactJson(['message' => 'Anda tidak memiliki akses ke penempatan ini.']);
         }
     });
 });
@@ -155,7 +155,7 @@ describe('PATCH /placement/{id}/status', function () {
 
         $this->patchJson("/api/v1/placement/{$p->id_placement}/status", ['status_placement' => 'dihentikan'])
             ->assertOk()
-            ->assertJsonPath('message', 'Placement dihentikan.')
+            ->assertJsonPath('message', 'Penempatan dihentikan.')
             ->assertJsonPath('data.tanggal_selesai', now()->toDateString());
     });
 
@@ -165,7 +165,7 @@ describe('PATCH /placement/{id}/status', function () {
         $aktif = Placement::factory()->create(['tanggal_mulai' => '2026-05-01']);
 
         $this->patchJson("/api/v1/placement/{$selesai->id_placement}/status", ['status_placement' => 'dihentikan'])
-            ->assertUnprocessable()->assertJsonPath('errors.status_placement.0', 'Hanya placement aktif yang dapat diakhiri.');
+            ->assertUnprocessable()->assertJsonPath('errors.status_placement.0', 'Hanya penempatan aktif yang dapat diakhiri.');
         $this->patchJson("/api/v1/placement/{$aktif->id_placement}/status", ['status_placement' => 'selesai', 'tanggal_selesai' => '2026-04-01'])
             ->assertUnprocessable()->assertJsonPath('errors.tanggal_selesai.0', 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
         $this->patchJson("/api/v1/placement/{$aktif->id_placement}/status", ['status_placement' => 'aktif'])

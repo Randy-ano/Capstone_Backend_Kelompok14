@@ -21,7 +21,7 @@ class IndexPlacementRequest extends FormRequest
 
     public function attributes(): array
     {
-        return ['status' => 'status placement', 'id_klien' => 'klien'];
+        return ['status' => 'status penempatan', 'id_klien' => 'klien'];
     }
 
     public function queryParameters(): array

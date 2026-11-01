@@ -106,7 +106,7 @@ Buka http://localhost:5173 lalu login dengan akun demo. Password semuanya **`pas
 | hr@intellisys.test | HR Client |
 | talent@intellisys.test | Talent |
 
-Selain itu ada 19 talent tambahan: `talent01@intellisys.test` s.d. `talent19@intellisys.test` (password sama).
+Selain itu ada akun tambahan: `talent01@` s.d. `talent21@`, `am02@`, `ts02@`, `hr02@` s.d. `hr06@intellisys.test` (password sama).
 
 ## 5. Mulai kerjakan FR
 

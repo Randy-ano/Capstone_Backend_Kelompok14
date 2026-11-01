@@ -81,7 +81,7 @@ describe('POST /dokumen/upload (R25)', function () {
 
         $this->post('/api/v1/dokumen/upload', ['file' => UploadedFile::fake()->create('a.pdf', 10), 'jenis_dokumen' => 'lainnya', 'id_placement' => $placement->id_placement], ['Accept' => 'application/json'])
             ->assertForbidden()
-            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke placement ini.']);
+            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke penempatan ini.']);
     });
 
     it('menolak file tidak valid (422)', function (Closure $file, string $jenis, array $error) {

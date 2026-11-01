@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Filter daftar job requirement; dipakai juga oleh tabel monitoring GET /progres.
+ * Filter daftar permintaan kebutuhan; dipakai juga oleh tabel monitoring GET /progres.
  */
 class IndexJobRequirementRequest extends FormRequest
 {
@@ -26,7 +26,7 @@ class IndexJobRequirementRequest extends FormRequest
 
     public function attributes(): array
     {
-        return ['status' => 'status job requirement'];
+        return ['status' => 'status permintaan kebutuhan'];
     }
 
     public function queryParameters(): array

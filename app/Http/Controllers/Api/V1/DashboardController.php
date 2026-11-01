@@ -19,7 +19,7 @@ class DashboardController extends Controller
     /**
      * Dashboard Manager.
      *
-     * Job per status, SLA terlambat/mendekati, kandidat per tahapan, placement aktif, keluhan terbuka, dan tren placement 12 bulan.
+     * Job per status, SLA terlambat/mendekati, kandidat per tahapan, penempatan aktif, keluhan terbuka, dan tren penempatan 12 bulan.
      */
     public function manager(): JsonResponse
     {

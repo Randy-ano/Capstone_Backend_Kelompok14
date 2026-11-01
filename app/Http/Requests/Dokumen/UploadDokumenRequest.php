@@ -42,7 +42,7 @@ class UploadDokumenRequest extends FormRequest
             'jenis_dokumen' => ['description' => 'Semua jenis kecuali cv.', 'example' => 'kontrak_kerja'],
             'id_klien' => ['description' => 'Untuk internal; HR Client otomatis kliennya.', 'example' => 1],
             'id_talent' => ['description' => 'Untuk internal; talent otomatis dirinya.', 'example' => null],
-            'id_placement' => ['description' => 'Jika dikirim, talent & klien diambil dari placement.', 'example' => 1],
+            'id_placement' => ['description' => 'Jika dikirim, talent & klien diambil dari penempatan.', 'example' => 1],
         ];
     }
 }

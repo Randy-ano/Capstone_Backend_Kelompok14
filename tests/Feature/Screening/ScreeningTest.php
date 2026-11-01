@@ -118,7 +118,7 @@ describe('POST /screening', function () {
 
         $this->postJson('/api/v1/screening', ['id_job_req' => $job->id_job_req, 'id_talent' => $talent->id_talent])
             ->assertUnprocessable()
-            ->assertJsonPath('errors.id_talent.0', 'Talent sudah pernah di-screening untuk job requirement ini.');
+            ->assertJsonPath('errors.id_talent.0', 'Talent sudah pernah di-screening untuk permintaan kebutuhan ini.');
     });
 
     it('menolak talent yang tidak tersedia (422)', function (string $kasus) {
@@ -213,7 +213,7 @@ describe('PUT /screening/{id}', function () {
     })->with([
         ['tidak lolos final', 'Hasil screening tidak lolos tidak dapat diubah lagi.'],
         ['sudah diajukan', 'Screening yang sudah diajukan ke klien tidak dapat diubah.'],
-        ['job dibatalkan', 'Job requirement sudah dibatalkan; screening tidak dapat diubah.'],
+        ['job dibatalkan', 'Permintaan kebutuhan sudah dibatalkan; screening tidak dapat diubah.'],
     ]);
 
     it('menolak body kosong atau hasil tidak dikenal (422)', function (array $body) {

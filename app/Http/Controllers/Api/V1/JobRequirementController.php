@@ -18,10 +18,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
- * @group Job Requirement
+ * @group Permintaan Kebutuhan
  *
  * Kebutuhan talent dari klien (FR-05), rekomendasi kandidat (FR-07), dan log progres (FR-09).
- * HR Client hanya mengakses job requirement milik kliennya.
+ * HR Client hanya mengakses permintaan kebutuhan milik kliennya.
  */
 class JobRequirementController extends Controller
 {
@@ -32,7 +32,7 @@ class JobRequirementController extends Controller
     ) {}
 
     /**
-     * Daftar job requirement.
+     * Daftar permintaan kebutuhan.
      *
      * `meta.ringkasan` berisi jumlah per status dan per indikator SLA (terlambat/mendekati) dari semua job yang boleh dilihat, tidak terpengaruh filter.
      */
@@ -46,20 +46,20 @@ class JobRequirementController extends Controller
     }
 
     /**
-     * Buat job requirement.
+     * Buat permintaan kebutuhan.
      *
      * HR Client: klien otomatis miliknya. Account Manager: wajib memilih klien dan menjadi AM penanggung jawab.
      */
     public function store(StoreJobRequirementRequest $request): JsonResponse
     {
         return (new JobRequirementResource($this->jobRequirement->buat($request->user(), $request->validated())))
-            ->additional(['message' => 'Job requirement berhasil dibuat.'])
+            ->additional(['message' => 'Permintaan kebutuhan berhasil dibuat.'])
             ->response()
             ->setStatusCode(201);
     }
 
     /**
-     * Detail job requirement.
+     * Detail permintaan kebutuhan.
      *
      * Beserta kompetensi dan ringkasan progres (jumlah screening per hasil, terpenuhi, sisa kebutuhan).
      */
@@ -70,18 +70,18 @@ class JobRequirementController extends Controller
     }
 
     /**
-     * Ubah job requirement.
+     * Ubah permintaan kebutuhan.
      *
      * Hanya saat berstatus draft atau diajukan. `kompetensi`, jika dikirim, menggantikan daftar lama.
      */
     public function update(UpdateJobRequirementRequest $request, JobRequirement $jobRequirement): JobRequirementResource
     {
         return (new JobRequirementResource($this->jobRequirement->ubah($jobRequirement, $request->validated())))
-            ->additional(['message' => 'Job requirement berhasil diperbarui.']);
+            ->additional(['message' => 'Permintaan kebutuhan berhasil diperbarui.']);
     }
 
     /**
-     * Ajukan atau batalkan job requirement.
+     * Ajukan atau batalkan permintaan kebutuhan.
      *
      * `diajukan` hanya dari draft (mencatat progres "kebutuhan_dibuat"); `dibatalkan` dari draft/diajukan/diproses dan mengembalikan talent yang sedang diproses menjadi tersedia.
      */
@@ -91,8 +91,8 @@ class JobRequirementController extends Controller
 
         return (new JobRequirementResource($this->jobRequirement->ubahStatus($jobRequirement, $status)))
             ->additional(['message' => $status === StatusReq::Diajukan
-                ? 'Job requirement berhasil diajukan.'
-                : 'Job requirement berhasil dibatalkan.']);
+                ? 'Permintaan kebutuhan berhasil diajukan.'
+                : 'Permintaan kebutuhan berhasil dibatalkan.']);
     }
 
     /**
@@ -109,7 +109,7 @@ class JobRequirementController extends Controller
     }
 
     /**
-     * Log progres job requirement.
+     * Log progres permintaan kebutuhan.
      *
      * Indikator SLA terkini dan seluruh log progres (terbaru dulu).
      */

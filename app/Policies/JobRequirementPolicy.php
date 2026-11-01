@@ -8,7 +8,7 @@ use App\Models\User;
 use Illuminate\Auth\Access\Response;
 
 /**
- * Job requirement: internal melihat semua; HR Client hanya milik kliennya.
+ * Permintaan kebutuhan: internal melihat semua; HR Client hanya milik kliennya.
  * Dibuat/diubah oleh HR Client (kliennya) dan AM; rekomendasi khusus TS.
  */
 class JobRequirementPolicy
@@ -22,7 +22,7 @@ class JobRequirementPolicy
     {
         return $user->isInternal() || $this->milikKliennya($user, $job)
             ? Response::allow()
-            : Response::deny('Anda tidak memiliki akses ke job requirement ini.');
+            : Response::deny('Anda tidak memiliki akses ke permintaan kebutuhan ini.');
     }
 
     public function create(User $user): bool
@@ -37,8 +37,8 @@ class JobRequirementPolicy
         }
 
         return Response::deny($user->hasRole(Role::HrClient)
-            ? 'Anda tidak memiliki akses ke job requirement ini.'
-            : 'Hanya HR Client dan Account Manager yang dapat mengubah job requirement.');
+            ? 'Anda tidak memiliki akses ke permintaan kebutuhan ini.'
+            : 'Hanya HR Client dan Account Manager yang dapat mengubah permintaan kebutuhan.');
     }
 
     public function rekomendasi(User $user, JobRequirement $job): Response

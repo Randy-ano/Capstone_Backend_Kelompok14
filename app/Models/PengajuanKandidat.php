@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\StatusEvaluasi;
 use App\Enums\StatusPengajuan;
+use App\Enums\StatusTampilPengajuan;
 use App\Observers\PengajuanKandidatObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -69,5 +71,19 @@ class PengajuanKandidat extends Model
     public function evaluasi(): HasOne
     {
         return $this->hasOne(EvaluasiKandidat::class, 'id_pengajuan', 'id_pengajuan');
+    }
+
+    /**
+     * Status yang ditampilkan ke pengguna: tahap terakhir yang sudah ada di data.
+     * Padanan query-nya ada di PengajuanService (filter status), harus sama persis.
+     */
+    public function statusTampil(): StatusTampilPengajuan
+    {
+        return match (true) {
+            $this->evaluasi?->placement !== null => StatusTampilPengajuan::Ditempatkan,
+            $this->evaluasi?->status_evaluasi === StatusEvaluasi::Diterima => StatusTampilPengajuan::Diterima,
+            $this->evaluasi?->status_evaluasi === StatusEvaluasi::Ditolak => StatusTampilPengajuan::Ditolak,
+            default => StatusTampilPengajuan::from($this->status_pengajuan->value),
+        };
     }
 }

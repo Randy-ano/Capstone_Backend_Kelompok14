@@ -23,7 +23,7 @@ class StoreLaporanKeluhanRequest extends FormRequest
     public function bodyParameters(): array
     {
         return [
-            'id_placement' => ['description' => 'Placement di klien HR Client yang login.', 'example' => 1],
+            'id_placement' => ['description' => 'Penempatan di klien HR Client yang login.', 'example' => 1],
             'judul_laporan' => ['example' => 'Sering terlambat hadir'],
             'deskripsi_keluhan' => ['example' => 'Dalam dua minggu terakhir talent terlambat 4 kali.'],
         ];

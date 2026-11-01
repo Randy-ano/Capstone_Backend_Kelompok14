@@ -40,7 +40,7 @@ class ProgresService
     }
 
     /**
-     * Filter query job requirement berdasarkan indikator SLA saat ini (padanan SQL dari indikatorSla()).
+     * Filter query permintaan kebutuhan berdasarkan indikator SLA saat ini (padanan SQL dari indikatorSla()).
      */
     public function filterIndikatorSla(Builder $query, IndikatorSla $indikator): Builder
     {

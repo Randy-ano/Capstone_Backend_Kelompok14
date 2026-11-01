@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Enums\HasilScreening;
+use App\Enums\StatusEvaluasi;
 use App\Enums\Role;
 use App\Enums\StatusKandidat;
 use App\Enums\StatusPengajuan;
 use App\Enums\StatusReq;
+use App\Enums\StatusTampilPengajuan;
 use App\Models\JobRequirement;
 use App\Models\PengajuanKandidat;
 use App\Models\ScreeningTalent;
@@ -45,7 +47,7 @@ class PengajuanService
     {
         if ($job->status_req !== StatusReq::Diproses) {
             throw ValidationException::withMessages([
-                $field => "Job requirement berstatus {$job->status_req->value}; proses kandidat tidak dapat dilanjutkan.",
+                $field => "Permintaan kebutuhan berstatus {$job->status_req->value}; proses kandidat tidak dapat dilanjutkan.",
             ]);
         }
     }
@@ -58,7 +60,7 @@ class PengajuanService
         return self::scope(PengajuanKandidat::query(), $user)
             ->with(self::RELASI)
             ->withCount('interviews')
-            ->when($filter['status'] ?? null, fn (Builder $q, string $status) => $q->where('status_pengajuan', $status))
+            ->when($filter['status'] ?? null, fn (Builder $q, string $status) => $this->filterStatusTampil($q, StatusTampilPengajuan::from($status)))
             ->when($filter['id_job_req'] ?? null, fn (Builder $q, int|string $id) => $q->where('id_job_req', $id))
             ->when($filter['search'] ?? null, fn (Builder $q, string $search) => $q->where(fn (Builder $q) => $q
                 ->whereHas('talent', fn (Builder $q) => $q->where('nama_lengkap', 'like', "%{$search}%"))
@@ -67,6 +69,22 @@ class PengajuanService
             ->orderByDesc('id_pengajuan')
             ->paginate($filter['per_page'] ?? 15)
             ->withQueryString();
+    }
+
+    /**
+     * Padanan query dari PengajuanKandidat::statusTampil().
+     */
+    private function filterStatusTampil(Builder $query, StatusTampilPengajuan $status): Builder
+    {
+        return match ($status) {
+            StatusTampilPengajuan::Ditempatkan => $query->whereHas('evaluasi.placement'),
+            StatusTampilPengajuan::Diterima => $query->whereHas('evaluasi', fn (Builder $q) => $q->where('status_evaluasi', StatusEvaluasi::Diterima)->doesntHave('placement')),
+            StatusTampilPengajuan::Ditolak => $query->where(fn (Builder $q) => $q
+                ->where('status_pengajuan', StatusPengajuan::Ditolak)
+                ->orWhereHas('evaluasi', fn (Builder $q) => $q->where('status_evaluasi', StatusEvaluasi::Ditolak))),
+            StatusTampilPengajuan::LanjutInterview => $query->where('status_pengajuan', StatusPengajuan::LanjutInterview)->doesntHave('evaluasi'),
+            StatusTampilPengajuan::Diajukan => $query->where('status_pengajuan', StatusPengajuan::Diajukan),
+        };
     }
 
     public function detail(PengajuanKandidat $pengajuan): PengajuanKandidat

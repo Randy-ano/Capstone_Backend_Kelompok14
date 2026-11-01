@@ -81,10 +81,10 @@ class PlacementService
         $job = $pengajuan->jobRequirement;
 
         if ($evaluasi->status_evaluasi !== StatusEvaluasi::Diterima) {
-            throw ValidationException::withMessages(['id_evaluasi' => 'Placement hanya dapat dibuat dari evaluasi yang diterima.']);
+            throw ValidationException::withMessages(['id_evaluasi' => 'Penempatan hanya dapat dibuat dari evaluasi yang diterima.']);
         }
         if ($evaluasi->placement) {
-            throw ValidationException::withMessages(['id_evaluasi' => 'Evaluasi ini sudah memiliki placement.']);
+            throw ValidationException::withMessages(['id_evaluasi' => 'Evaluasi ini sudah memiliki penempatan.']);
         }
         PengajuanService::pastikanJobBerjalan($job, 'id_evaluasi');
 
@@ -120,7 +120,7 @@ class PlacementService
     public function ubahStatus(Placement $placement, StatusPlacement $status, ?string $tanggalSelesai): Placement
     {
         if ($placement->status_placement !== StatusPlacement::Aktif) {
-            throw ValidationException::withMessages(['status_placement' => 'Hanya placement aktif yang dapat diakhiri.']);
+            throw ValidationException::withMessages(['status_placement' => 'Hanya penempatan aktif yang dapat diakhiri.']);
         }
         if ($tanggalSelesai && $placement->tanggal_mulai->gt($tanggalSelesai)) {
             throw ValidationException::withMessages(['tanggal_selesai' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.']);

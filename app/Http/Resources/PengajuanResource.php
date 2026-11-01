@@ -24,6 +24,8 @@ class PengajuanResource extends JsonResource
             'id_pengajuan' => $this->id_pengajuan,
             'tanggal_pengajuan' => $this->tanggal_pengajuan?->toIso8601String(),
             'status_pengajuan' => $this->status_pengajuan,
+            'status_tampil' => $this->statusTampil(),
+            'label_status_tampil' => $this->statusTampil()->label(),
             'talent' => [
                 'id_talent' => $talent->id_talent,
                 'nama_lengkap' => $talent->nama_lengkap,

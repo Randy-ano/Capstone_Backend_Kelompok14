@@ -54,10 +54,10 @@ class CutiService
         $talent = $user->talent;
 
         if ($placement->id_talent !== $talent->id_talent) {
-            throw ValidationException::withMessages(['id_placement' => 'Cuti hanya dapat diajukan untuk placement milik Anda.']);
+            throw ValidationException::withMessages(['id_placement' => 'Cuti hanya dapat diajukan untuk penempatan milik Anda.']);
         }
         if ($placement->status_placement !== StatusPlacement::Aktif) {
-            throw ValidationException::withMessages(['id_placement' => 'Cuti hanya dapat diajukan untuk placement yang masih aktif.']);
+            throw ValidationException::withMessages(['id_placement' => 'Cuti hanya dapat diajukan untuk penempatan yang masih aktif.']);
         }
 
         $bentrok = PengajuanCuti::query()
