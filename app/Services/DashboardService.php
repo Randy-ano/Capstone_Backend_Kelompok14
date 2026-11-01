@@ -77,7 +77,7 @@ class DashboardService
     public function kandidatPerTahapan(): array
     {
         $tahap = [
-            ['tersedia', 'Tersedia di talent pool', TalentPool::where('status_ketersediaan', StatusKetersediaan::Tersedia)
+            ['tersedia', 'Tersedia, belum diproses', TalentPool::where('status_ketersediaan', StatusKetersediaan::Tersedia)
                 ->whereHas('talent', fn (Builder $q) => $q->where('status_kandidat', StatusKandidat::Tersedia))->count()],
             ['screening', 'Sedang di-screening', ScreeningTalent::where('hasil_screening', HasilScreening::Pending)
                 ->whereHas('jobRequirement', fn (Builder $q) => $q->whereIn('status_req', self::JOB_AKTIF))->count()],
@@ -85,7 +85,7 @@ class DashboardService
                 ->whereHas('jobRequirement', fn (Builder $q) => $q->whereIn('status_req', self::JOB_AKTIF))->count()],
             ['diajukan', 'Diajukan ke klien', PengajuanKandidat::where('status_pengajuan', StatusPengajuan::Diajukan)->count()],
             ['interview', 'Tahap interview', PengajuanKandidat::where('status_pengajuan', StatusPengajuan::LanjutInterview)->doesntHave('evaluasi')->count()],
-            ['diterima', 'Diterima, menunggu placement', PengajuanKandidat::whereHas('evaluasi', fn (Builder $q) => $q->where('status_evaluasi', StatusEvaluasi::Diterima)->doesntHave('placement'))->count()],
+            ['diterima', 'Diterima, menunggu penempatan', PengajuanKandidat::whereHas('evaluasi', fn (Builder $q) => $q->where('status_evaluasi', StatusEvaluasi::Diterima)->doesntHave('placement'))->count()],
             ['ditempatkan', 'Ditempatkan', Placement::where('status_placement', StatusPlacement::Aktif)->count()],
         ];
 
@@ -134,7 +134,7 @@ class DashboardService
         return [
             $this->kartu('job_aktif', 'Permintaan berjalan', $this->jobAktif()->count(), 'diajukan & diproses', '/permintaan-kebutuhan'),
             $this->kartu('sla_terlambat', 'SLA terlambat', $this->jumlahSla(IndikatorSla::Terlambat), "{$this->jumlahSla(IndikatorSla::Mendekati)} mendekati deadline", '/pipeline-rekrutmen'),
-            $this->kartu('placement_aktif', 'Talent ditempatkan', Placement::where('status_placement', StatusPlacement::Aktif)->count(), 'placement aktif', '/penugasan-penempatan'),
+            $this->kartu('placement_aktif', 'Talent ditempatkan', Placement::where('status_placement', StatusPlacement::Aktif)->count(), 'penempatan aktif', '/penugasan-penempatan'),
             $this->kartu('cuti_menunggu', 'Cuti menunggu keputusan', PengajuanCuti::where('status_cuti', StatusCuti::Menunggu)->where('status_approval_manager', StatusApproval::Menunggu)->count(), 'perlu persetujuan Anda', '/pengajuan-cuti-shift'),
             $this->kartu('keluhan_terbuka', 'Keluhan terbuka', LaporanKeluhan::whereIn('status_laporan', [StatusLaporan::Baru, StatusLaporan::Diproses])->count(), 'baru & diproses', '/tiket-komplain-klien'),
             $this->kartu('ttd_menunggu', 'Perlu tanda tangan Anda', $this->ttdMenunggu($user), 'dokumen', '/dokumen-quotation-po'),
@@ -157,7 +157,7 @@ class DashboardService
     private function kartuTs(): array
     {
         return [
-            $this->kartu('talent_tersedia', 'Talent tersedia', TalentPool::where('status_ketersediaan', StatusKetersediaan::Tersedia)
+            $this->kartu('talent_tersedia', 'Tersedia, belum diproses', TalentPool::where('status_ketersediaan', StatusKetersediaan::Tersedia)
                 ->whereHas('talent', fn (Builder $q) => $q->where('status_kandidat', StatusKandidat::Tersedia))->count(), 'di talent pool', '/talent-pool'),
             $this->kartu('job_terbuka', 'Permintaan perlu kandidat', $this->jobAktif()->count(), 'diajukan & diproses', '/rekomendasi-kandidat'),
             $this->kartu('screening_pending', 'Screening belum diputuskan', ScreeningTalent::where('hasil_screening', HasilScreening::Pending)
