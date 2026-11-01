@@ -95,8 +95,8 @@ describe('GET /dashboard/ringkasan', function () {
         }
     })->with([
         'manager' => ['manager@intellisys.test', ['job_aktif' => 4, 'sla_terlambat' => 1, 'placement_aktif' => 5, 'cuti_menunggu' => 3, 'keluhan_terbuka' => 3, 'ttd_menunggu' => 2]],
-        'account manager' => ['am@intellisys.test', ['job_aktif' => 4, 'siap_diajukan' => 2, 'menunggu_klien' => 1, 'interview_mendatang' => 2, 'keluhan_terbuka' => 3, 'ttd_menunggu' => 0]],
-        'talent support' => ['ts@intellisys.test', ['talent_tersedia' => 6, 'job_terbuka' => 4, 'screening_pending' => 2, 'menunggu_placement' => 1]],
+        'account manager' => ['am@intellisys.test', ['job_aktif' => 4, 'siap_diajukan' => 1, 'menunggu_klien' => 1, 'interview_mendatang' => 2, 'keluhan_terbuka' => 3, 'ttd_menunggu' => 0]],
+        'talent support' => ['ts@intellisys.test', ['talent_tersedia' => 6, 'job_terbuka' => 4, 'screening_pending' => 2, 'menunggu_placement' => 2]],
         'hr client (PT Maju Jaya)' => ['hr@intellisys.test', ['job_aktif' => 1, 'perlu_ditinjau' => 1, 'interview_mendatang' => 1, 'placement_aktif' => 3, 'cuti_menunggu' => 1, 'ttd_menunggu' => 1]],
         'talent (Budi)' => ['talent@intellisys.test', ['status_profil' => 'Lengkap', 'status_kandidat' => 'Ditempatkan', 'interview_mendatang' => 0, 'cuti_menunggu' => 1]],
     ]);
