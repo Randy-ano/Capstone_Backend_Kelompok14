@@ -13,6 +13,7 @@ class KlienSeeder extends Seeder
             ['nama_perusahaan' => 'PT Maju Jaya', 'alamat' => 'Jl. Jend. Sudirman No. 21, Jakarta Selatan', 'no_telepon' => '021-5550101', 'penanggung_jawab' => 'Rudi Hartanto'],
             ['nama_perusahaan' => 'PT Sinar Digital Nusantara', 'alamat' => 'Jl. Asia Afrika No. 88, Bandung', 'no_telepon' => '022-4230202', 'penanggung_jawab' => 'Dewi Lestari'],
             ['nama_perusahaan' => 'CV Teknologi Andalan', 'alamat' => 'Jl. Raya Darmo No. 45, Surabaya', 'no_telepon' => '031-5670303', 'penanggung_jawab' => 'Agus Salim'],
+            ['nama_perusahaan' => 'PT Nusantara Retail Indonesia', 'alamat' => 'Jl. Pemuda No. 12, Semarang', 'no_telepon' => '024-3540404', 'penanggung_jawab' => 'Maria Kusuma'],
         ];
 
         foreach ($data as $klien) {
