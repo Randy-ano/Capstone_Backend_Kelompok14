@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\Placement;
+use App\Models\JobRequirement;
+use App\Enums\StatusInterview;
+use App\Enums\StatusEvaluasi;
 use App\Enums\HasilScreening;
 use App\Enums\Role;
 use App\Enums\StatusKandidat;
@@ -122,7 +126,7 @@ describe('POST /pengajuan', function () {
     })->with([
         ['pending', 'Hanya kandidat yang lolos screening yang dapat diajukan ke klien.'],
         ['sudah diajukan', 'Kandidat ini sudah diajukan ke klien.'],
-        ['job terpenuhi', 'Job requirement berstatus terpenuhi; proses kandidat tidak dapat dilanjutkan.'],
+        ['job terpenuhi', 'Permintaan kebutuhan berstatus terpenuhi; proses kandidat tidak dapat dilanjutkan.'],
     ]);
 
     it('menolak body tidak valid (422)', function () {
@@ -200,4 +204,85 @@ describe('PATCH /pengajuan/{id}/status', function () {
             ->assertForbidden()
             ->assertExactJson(['message' => 'Anda tidak memiliki akses ke fitur ini.']);
     })->with(roleSelain(Role::HrClient));
+});
+
+describe('status_tampil pengajuan', function () {
+    /** Satu pengajuan per status tampil. */
+    function pengajuanSemuaStatus(JobRequirement $job): array
+    {
+        $interviewSelesai = function (StatusEvaluasi $status) use ($job) {
+            $p = rekrutmenPengajuan($job, StatusPengajuan::LanjutInterview);
+            rekrutmenInterview($p, StatusInterview::Selesai, now()->subDay()->toDateString());
+
+            return [$p, rekrutmenEvaluasi($p, $status)];
+        };
+        [$diterima] = $interviewSelesai(StatusEvaluasi::Diterima);
+        [$ditolakEvaluasi] = $interviewSelesai(StatusEvaluasi::Ditolak);
+        [$ditempatkan, $evaluasi] = $interviewSelesai(StatusEvaluasi::Diterima);
+        Placement::factory()->create(['id_evaluasi' => $evaluasi->id_evaluasi]);
+
+        return [
+            'diajukan' => rekrutmenPengajuan($job),
+            'lanjut_interview' => rekrutmenPengajuan($job, StatusPengajuan::LanjutInterview),
+            'ditolak_klien' => rekrutmenPengajuan($job, StatusPengajuan::Ditolak),
+            'ditolak_evaluasi' => $ditolakEvaluasi,
+            'diterima' => $diterima,
+            'ditempatkan' => $ditempatkan,
+        ];
+    }
+
+    it('mengikuti tahap terakhir, beserta labelnya', function () {
+        loginSebagai(Role::Manager);
+        $p = pengajuanSemuaStatus(rekrutmenJob());
+
+        foreach ([
+            'diajukan' => ['diajukan', 'Menunggu Tinjauan'],
+            'lanjut_interview' => ['lanjut_interview', 'Lanjut Interview'],
+            'ditolak_klien' => ['ditolak', 'Ditolak'],
+            'ditolak_evaluasi' => ['ditolak', 'Ditolak'],
+            'diterima' => ['diterima', 'Diterima'],
+            'ditempatkan' => ['ditempatkan', 'Ditempatkan'],
+        ] as $kunci => [$nilai, $label]) {
+            $this->getJson("/api/v1/pengajuan/{$p[$kunci]->id_pengajuan}")
+                ->assertOk()
+                ->assertJsonPath('data.status_tampil', $nilai)
+                ->assertJsonPath('data.label_status_tampil', $label);
+        }
+    });
+
+    it('filter status memakai nilai status_tampil dan sama dengan isi field-nya', function (string $status, array $kunci) {
+        loginSebagai(Role::Manager);
+        $p = pengajuanSemuaStatus(rekrutmenJob());
+
+        $data = $this->getJson("/api/v1/pengajuan?status={$status}")->assertOk()->json('data');
+
+        expect(collect($data)->pluck('id_pengajuan')->sort()->values()->all())
+            ->toBe(collect($kunci)->map(fn (string $k) => $p[$k]->id_pengajuan)->sort()->values()->all())
+            ->and(collect($data)->pluck('status_tampil')->unique()->all())->toBe([$status]);
+    })->with([
+        ['diajukan', ['diajukan']],
+        ['lanjut_interview', ['lanjut_interview']],
+        ['ditolak', ['ditolak_klien', 'ditolak_evaluasi']],
+        ['diterima', ['diterima']],
+        ['ditempatkan', ['ditempatkan']],
+    ]);
+
+    it('menolak nilai filter yang tidak dikenal (422)', function () {
+        loginSebagai(Role::Manager);
+
+        $this->getJson('/api/v1/pengajuan?status=ngawur')->assertUnprocessable()->assertJsonValidationErrors('status');
+    });
+
+    it('talent juga menerima status_tampil tanpa nilai evaluasi', function () {
+        $job = rekrutmenJob();
+        $p = rekrutmenPengajuan($job, StatusPengajuan::LanjutInterview);
+        rekrutmenInterview($p, StatusInterview::Selesai, now()->subDay()->toDateString());
+        rekrutmenEvaluasi($p, StatusEvaluasi::Diterima);
+        $this->actingAs($p->talent->user);
+
+        $this->getJson("/api/v1/pengajuan/{$p->id_pengajuan}")
+            ->assertOk()
+            ->assertJsonPath('data.status_tampil', 'diterima')
+            ->assertJsonMissingPath('data.evaluasi.nilai_score');
+    });
 });

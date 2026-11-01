@@ -21,17 +21,18 @@ describe('GET /dashboard/manager (R32)', function () {
 
         $this->getJson('/api/v1/dashboard/manager')
             ->assertOk()
-            ->assertJsonPath('data.job_requirement', ['total' => 5, 'per_status' => ['draft' => 1, 'diajukan' => 3, 'diproses' => 1, 'terpenuhi' => 0, 'dibatalkan' => 0]])
+            ->assertJsonPath('data.job_requirement', ['total' => 8, 'per_status' => ['draft' => 1, 'diajukan' => 1, 'diproses' => 3, 'terpenuhi' => 2, 'dibatalkan' => 1]])
             ->assertJsonPath('data.sla', ['terlambat' => 1, 'mendekati' => 1])
-            ->assertJsonPath('data.placement_aktif', 1)
-            ->assertJsonPath('data.laporan_keluhan_terbuka', 1)
-            // 14 talent di pool − Budi (ditempatkan) − Gamblang (screening pending).
-            ->assertJsonPath('data.kandidat_per_tahapan.0', ['tahap' => 'tersedia', 'label' => 'Tersedia di talent pool', 'jumlah' => 12])
-            ->assertJsonPath('data.kandidat_per_tahapan.1.jumlah', 1)
-            ->assertJsonPath('data.kandidat_per_tahapan.6', ['tahap' => 'ditempatkan', 'label' => 'Ditempatkan', 'jumlah' => 1])
+            ->assertJsonPath('data.placement_aktif', 5)
+            ->assertJsonPath('data.laporan_keluhan_terbuka', 3)
+            // 20 talent di pool − 5 ditempatkan − 9 dalam proses.
+            ->assertJsonPath('data.kandidat_per_tahapan.0', ['tahap' => 'tersedia', 'label' => 'Tersedia, belum diproses', 'jumlah' => 6])
+            ->assertJsonPath('data.kandidat_per_tahapan.1.jumlah', 2)
+            ->assertJsonPath('data.kandidat_per_tahapan.6', ['tahap' => 'ditempatkan', 'label' => 'Ditempatkan', 'jumlah' => 5])
             ->assertJsonCount(12, 'data.tren_placement')
             ->assertJsonPath('data.tren_placement.11.bulan', now()->format('Y-m'))
-            ->assertJsonPath('data.tren_placement.11.jumlah', 1);
+            ->assertJsonPath('data.tren_placement.10.jumlah', 1)
+            ->assertJsonPath('data.tren_placement.0.jumlah', 1);
     });
 
     it('menghitung tahapan kandidat, SLA, dan tren dengan data terkontrol', function () {
@@ -89,11 +90,14 @@ describe('GET /dashboard/ringkasan', function () {
             ->json('data');
 
         expect(collect($data['kartu'])->pluck('nilai', 'kunci')->all())->toBe($harapan);
+        if ($email === 'ts@intellisys.test') {
+            expect($data['kartu'][0]['label'])->toBe('Tersedia, belum diproses');
+        }
     })->with([
-        'manager' => ['manager@intellisys.test', ['job_aktif' => 4, 'sla_terlambat' => 1, 'placement_aktif' => 1, 'cuti_menunggu' => 1, 'keluhan_terbuka' => 1, 'ttd_menunggu' => 1]],
-        'account manager' => ['am@intellisys.test', ['job_aktif' => 4, 'siap_diajukan' => 0, 'menunggu_klien' => 0, 'interview_mendatang' => 0, 'keluhan_terbuka' => 1, 'ttd_menunggu' => 0]],
-        'talent support' => ['ts@intellisys.test', ['talent_tersedia' => 12, 'job_terbuka' => 4, 'screening_pending' => 1, 'menunggu_placement' => 0]],
-        'hr client (PT Maju Jaya)' => ['hr@intellisys.test', ['job_aktif' => 2, 'perlu_ditinjau' => 0, 'interview_mendatang' => 0, 'placement_aktif' => 1, 'cuti_menunggu' => 1, 'ttd_menunggu' => 1]],
+        'manager' => ['manager@intellisys.test', ['job_aktif' => 4, 'sla_terlambat' => 1, 'placement_aktif' => 5, 'cuti_menunggu' => 3, 'keluhan_terbuka' => 3, 'ttd_menunggu' => 2]],
+        'account manager' => ['am@intellisys.test', ['job_aktif' => 4, 'siap_diajukan' => 2, 'menunggu_klien' => 1, 'interview_mendatang' => 2, 'keluhan_terbuka' => 3, 'ttd_menunggu' => 0]],
+        'talent support' => ['ts@intellisys.test', ['talent_tersedia' => 6, 'job_terbuka' => 4, 'screening_pending' => 2, 'menunggu_placement' => 1]],
+        'hr client (PT Maju Jaya)' => ['hr@intellisys.test', ['job_aktif' => 1, 'perlu_ditinjau' => 1, 'interview_mendatang' => 1, 'placement_aktif' => 3, 'cuti_menunggu' => 1, 'ttd_menunggu' => 1]],
         'talent (Budi)' => ['talent@intellisys.test', ['status_profil' => 'Lengkap', 'status_kandidat' => 'Ditempatkan', 'interview_mendatang' => 0, 'cuti_menunggu' => 1]],
     ]);
 
