@@ -26,7 +26,7 @@ class StoreScreeningRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'id_job_req' => 'job requirement',
+            'id_job_req' => 'permintaan kebutuhan',
             'id_talent' => 'talent',
             'catatan_screening' => 'catatan screening',
         ];
@@ -35,7 +35,7 @@ class StoreScreeningRequest extends FormRequest
     public function bodyParameters(): array
     {
         return [
-            'id_job_req' => ['description' => 'Job requirement berstatus diajukan/diproses.', 'example' => 1],
+            'id_job_req' => ['description' => 'Permintaan kebutuhan berstatus diajukan/diproses.', 'example' => 1],
             'id_talent' => ['description' => 'Talent di talent pool yang tersedia.', 'example' => 1],
             'catatan_screening' => ['example' => 'Kompetensi sesuai, jadwalkan wawancara internal.'],
         ];

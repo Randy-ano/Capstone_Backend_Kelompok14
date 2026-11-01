@@ -32,7 +32,7 @@ class StoreCutiRequest extends FormRequest
     public function bodyParameters(): array
     {
         return [
-            'id_placement' => ['description' => 'Placement aktif milik talent.', 'example' => 1],
+            'id_placement' => ['description' => 'Penempatan aktif milik talent.', 'example' => 1],
             'tanggal_mulai' => ['example' => '2026-11-02'],
             'tanggal_selesai' => ['example' => '2026-11-03'],
             'alasan_cuti' => ['example' => 'Acara keluarga.'],

@@ -67,7 +67,7 @@ describe('GET /job-requirements/{id}/progres', function () {
         $this->getJson("/api/v1/job-requirements/{$milik->id_job_req}/progres")->assertOk();
         $this->getJson("/api/v1/job-requirements/{$lain->id_job_req}/progres")
             ->assertForbidden()
-            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke job requirement ini.']);
+            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke permintaan kebutuhan ini.']);
     });
 
     it('menolak talent (403)', function () {

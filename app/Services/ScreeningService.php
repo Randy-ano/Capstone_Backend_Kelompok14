@@ -58,7 +58,7 @@ class ScreeningService
         $this->rekomendasi->pastikanTerbuka($job);
 
         if ($job->screenings()->where('id_talent', $talent->id_talent)->exists()) {
-            throw ValidationException::withMessages(['id_talent' => 'Talent sudah pernah di-screening untuk job requirement ini.']);
+            throw ValidationException::withMessages(['id_talent' => 'Talent sudah pernah di-screening untuk permintaan kebutuhan ini.']);
         }
 
         if (
@@ -95,7 +95,7 @@ class ScreeningService
     {
         $job = $screening->jobRequirement;
         if (in_array($job->status_req, ProgresService::STATUS_SELESAI, true)) {
-            throw ValidationException::withMessages(['hasil_screening' => "Job requirement sudah {$job->status_req->value}; screening tidak dapat diubah."]);
+            throw ValidationException::withMessages(['hasil_screening' => "Permintaan kebutuhan sudah {$job->status_req->value}; screening tidak dapat diubah."]);
         }
         if ($screening->pengajuan()->exists()) {
             throw ValidationException::withMessages(['hasil_screening' => 'Screening yang sudah diajukan ke klien tidak dapat diubah.']);

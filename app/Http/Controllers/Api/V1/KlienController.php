@@ -11,7 +11,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 /**
  * @group Klien
  *
- * Daftar klien (read-only) untuk pilihan klien saat Account Manager membuat job requirement. Khusus internal.
+ * Daftar klien (read-only) untuk pilihan klien saat Account Manager membuat permintaan kebutuhan. Khusus internal.
  */
 class KlienController extends Controller
 {

@@ -22,8 +22,8 @@ class KompetensiController extends Controller
     /**
      * Daftar kompetensi.
      *
-     * Master kompetensi untuk pilihan di profil talent, job requirement, dan filter talent pool. Semua role.
-     * `meta.kategori` berisi semua kategori yang sudah dipakai. `dengan_pemakaian=1` menambahkan jumlah talent & job requirement per kompetensi.
+     * Master kompetensi untuk pilihan di profil talent, permintaan kebutuhan, dan filter talent pool. Semua role.
+     * `meta.kategori` berisi semua kategori yang sudah dipakai. `dengan_pemakaian=1` menambahkan jumlah talent & permintaan kebutuhan per kompetensi.
      */
     public function index(IndexKompetensiRequest $request): AnonymousResourceCollection
     {
@@ -50,7 +50,7 @@ class KompetensiController extends Controller
     /**
      * Ubah kompetensi.
      *
-     * Khusus Talent Support dan Manager. Perubahan nama langsung berlaku di profil talent dan job requirement yang memakainya.
+     * Khusus Talent Support dan Manager. Perubahan nama langsung berlaku di profil talent dan permintaan kebutuhan yang memakainya.
      */
     public function update(UpdateKompetensiRequest $request, Kompetensi $kompetensi): KompetensiResource
     {
@@ -61,7 +61,7 @@ class KompetensiController extends Controller
     /**
      * Hapus kompetensi.
      *
-     * Khusus Talent Support dan Manager. Ditolak (422) jika masih dipakai talent atau job requirement.
+     * Khusus Talent Support dan Manager. Ditolak (422) jika masih dipakai talent atau permintaan kebutuhan.
      */
     public function destroy(Kompetensi $kompetensi): JsonResponse
     {

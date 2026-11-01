@@ -13,7 +13,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 /**
  * @group Operasional
  *
- * Monitoring kinerja talent (FR-15, FR-18, R23). Dicatat Manager, dilihat Manager & Account Manager; talent hanya melihat catatan placement miliknya.
+ * Monitoring kinerja talent (FR-15, FR-18, R23). Dicatat Manager, dilihat Manager & Account Manager; talent hanya melihat catatan penempatan miliknya.
  */
 class MonitoringController extends Controller
 {
@@ -22,7 +22,7 @@ class MonitoringController extends Controller
     /**
      * Daftar monitoring.
      *
-     * Talent hanya menerima catatan untuk placement miliknya.
+     * Talent hanya menerima catatan untuk penempatan miliknya.
      */
     public function index(IndexMonitoringRequest $request): AnonymousResourceCollection
     {

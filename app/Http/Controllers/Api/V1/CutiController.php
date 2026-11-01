@@ -35,7 +35,7 @@ class CutiController extends Controller
     /**
      * Ajukan cuti.
      *
-     * Khusus Talent, untuk placement aktif miliknya; tanggal tidak boleh tumpang tindih dengan cuti lain yang menunggu/disetujui.
+     * Khusus Talent, untuk penempatan aktif miliknya; tanggal tidak boleh tumpang tindih dengan cuti lain yang menunggu/disetujui.
      */
     public function store(StoreCutiRequest $request): JsonResponse
     {

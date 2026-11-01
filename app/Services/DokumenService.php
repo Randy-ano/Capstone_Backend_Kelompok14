@@ -100,7 +100,7 @@ class DokumenService
                 default => true,
             };
             if (! $milik) {
-                throw new AccessDeniedHttpException('Anda tidak memiliki akses ke placement ini.');
+                throw new AccessDeniedHttpException('Anda tidak memiliki akses ke penempatan ini.');
             }
             [$idKlien, $idTalent] = [$placement->id_klien, $placement->id_talent];
         } elseif ($user->hasRole(Role::HrClient)) {

@@ -127,7 +127,7 @@ describe('GET /job-requirements/{id}/rekomendasi', function () {
 
         $this->getJson("/api/v1/job-requirements/{$job->id_job_req}/rekomendasi")
             ->assertUnprocessable()
-            ->assertJsonPath('errors.id_job_req.0', 'Kandidat hanya dapat dicari untuk job requirement berstatus diajukan atau diproses.');
+            ->assertJsonPath('errors.id_job_req.0', 'Kandidat hanya dapat dicari untuk permintaan kebutuhan berstatus diajukan atau diproses.');
     })->with([StatusReq::Draft, StatusReq::Terpenuhi, StatusReq::Dibatalkan]);
 
     it('menolak selain Talent Support (403)', function (Role $role) {

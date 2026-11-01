@@ -18,12 +18,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * FR-05: job requirement dibuat HR Client (untuk kliennya) atau AM (memilih klien).
+ * FR-05: permintaan kebutuhan dibuat HR Client (untuk kliennya) atau AM (memilih klien).
  * HR Client hanya melihat job milik kliennya; internal melihat semua.
  */
 class JobRequirementService
 {
-    /** Relasi yang ditampilkan di daftar job requirement. */
+    /** Relasi yang ditampilkan di daftar permintaan kebutuhan. */
     public const RELASI_DAFTAR = ['klien', 'accountManager', 'kompetensi'];
 
     /** Status yang masih boleh diubah isinya. */
@@ -87,7 +87,7 @@ class JobRequirementService
     }
 
     /**
-     * Filter bersama untuk daftar job requirement dan tabel monitoring progres.
+     * Filter bersama untuk daftar permintaan kebutuhan dan tabel monitoring progres.
      */
     public function terapkanFilter(Builder $query, array $filter): Builder
     {
@@ -140,7 +140,7 @@ class JobRequirementService
     {
         if (! in_array($job->status_req, self::STATUS_BISA_DIUBAH, true)) {
             throw ValidationException::withMessages([
-                'status_req' => 'Job requirement hanya dapat diubah saat berstatus draft atau diajukan.',
+                'status_req' => 'Permintaan kebutuhan hanya dapat diubah saat berstatus draft atau diajukan.',
             ]);
         }
 
@@ -162,7 +162,7 @@ class JobRequirementService
     {
         if ($status === StatusReq::Diajukan) {
             if ($job->status_req !== StatusReq::Draft) {
-                throw ValidationException::withMessages(['status_req' => 'Hanya job requirement berstatus draft yang dapat diajukan.']);
+                throw ValidationException::withMessages(['status_req' => 'Hanya permintaan kebutuhan berstatus draft yang dapat diajukan.']);
             }
             if ($job->sla_deadline->isPast()) {
                 throw ValidationException::withMessages(['status_req' => 'SLA deadline sudah lewat. Perbarui SLA deadline sebelum mengajukan.']);
@@ -170,7 +170,7 @@ class JobRequirementService
         }
 
         if ($status === StatusReq::Dibatalkan && ! in_array($job->status_req, self::STATUS_BISA_DIBATALKAN, true)) {
-            throw ValidationException::withMessages(['status_req' => 'Job requirement yang sudah terpenuhi atau dibatalkan tidak dapat dibatalkan.']);
+            throw ValidationException::withMessages(['status_req' => 'Permintaan kebutuhan yang sudah terpenuhi atau dibatalkan tidak dapat dibatalkan.']);
         }
 
         return DB::transaction(function () use ($job, $status) {

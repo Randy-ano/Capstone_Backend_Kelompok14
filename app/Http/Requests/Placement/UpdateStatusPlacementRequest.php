@@ -18,7 +18,7 @@ class UpdateStatusPlacementRequest extends FormRequest
 
     public function attributes(): array
     {
-        return ['status_placement' => 'status placement', 'tanggal_selesai' => 'tanggal selesai'];
+        return ['status_placement' => 'status penempatan', 'tanggal_selesai' => 'tanggal selesai'];
     }
 
     public function bodyParameters(): array

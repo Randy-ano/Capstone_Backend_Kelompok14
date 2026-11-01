@@ -7,7 +7,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Daftar klien (read-only) untuk pilihan klien saat AM membuat job requirement dan filter internal.
+ * Daftar klien (read-only) untuk pilihan klien saat AM membuat permintaan kebutuhan dan filter internal.
  */
 class KlienService
 {

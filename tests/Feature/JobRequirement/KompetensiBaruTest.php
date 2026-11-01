@@ -6,7 +6,7 @@ use App\Models\JobRequirement;
 use App\Models\Klien;
 use App\Models\Kompetensi;
 
-// R33: pembuat job requirement (HR Client/AM) boleh menambah kompetensi baru langsung dari form job requirement.
+// R33: pembuat permintaan kebutuhan (HR Client/AM) boleh menambah kompetensi baru langsung dari form permintaan kebutuhan.
 
 function dataJobKompetensiBaru(array $ubah = []): array
 {
@@ -119,7 +119,7 @@ describe('POST /job-requirements dengan kompetensi_baru', function () {
             ->assertJsonPath('errors', ['kompetensi_baru.0' => ['Kolom kompetensi baru harus berisi minimal 2 karakter.']]);
     });
 
-    it('membatalkan kompetensi baru jika job requirement gagal disimpan', function () {
+    it('membatalkan kompetensi baru jika permintaan kebutuhan gagal disimpan', function () {
         loginSebagai(Role::AccountManager);
 
         $this->postJson('/api/v1/job-requirements', dataJobKompetensiBaru([
@@ -131,7 +131,7 @@ describe('POST /job-requirements dengan kompetensi_baru', function () {
         expect(Kompetensi::count())->toBe(0);
     });
 
-    it('tetap menolak Talent, TS, dan Manager membuat job requirement (403)', function (Role $role) {
+    it('tetap menolak Talent, TS, dan Manager membuat permintaan kebutuhan (403)', function (Role $role) {
         loginSebagai($role);
 
         $this->postJson('/api/v1/job-requirements', dataJobKompetensiBaru(['kompetensi_baru' => ['Rust']]))
@@ -202,7 +202,7 @@ describe('Hak akses master kompetensi tidak berubah', function () {
         expect(Kompetensi::count())->toBe(0);
     })->with([Role::HrClient, Role::AccountManager]);
 
-    it('kompetensi dari job requirement langsung bisa dipilih talent di profil', function () {
+    it('kompetensi dari permintaan kebutuhan langsung bisa dipilih talent di profil', function () {
         loginSebagai(Role::HrClient);
         $this->postJson('/api/v1/job-requirements', dataJobKompetensiBaru(['kompetensi_baru' => ['Elixir']]))->assertCreated();
         $id = Kompetensi::where('nama_kompetensi', 'Elixir')->value('id_kompetensi');

@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 /**
- * Pesan, nama atribut, dan aturan kompetensi yang sama untuk buat dan ubah job requirement.
+ * Pesan, nama atribut, dan aturan kompetensi yang sama untuk buat dan ubah permintaan kebutuhan.
  */
 final class JobRequirementRules
 {
@@ -25,7 +25,7 @@ final class JobRequirementRules
         'kualifikasi' => 'kualifikasi',
         'pengalaman_min' => 'pengalaman minimal',
         'sla_deadline' => 'SLA deadline',
-        'status_req' => 'status job requirement',
+        'status_req' => 'status permintaan kebutuhan',
         'kompetensi' => 'kompetensi',
         'kompetensi.*' => 'kompetensi',
         'kompetensi_baru' => 'kompetensi baru',

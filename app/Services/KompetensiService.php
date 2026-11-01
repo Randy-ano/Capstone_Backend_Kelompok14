@@ -50,8 +50,8 @@ class KompetensiService
     }
 
     /**
-     * R33: kompetensi baru dari form job requirement. Nama yang sama setelah normalisasi ("React.js" = "reactjs" = "React JS")
-     * memakai kompetensi yang sudah ada; selebihnya dibuat dengan kategori kosong. Dipanggil di dalam transaksi job requirement.
+     * R33: kompetensi baru dari form permintaan kebutuhan. Nama yang sama setelah normalisasi ("React.js" = "reactjs" = "React JS")
+     * memakai kompetensi yang sudah ada; selebihnya dibuat dengan kategori kosong. Dipanggil di dalam transaksi permintaan kebutuhan.
      *
      * @param  list<string>  $daftarNama
      * @return list<int> id kompetensi, unik
@@ -107,8 +107,8 @@ class KompetensiService
     }
 
     /**
-     * Kompetensi yang masih dipakai talent atau job requirement tidak boleh dihapus: foreign key-nya cascade,
-     * sehingga penghapusan akan diam-diam mengubah profil talent (R4) dan syarat job requirement.
+     * Kompetensi yang masih dipakai talent atau permintaan kebutuhan tidak boleh dihapus: foreign key-nya cascade,
+     * sehingga penghapusan akan diam-diam mengubah profil talent (R4) dan syarat permintaan kebutuhan.
      */
     public function hapus(Kompetensi $kompetensi): void
     {
@@ -116,7 +116,7 @@ class KompetensiService
 
         if ($kompetensi->talents_count > 0 || $kompetensi->job_requirements_count > 0) {
             throw ValidationException::withMessages([
-                'id_kompetensi' => "Kompetensi {$kompetensi->nama_kompetensi} masih dipakai oleh {$kompetensi->talents_count} talent dan {$kompetensi->job_requirements_count} job requirement, sehingga tidak dapat dihapus.",
+                'id_kompetensi' => "Kompetensi {$kompetensi->nama_kompetensi} masih dipakai oleh {$kompetensi->talents_count} talent dan {$kompetensi->job_requirements_count} permintaan kebutuhan, sehingga tidak dapat dihapus.",
             ]);
         }
 

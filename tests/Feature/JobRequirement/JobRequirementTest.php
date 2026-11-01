@@ -101,7 +101,7 @@ describe('POST /job-requirements', function () {
 
         $this->postJson('/api/v1/job-requirements', $data)
             ->assertCreated()
-            ->assertJsonPath('message', 'Job requirement berhasil dibuat.')
+            ->assertJsonPath('message', 'Permintaan kebutuhan berhasil dibuat.')
             ->assertJsonPath('data.klien.id_klien', $hr->idKlien())
             ->assertJsonPath('data.account_manager', null)
             ->assertJsonPath('data.status_req', 'draft')
@@ -190,7 +190,7 @@ describe('GET /job-requirements/{id}', function () {
         $this->getJson("/api/v1/job-requirements/{$milik->id_job_req}")->assertOk();
         $this->getJson("/api/v1/job-requirements/{$lain->id_job_req}")
             ->assertForbidden()
-            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke job requirement ini.']);
+            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke permintaan kebutuhan ini.']);
     });
 
     it('membalas 404 jika data tidak ada', function () {
@@ -211,7 +211,7 @@ describe('PUT /job-requirements/{id}', function () {
 
         $this->putJson("/api/v1/job-requirements/{$job->id_job_req}", ['posisi' => 'Baru', 'kompetensi' => [$baru->id_kompetensi]])
             ->assertOk()
-            ->assertJsonPath('message', 'Job requirement berhasil diperbarui.')
+            ->assertJsonPath('message', 'Permintaan kebutuhan berhasil diperbarui.')
             ->assertJsonPath('data.posisi', 'Baru')
             ->assertJsonPath('data.jumlah_kebutuhan', $job->jumlah_kebutuhan)
             ->assertJsonPath('data.kompetensi.0.id_kompetensi', $baru->id_kompetensi)
@@ -224,7 +224,7 @@ describe('PUT /job-requirements/{id}', function () {
 
         $this->putJson("/api/v1/job-requirements/{$job->id_job_req}", ['posisi' => 'Baru'])
             ->assertUnprocessable()
-            ->assertJsonPath('errors.status_req.0', 'Job requirement hanya dapat diubah saat berstatus draft atau diajukan.');
+            ->assertJsonPath('errors.status_req.0', 'Permintaan kebutuhan hanya dapat diubah saat berstatus draft atau diajukan.');
     })->with([StatusReq::Diproses, StatusReq::Terpenuhi, StatusReq::Dibatalkan]);
 
     it('menolak data tidak valid (422)', function () {
@@ -242,7 +242,7 @@ describe('PUT /job-requirements/{id}', function () {
 
         $this->putJson("/api/v1/job-requirements/{$job->id_job_req}", ['posisi' => 'Baru'])
             ->assertForbidden()
-            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke job requirement ini.']);
+            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke permintaan kebutuhan ini.']);
     });
 
     it('menolak role selain HR Client dan AM (403)', function (Role $role) {
@@ -262,7 +262,7 @@ describe('PATCH /job-requirements/{id}/status', function () {
 
         $this->patchJson("/api/v1/job-requirements/{$job->id_job_req}/status", ['status_req' => 'diajukan'])
             ->assertOk()
-            ->assertJsonPath('message', 'Job requirement berhasil diajukan.')
+            ->assertJsonPath('message', 'Permintaan kebutuhan berhasil diajukan.')
             ->assertJsonPath('data.status_req', 'diajukan');
 
         expect($job->progres()->sole())
@@ -278,7 +278,7 @@ describe('PATCH /job-requirements/{id}/status', function () {
             ->assertUnprocessable()
             ->assertJsonPath('errors.status_req.0', $pesan);
     })->with([
-        'sudah diajukan' => [['status_req' => StatusReq::Diajukan], 'Hanya job requirement berstatus draft yang dapat diajukan.'],
+        'sudah diajukan' => [['status_req' => StatusReq::Diajukan], 'Hanya permintaan kebutuhan berstatus draft yang dapat diajukan.'],
         'deadline lewat' => [['sla_deadline' => now()->subHour()], 'SLA deadline sudah lewat. Perbarui SLA deadline sebelum mengajukan.'],
     ]);
 
@@ -293,7 +293,7 @@ describe('PATCH /job-requirements/{id}/status', function () {
 
         $this->patchJson("/api/v1/job-requirements/{$job->id_job_req}/status", ['status_req' => 'dibatalkan'])
             ->assertOk()
-            ->assertJsonPath('message', 'Job requirement berhasil dibatalkan.')
+            ->assertJsonPath('message', 'Permintaan kebutuhan berhasil dibatalkan.')
             ->assertJsonPath('data.status_req', 'dibatalkan');
 
         expect($diproses->fresh()->status_kandidat)->toBe(StatusKandidat::Tersedia)
@@ -306,7 +306,7 @@ describe('PATCH /job-requirements/{id}/status', function () {
 
         $this->patchJson("/api/v1/job-requirements/{$job->id_job_req}/status", ['status_req' => 'dibatalkan'])
             ->assertUnprocessable()
-            ->assertJsonPath('errors.status_req.0', 'Job requirement yang sudah terpenuhi atau dibatalkan tidak dapat dibatalkan.');
+            ->assertJsonPath('errors.status_req.0', 'Permintaan kebutuhan yang sudah terpenuhi atau dibatalkan tidak dapat dibatalkan.');
 
         $this->patchJson("/api/v1/job-requirements/{$job->id_job_req}/status", ['status_req' => 'terpenuhi'])
             ->assertUnprocessable()
@@ -319,7 +319,7 @@ describe('PATCH /job-requirements/{id}/status', function () {
         $this->actingAs(HrClient::factory()->create()->user)
             ->patchJson("/api/v1/job-requirements/{$job->id_job_req}/status", ['status_req' => 'diajukan'])
             ->assertForbidden()
-            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke job requirement ini.']);
+            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke permintaan kebutuhan ini.']);
 
         $this->actingAs(buatUser(Role::TalentSupport))
             ->patchJson("/api/v1/job-requirements/{$job->id_job_req}/status", ['status_req' => 'diajukan'])

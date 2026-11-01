@@ -24,7 +24,7 @@ class IndexScreeningRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'id_job_req' => 'job requirement',
+            'id_job_req' => 'permintaan kebutuhan',
             'id_talent' => 'talent',
             'hasil' => 'hasil screening',
         ];
@@ -33,7 +33,7 @@ class IndexScreeningRequest extends FormRequest
     public function queryParameters(): array
     {
         return [
-            'id_job_req' => ['description' => 'Filter job requirement.', 'example' => 1],
+            'id_job_req' => ['description' => 'Filter permintaan kebutuhan.', 'example' => 1],
             'id_talent' => ['description' => 'Filter talent.', 'example' => 1],
             'hasil' => ['description' => 'Filter hasil: pending, lolos, tidak_lolos.', 'example' => 'lolos'],
             'belum_diajukan' => ['description' => 'Jika 1, hanya screening yang belum diajukan ke klien (untuk pengajuan, R14).', 'example' => 1],

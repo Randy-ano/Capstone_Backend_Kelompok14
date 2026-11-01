@@ -21,6 +21,6 @@ class PlacementPolicy
             default => false,
         };
 
-        return $boleh ? Response::allow() : Response::deny('Anda tidak memiliki akses ke placement ini.');
+        return $boleh ? Response::allow() : Response::deny('Anda tidak memiliki akses ke penempatan ini.');
     }
 }

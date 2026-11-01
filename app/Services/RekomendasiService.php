@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 /**
- * FR-07, R9: rekomendasi kandidat berbasis aturan — mencocokkan kriteria job requirement
+ * FR-07, R9: rekomendasi kandidat berbasis aturan — mencocokkan kriteria permintaan kebutuhan
  * dengan data profil talent (kompetensi & pengalaman kerja). Tidak membaca file PDF CV.
  */
 class RekomendasiService
@@ -83,7 +83,7 @@ class RekomendasiService
     {
         if (! in_array($job->status_req, self::STATUS_TERBUKA, true)) {
             throw ValidationException::withMessages([
-                $field => 'Kandidat hanya dapat dicari untuk job requirement berstatus diajukan atau diproses.',
+                $field => 'Kandidat hanya dapat dicari untuk permintaan kebutuhan berstatus diajukan atau diproses.',
             ]);
         }
     }

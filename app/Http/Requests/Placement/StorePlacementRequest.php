@@ -34,10 +34,10 @@ class StorePlacementRequest extends FormRequest
     public function bodyParameters(): array
     {
         return [
-            'id_evaluasi' => ['description' => 'Evaluasi diterima yang belum punya placement.', 'example' => 1],
+            'id_evaluasi' => ['description' => 'Evaluasi diterima yang belum punya penempatan.', 'example' => 1],
             'tanggal_mulai' => ['example' => '2026-11-01'],
             'tanggal_selesai' => ['description' => 'Akhir kontrak, boleh kosong.', 'example' => '2027-10-31'],
-            'posisi_penempatan' => ['description' => 'Default: posisi job requirement.', 'example' => 'Backend Developer'],
+            'posisi_penempatan' => ['description' => 'Default: posisi permintaan kebutuhan.', 'example' => 'Backend Developer'],
         ];
     }
 }

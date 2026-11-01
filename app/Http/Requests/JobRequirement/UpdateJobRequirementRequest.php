@@ -7,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * Ubah sebagian isi job requirement (hanya saat draft/diajukan, dicek di service). Klien tidak bisa diganti.
+ * Ubah sebagian isi permintaan kebutuhan (hanya saat draft/diajukan, dicek di service). Klien tidak bisa diganti.
  */
 class UpdateJobRequirementRequest extends FormRequest
 {

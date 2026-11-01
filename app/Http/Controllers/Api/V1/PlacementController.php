@@ -14,16 +14,16 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
- * @group Placement
+ * @group Penempatan
  *
- * Penempatan talent ke klien (FR-17). Talent melihat miliknya, HR Client melihat placement di kliennya, internal semua.
+ * Penempatan talent ke klien (FR-17). Talent melihat miliknya, HR Client melihat penempatan di kliennya, internal semua.
  */
 class PlacementController extends Controller
 {
     public function __construct(private readonly PlacementService $placement) {}
 
     /**
-     * Daftar placement.
+     * Daftar penempatan.
      */
     public function index(IndexPlacementRequest $request): AnonymousResourceCollection
     {
@@ -32,20 +32,20 @@ class PlacementController extends Controller
     }
 
     /**
-     * Buat placement.
+     * Buat penempatan.
      *
      * Khusus Talent Support, dari evaluasi diterima (R18). Talent menjadi ditempatkan, pool tidak tersedia, dan job terpenuhi jika kebutuhan tercapai (R19).
      */
     public function store(StorePlacementRequest $request): JsonResponse
     {
         return (new PlacementResource($this->placement->buat($request->validated())))
-            ->additional(['message' => 'Placement berhasil dibuat.'])
+            ->additional(['message' => 'Penempatan berhasil dibuat.'])
             ->response()
             ->setStatusCode(201);
     }
 
     /**
-     * Detail placement.
+     * Detail penempatan.
      *
      * Beserta ringkasan jumlah cuti, shift, monitoring, dan laporan keluhan.
      */
@@ -55,7 +55,7 @@ class PlacementController extends Controller
     }
 
     /**
-     * Akhiri placement.
+     * Akhiri penempatan.
      *
      * Khusus Talent Support dan Manager: selesai atau dihentikan; talent kembali tersedia di pool (R20).
      */
@@ -64,6 +64,6 @@ class PlacementController extends Controller
         $status = StatusPlacement::from($request->validated('status_placement'));
 
         return (new PlacementResource($this->placement->ubahStatus($placement, $status, $request->validated('tanggal_selesai'))))
-            ->additional(['message' => $status === StatusPlacement::Selesai ? 'Placement ditandai selesai.' : 'Placement dihentikan.']);
+            ->additional(['message' => $status === StatusPlacement::Selesai ? 'Penempatan ditandai selesai.' : 'Penempatan dihentikan.']);
     }
 }

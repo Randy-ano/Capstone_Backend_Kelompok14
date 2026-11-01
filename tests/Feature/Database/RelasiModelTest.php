@@ -80,7 +80,7 @@ describe('kebutuhan & kandidat', function () {
             ->and($kompetensi->first()->talents->first()->is($talent))->toBeTrue();
     });
 
-    it('menghubungkan job requirement dengan klien, AM, dan kompetensi', function () {
+    it('menghubungkan permintaan kebutuhan dengan klien, AM, dan kompetensi', function () {
         $job = JobRequirement::factory()->create();
         $kompetensi = Kompetensi::factory()->create();
         $job->kompetensi()->attach($kompetensi);

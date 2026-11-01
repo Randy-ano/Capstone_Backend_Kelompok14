@@ -103,7 +103,7 @@ describe('POST /shift (input massal, R22)', function () {
 
         $this->postJson('/api/v1/shift', ['id_placement' => $placement->id_placement, 'tanggal' => [tgl(1)], 'jenis_shift' => 'pagi'])
             ->assertUnprocessable()
-            ->assertJsonPath('errors.id_placement.0', 'Shift hanya dapat diatur untuk placement yang masih aktif.');
+            ->assertJsonPath('errors.id_placement.0', 'Shift hanya dapat diatur untuk penempatan yang masih aktif.');
     });
 
     it('menolak HR Client dari klien lain dan role lain (403)', function () {
@@ -111,7 +111,7 @@ describe('POST /shift (input massal, R22)', function () {
         $body = ['id_placement' => $placement->id_placement, 'tanggal' => [tgl(1)], 'jenis_shift' => 'pagi'];
 
         loginSebagai(Role::HrClient);
-        $this->postJson('/api/v1/shift', $body)->assertForbidden()->assertExactJson(['message' => 'Anda tidak memiliki akses ke placement ini.']);
+        $this->postJson('/api/v1/shift', $body)->assertForbidden()->assertExactJson(['message' => 'Anda tidak memiliki akses ke penempatan ini.']);
 
         foreach ([Role::Talent, Role::AccountManager, Role::TalentSupport] as $role) {
             loginSebagai($role);

@@ -94,12 +94,12 @@ describe('POST /cuti', function () {
 
         $this->postJson('/api/v1/cuti', dataCuti($lain))
             ->assertUnprocessable()
-            ->assertJsonPath('errors.id_placement.0', 'Cuti hanya dapat diajukan untuk placement milik Anda.');
+            ->assertJsonPath('errors.id_placement.0', 'Cuti hanya dapat diajukan untuk penempatan milik Anda.');
 
         $placement->update(['status_placement' => StatusPlacement::Selesai]);
         $this->postJson('/api/v1/cuti', dataCuti($placement))
             ->assertUnprocessable()
-            ->assertJsonPath('errors.id_placement.0', 'Cuti hanya dapat diajukan untuk placement yang masih aktif.');
+            ->assertJsonPath('errors.id_placement.0', 'Cuti hanya dapat diajukan untuk penempatan yang masih aktif.');
     });
 
     it('menolak tanggal yang tumpang tindih dengan cuti menunggu/disetujui, tapi tidak dengan yang ditolak/dibatalkan', function (StatusCuti $status, bool $ditolak) {
