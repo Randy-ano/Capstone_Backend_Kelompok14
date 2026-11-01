@@ -162,7 +162,7 @@ class DashboardService
             $this->kartu('job_terbuka', 'Permintaan perlu kandidat', $this->jobAktif()->count(), 'diajukan & diproses', '/rekomendasi-kandidat'),
             $this->kartu('screening_pending', 'Screening belum diputuskan', ScreeningTalent::where('hasil_screening', HasilScreening::Pending)
                 ->whereHas('jobRequirement', fn (Builder $q) => $q->whereIn('status_req', self::JOB_AKTIF))->count(), null, '/rekomendasi-kandidat'),
-            $this->kartu('menunggu_placement', 'Menunggu placement', PengajuanKandidat::whereHas('evaluasi', fn (Builder $q) => $q->where('status_evaluasi', StatusEvaluasi::Diterima)->doesntHave('placement'))->count(), 'evaluasi diterima', '/pengajuan-kandidat'),
+            $this->kartu('menunggu_placement', 'Menunggu penempatan', PengajuanKandidat::whereHas('evaluasi', fn (Builder $q) => $q->where('status_evaluasi', StatusEvaluasi::Diterima)->doesntHave('placement'))->count(), 'evaluasi diterima', '/pengajuan-kandidat'),
         ];
     }
 

@@ -174,8 +174,12 @@ class RekrutmenSeeder extends Seeder
         $kevin = $this->screen($job, 'Kevin Wijaya', Linimasa::hari(-6), HasilScreening::Lolos, 'React dan integrasi API kuat.');
         $this->ajukan($kevin, Linimasa::hari(-1, 14));
 
-        // Lolos screening, menunggu diajukan AM.
-        $this->screen($job, 'Maya Sari', Linimasa::hari(-3), HasilScreening::Lolos, 'Latar desain antarmuka sesuai.');
+        // Diterima hr@, menunggu dibuatkan penempatan oleh TS.
+        $maya = $this->screen($job, 'Maya Sari', Linimasa::hari(-28), HasilScreening::Lolos, 'Latar desain antarmuka sesuai.');
+        $pMaya = $this->ajukan($maya, Linimasa::hari(-26));
+        $this->tinjau($pMaya, StatusPengajuan::LanjutInterview, Linimasa::hari(-24));
+        $this->interviewSelesai($pMaya, Linimasa::hari(-14), 'Interview teknis React.');
+        $this->nilai('hr', $pMaya, 84, 'diterima', 'Hasil tes baik; siap bergabung setelah penempatan dibuat.', Linimasa::hari(-2, 15));
 
         // Menunggu keputusan TS.
         $this->screen($job, 'Bagas Saputra', Linimasa::hari(-1), HasilScreening::Pending, 'Lulusan baru; perlu tes teknis.');
