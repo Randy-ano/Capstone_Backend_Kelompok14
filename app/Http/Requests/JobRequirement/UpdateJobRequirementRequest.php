@@ -30,6 +30,8 @@ class UpdateJobRequirementRequest extends FormRequest
             'jumlah_kebutuhan' => ['sometimes', 'required', 'integer', 'min:1', 'max:100'],
             'kualifikasi' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'pengalaman_min' => ['sometimes', 'required', 'integer', 'min:0', 'max:50'],
+            // Hanya gaji_maks yang dikirim: dibandingkan dengan gaji_min yang tersimpan.
+            ...JobRequirementRules::gaji($this, $this->has('gaji_min') ? null : $this->route('jobRequirement')?->gaji_min, ubah: true),
             'sla_deadline' => ['sometimes', 'required', 'date', 'after:now'],
             // kompetensi_baru hanya diproses bersama kompetensi; keduanya menggantikan daftar lama.
             'kompetensi' => ['sometimes', ...$kompetensi['kompetensi']],
@@ -57,6 +59,8 @@ class UpdateJobRequirementRequest extends FormRequest
             'jumlah_kebutuhan' => ['example' => 3],
             'kualifikasi' => ['example' => 'Menguasai Laravel, MySQL, dan Docker.'],
             'pengalaman_min' => ['example' => 3],
+            'gaji_min' => ['example' => 9000000],
+            'gaji_maks' => ['example' => 13000000],
             'sla_deadline' => ['example' => '2027-01-15 17:00:00'],
             'kompetensi' => ['description' => 'Jika dikirim, menggantikan daftar kompetensi lama (bersama kompetensi_baru). Kirim [] jika hanya memakai kompetensi_baru.', 'example' => [1, 12, 15]],
             'kompetensi.*' => ['example' => 1],

@@ -28,6 +28,8 @@ class JobRequirement extends Model
         'jumlah_kebutuhan',
         'kualifikasi',
         'pengalaman_min',
+        'gaji_min',
+        'gaji_maks',
         'status_req',
         'sla_deadline',
     ];
@@ -42,6 +44,8 @@ class JobRequirement extends Model
         return [
             'jumlah_kebutuhan' => 'integer',
             'pengalaman_min' => 'integer',
+            'gaji_min' => 'integer',
+            'gaji_maks' => 'integer',
             'status_req' => StatusReq::class,
             'sla_deadline' => 'datetime',
         ];

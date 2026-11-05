@@ -16,7 +16,25 @@ final class JobRequirementRules
         'sla_deadline.after' => 'SLA deadline harus setelah waktu sekarang.',
         'kompetensi.required' => 'Pilih minimal 1 kompetensi.',
         'kompetensi.min' => 'Pilih minimal 1 kompetensi.',
+        'gaji_maks.gte' => 'Gaji maksimal tidak boleh lebih kecil dari gaji minimal.',
     ];
+
+    /** Batas atas isian gaji (Rp1 triliun) agar tetap muat di kolom dan masuk akal. */
+    public const GAJI_MAKS = 1_000_000_000_000;
+
+    /**
+     * Kisaran gaji opsional (rupiah). Saat ubah, gaji_maks dibandingkan dengan gaji_min baru atau yang tersimpan.
+     */
+    public static function gaji(Request $request, ?int $gajiMinTersimpan = null, bool $ubah = false): array
+    {
+        $awalan = $ubah ? ['sometimes'] : [];
+        $banding = $request->filled('gaji_min') ? 'gte:gaji_min' : ($gajiMinTersimpan !== null ? "gte:{$gajiMinTersimpan}" : null);
+
+        return [
+            'gaji_min' => [...$awalan, 'nullable', 'integer', 'min:0', 'max:'.self::GAJI_MAKS],
+            'gaji_maks' => array_values(array_filter([...$awalan, 'nullable', 'integer', 'min:0', 'max:'.self::GAJI_MAKS, $banding])),
+        ];
+    }
 
     public const ATTRIBUTES = [
         'id_klien' => 'klien',
@@ -24,6 +42,8 @@ final class JobRequirementRules
         'jumlah_kebutuhan' => 'jumlah kebutuhan',
         'kualifikasi' => 'kualifikasi',
         'pengalaman_min' => 'pengalaman minimal',
+        'gaji_min' => 'gaji minimal',
+        'gaji_maks' => 'gaji maksimal',
         'sla_deadline' => 'SLA deadline',
         'status_req' => 'status permintaan kebutuhan',
         'kompetensi' => 'kompetensi',
