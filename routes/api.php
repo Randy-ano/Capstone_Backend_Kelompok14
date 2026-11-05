@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\PengajuanController;
 use App\Http\Controllers\Api\V1\PlacementController;
 use App\Http\Controllers\Api\V1\ProgresController;
 use App\Http\Controllers\Api\V1\ScreeningController;
+use App\Http\Controllers\Api\V1\SertifikatTalentController;
 use App\Http\Controllers\Api\V1\ShiftController;
 use App\Http\Controllers\Api\V1\TalentController;
 use App\Http\Controllers\Api\V1\TalentCvController;
@@ -83,7 +84,17 @@ Route::middleware('auth:sanctum')->group(function () {
         // FR-06: unduh CV milik sendiri.
         Route::get('/cv/download', [TalentCvController::class, 'download'])
             ->name('talent.cv.download');
+
+        // File sertifikat milik sendiri (PDF/JPG/PNG, maks 2 MB, disk private).
+        Route::post('/sertifikat/{sertifikat}/file', [SertifikatTalentController::class, 'unggah'])
+            ->can('unggahFile', 'sertifikat')
+            ->name('talent.sertifikat.file');
     });
+
+    // File sertifikat talent (pratinjau inline): pemilik, AM, TS, Manager, HR Client yang pernah menerima pengajuan talent itu.
+    Route::get('/sertifikat/{sertifikat}/file', [SertifikatTalentController::class, 'file'])
+        ->can('lihatFile', 'sertifikat')
+        ->name('sertifikat.file');
 
     // FR-04: master kompetensi — dibaca semua role, dikelola TS & Manager.
     Route::get('/kompetensi', [KompetensiController::class, 'index'])

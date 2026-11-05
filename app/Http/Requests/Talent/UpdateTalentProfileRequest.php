@@ -4,6 +4,7 @@ namespace App\Http\Requests\Talent;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
@@ -147,6 +148,8 @@ class UpdateTalentProfileRequest extends FormRequest
 
             // Sertifikat (jika dikirim, menggantikan seluruh daftar lama)
             'sertifikat' => ['sometimes', 'array', 'max:30'],
+            // id_sertifikat: baris lama (diperbarui, file tetap); tanpa id = baris baru.
+            'sertifikat.*.id_sertifikat' => ['nullable', 'integer', 'distinct', Rule::exists('sertifikat_talent', 'id_sertifikat')->where('id_talent', $this->user()?->talent?->id_talent ?? 0)],
             'sertifikat.*.nama_sertifikat' => ['required', 'string', 'max:255'],
             'sertifikat.*.penerbit' => ['nullable', 'string', 'max:255'],
             'sertifikat.*.tanggal_terbit' => ['nullable', 'date', 'before_or_equal:today'],
@@ -234,6 +237,7 @@ class UpdateTalentProfileRequest extends FormRequest
             'riwayat_pengalaman_kerja.*.masih_bekerja' => 'masih bekerja',
             'riwayat_pengalaman_kerja.*.tanggal_selesai' => 'tanggal selesai',
             'riwayat_pengalaman_kerja.*.deskripsi' => 'deskripsi pekerjaan',
+            'sertifikat.*.id_sertifikat' => 'sertifikat',
             'sertifikat.*.nama_sertifikat' => 'nama sertifikat',
             'sertifikat.*.penerbit' => 'penerbit',
             'sertifikat.*.tanggal_terbit' => 'tanggal terbit',
@@ -275,7 +279,8 @@ class UpdateTalentProfileRequest extends FormRequest
             'riwayat_pengalaman_kerja.*.tanggal_mulai' => ['example' => '2021-08-01'],
             'riwayat_pengalaman_kerja.*.masih_bekerja' => ['example' => true],
             'riwayat_pengalaman_kerja.*.tanggal_selesai' => ['description' => 'Wajib jika masih_bekerja bukan true.', 'example' => null],
-            'sertifikat' => ['description' => 'Jika dikirim, menggantikan seluruh daftar sertifikat lama.'],
+            'sertifikat' => ['description' => 'Jika dikirim, menjadi daftar sertifikat terbaru: baris ber-id_sertifikat diperbarui (file tetap), baris tanpa id dibuat, baris lama yang tidak dikirim dihapus beserta filenya.'],
+            'sertifikat.*.id_sertifikat' => ['description' => 'Id sertifikat lama milik talent; kosongkan untuk sertifikat baru.', 'example' => null],
             'sertifikat.*.nama_sertifikat' => ['example' => 'AWS Certified Developer – Associate'],
             'sertifikat.*.penerbit' => ['example' => 'Amazon Web Services'],
             'sertifikat.*.tanggal_terbit' => ['example' => '2024-03-01'],

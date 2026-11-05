@@ -41,7 +41,7 @@ class RekomendasiService
         $job->loadMissing('kompetensi');
 
         return Talent::query()
-            ->with(['kompetensi', 'pengalamanKerjaTalent', 'talentPool', 'riwayatPendidikan'])
+            ->with(['kompetensi', 'pengalamanKerjaTalent', 'talentPool', 'riwayatPendidikan', 'sertifikat'])
             ->where('status_kandidat', StatusKandidat::Tersedia)
             ->whereHas('talentPool', fn (Builder $q) => $q->where('status_ketersediaan', StatusKetersediaan::Tersedia))
             ->whereDoesntHave('screenings', fn (Builder $q) => $q->where('id_job_req', $job->id_job_req))

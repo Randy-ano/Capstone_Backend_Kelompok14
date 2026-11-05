@@ -8,8 +8,11 @@ use App\Models\Bahasa;
 use App\Models\Kompetensi;
 use App\Models\Talent;
 use App\Models\User;
+use App\Services\SertifikatService;
 use App\Services\TalentCvService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Seeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 
 /**
@@ -20,6 +23,9 @@ class TalentSeeder extends Seeder
 {
     /** Talent yang CV-nya sudah dibuat. */
     private const PUNYA_CV = ['Budi Santoso', 'Dimas Prasetyo', 'Yoga Pratama', 'Intan Permata', 'Rizky Firmansyah'];
+
+    /** Sertifikat yang diberi contoh file PDF (sisanya tanpa file, untuk contoh "belum diunggah"). */
+    private const SERTIFIKAT_BERFILE = ['Laravel Certified Developer', 'AWS Certified Developer', 'ISTQB Foundation Level', 'Meta Front-End Developer', 'Microsoft Certified: Power BI Data Analyst', 'Oracle Certified Associate'];
 
     public function run(TalentCvService $cv): void
     {
@@ -97,11 +103,18 @@ class TalentSeeder extends Seeder
         $talent->kompetensi()->attach(Kompetensi::whereIn('nama_kompetensi', $t['kompetensi'])->pluck('id_kompetensi'));
 
         foreach ($t['sertifikat'] ?? [] as [$nama, $penerbit, $terbitBulanLalu]) {
-            $talent->sertifikat()->create([
+            $sertifikat = $talent->sertifikat()->create([
                 'nama_sertifikat' => $nama,
                 'penerbit' => $penerbit,
                 'tanggal_terbit' => Linimasa::bulan($terbitBulanLalu, 15)->toDateString(),
             ]);
+
+            if (in_array($nama, self::SERTIFIKAT_BERFILE, true)) {
+                app(SertifikatService::class)->unggah($sertifikat, UploadedFile::fake()->createWithContent(
+                    'sertifikat-'.Str::slug($nama).'.pdf',
+                    self::pdfSertifikat($nama, $penerbit, $talent->nama_lengkap, $sertifikat->tanggal_terbit->translatedFormat('d F Y')),
+                ));
+            }
         }
 
         foreach ($t['bahasa'] ?? [] as $nama => $tingkat) {
@@ -128,6 +141,25 @@ class TalentSeeder extends Seeder
      *
      * @return array<string, array<string, mixed>>
      */
+    /** PDF sertifikat contoh satu halaman (landscape) untuk demo. */
+    private static function pdfSertifikat(string $nama, string $penerbit, string $talent, string $tanggal): string
+    {
+        $e = fn (string $teks) => e($teks);
+
+        return Pdf::loadHTML(<<<HTML
+            <html><body style="font-family: Helvetica, Arial, sans-serif; text-align: center; color: #1f2937;">
+            <div style="border: 6px double #780001; padding: 40px 30px; margin: 10px;">
+                <div style="font-size: 13px; letter-spacing: 4px; color: #780001;">SERTIFIKAT</div>
+                <h1 style="font-size: 28px; margin: 18px 0 6px;">{$e($nama)}</h1>
+                <div style="font-size: 13px; color: #6b7280;">diberikan kepada</div>
+                <div style="font-size: 24px; font-weight: bold; margin: 14px 0;">{$e($talent)}</div>
+                <div style="font-size: 12px;">Diterbitkan oleh {$e($penerbit)} pada {$e($tanggal)}</div>
+                <div style="font-size: 10px; color: #9ca3af; margin-top: 40px;">Contoh file sertifikat untuk data demo Intellisys Talent Hub.</div>
+            </div>
+            </body></html>
+            HTML)->setPaper('a4', 'landscape')->output();
+    }
+
     private function data(): array
     {
         return [
