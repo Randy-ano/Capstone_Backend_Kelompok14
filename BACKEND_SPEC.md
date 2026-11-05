@@ -430,6 +430,8 @@ Kolom dan tabel berikut ditambahkan untuk profil & CV talent (FR-03, FR-04); lih
 | id_klien | FK→klien, nullable, set null | untuk quotation, PO, PKS |
 | id_talent | FK→talent, nullable, set null | untuk CV, kontrak kerja, SP |
 | id_placement | FK→placement, nullable, set null | untuk kontrak kerja, SP |
+| id_job_req | FK→job_requirement, nullable, set null | quotation, PO, PKS, dan kontrak kerja (R34; migration `2026_11_06_100000`) |
+| id_pengajuan | FK→pengajuan_kandidat, nullable, set null | kontrak kerja per kandidat diterima (R34; migration `2026_11_06_100000`) |
 | jenis_dokumen | string (enum) | `quotation`, `purchase_order`, `pks`, `kontrak_kerja`, `surat_peringatan`, `cv`, `lainnya` |
 | file_path | string | path di disk private |
 | status_dokumen | string (enum) | `draft` (default), `menunggu_ttd`, `ditandatangani`, `ditolak` |
@@ -522,7 +524,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
 - **R17.** Evaluasi oleh HR Client dari klien yang sama, maksimal 1 per pengajuan, dan hanya jika minimal 1 interview berstatus `selesai`. Jika `ditolak` → talent.status_kandidat = `tersedia`.
 
 ### Placement (FR-17)
-- **R18.** Placement dibuat oleh TS, **hanya dari evaluasi `diterima`** yang belum punya placement. Salin id_talent, id_job_req, id_klien.
+- **R18.** Placement dibuat oleh TS, **hanya dari evaluasi `diterima`** yang belum punya placement, dan (revisi 2026-11-06) setelah dokumen Quotation–Kontrak Kerja selesai (R36). Salin id_talent, id_job_req, id_klien.
 - **R19.** Saat placement dibuat (dalam 1 DB transaction): talent.status_kandidat = `ditempatkan`, talent_pool.status_ketersediaan = `tidak_tersedia`, dan jika jumlah placement `aktif` untuk job tsb ≥ `jumlah_kebutuhan` → status_req = `terpenuhi`.
 - **R20.** Saat placement `selesai`/`dihentikan` → talent kembali `tersedia` di pool.
 
@@ -552,6 +554,12 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
   - gambar unggahan (PNG/JPG) dijadikan PDF: halaman pertama berisi gambar itu dimuat utuh & proporsional di A4 (lanskap bila gambar melebar), lalu Lembar Pengesahan; nama file unduhan berakhiran `.pdf`;
   - penandatangan yang belum memutuskan ditulis "Belum ditandatangani"; yang menolak "Ditolak".
   Dokumen tanpa penandatangan (draft) dan DOC/DOCX diunduh apa adanya. File asli (tanpa tanda tangan) tetap dapat diunduh pengunggah dan internal lewat `GET /dokumen/{id}/file-asli`.
+
+### Dokumen kerja sama berurutan (revisi 2026-11-06)
+Alur per permintaan kebutuhan: kandidat diterima di evaluasi → **Quotation** → **Purchase Order** → **PKS** → **Kontrak Kerja** (per kandidat) → penempatan oleh TS → onboarding. Satu langkah **selesai** jika ada dokumen jenis itu (untuk permintaan / kandidat tersebut) yang berstatus `ditandatangani`. Implementasi: `KelengkapanDokumenService`.
+- **R34. Urutan.** Quotation, PO, PKS terhubung ke `id_job_req` (klien diambil dari permintaan); Kontrak Kerja ke `id_pengajuan` (talent, permintaan, klien, dan placement bila ada diambil dari pengajuan). Unggah/buat dari template ditolak 422 jika: Quotation — permintaan belum punya kandidat berevaluasi `diterima`; PO — Quotation permintaan belum selesai; PKS — PO belum selesai; Kontrak Kerja — kandidat belum diterima atau PKS permintaannya belum selesai. Pesan menyebut dokumen yang kurang, mis. "Purchase Order belum bisa diunggah: Quotation untuk permintaan ini belum selesai ditandatangani." Dokumen jenis yang sama untuk tujuan yang sama yang masih `draft`/`menunggu_ttd` juga ditolak (422); yang `ditolak` boleh diganti dokumen baru. Permintaan `dibatalkan` ditolak. Surat Peringatan & Lainnya tidak terikat urutan.
+- **R35. Hak unggah & penandatangan yang disarankan.** Quotation: AM · PO: HR Client dari klien permintaan · PKS: AM atau Manager · Kontrak Kerja: AM (selain itu 403). Penandatangan disarankan (dicentang otomatis, tetap bisa diubah dari daftar calon R27): Quotation → HR Client klien · PO → Manager · PKS → Manager + HR Client · Kontrak Kerja → talent + Manager.
+- **R36. Penempatan setelah kontrak.** `POST /placement` ditolak 422 sampai Quotation, PO, PKS permintaan dan Kontrak Kerja kandidat selesai ("Penempatan belum bisa dibuat. Dokumen yang belum selesai ditandatangani: …"). Setelah penempatan dibuat, Kontrak Kerja kandidat diisi `id_placement`. Kelengkapan tampil sebagai `kelengkapan_dokumen` (detail pengajuan diterima: `langkah[4]` dengan `status` `belum_ada`/`menunggu`/`ditolak`/`selesai` + `label_status` + `dokumen`, `selesai`, `kurang`; detail permintaan: `langkah[3]` + `kontrak_kerja[]` per kandidat + `tahap`) dan `tahap_dokumen` di `GET /progres`. Talent yang punya Kontrak Kerja boleh membuka menu Dokumen walau belum ditempatkan (`talent.ditempatkan:dokumen`, `akses_dokumen` di `/auth/me`) agar dapat menandatanganinya.
 
 ### Notifikasi & Reminder (FR-16)
 - **R29.** Gunakan satu `NotifikasiService::kirim(user, tipe, pesan, kanal)` yang menyimpan ke tabel `notifikasi` dan, jika kanal `email`, mengirim email lewat queue lalu memperbarui `status_pengiriman`.
@@ -612,7 +620,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 |---|---|---|---|
 | GET | /job-requirements | HC, Internal | HC hanya miliknya; filter `status`, `indikator_sla`, `id_klien` (internal), `search` (posisi/klien); `meta.ringkasan` = jumlah per status + `sla_terlambat`, `sla_mendekati` (tidak terpengaruh filter) |
 | POST | /job-requirements | HC, AM | R7; `status_req` awal `draft` (default) atau `diajukan`; `kompetensi[]` (id) dan/atau `kompetensi_baru[]` (nama, R33); opsional `gaji_min`, `gaji_maks` (rupiah, `gaji_maks` ≥ `gaji_min`) |
-| GET | /job-requirements/{id} | HC, Internal | + kompetensi + `ringkasan_progres` (jumlah screening per hasil, `usulan_menunggu_am`/`usulan_diteruskan`/`usulan_tidak_diteruskan`, terpenuhi, sisa) + `progres_terakhir` |
+| GET | /job-requirements/{id} | HC, Internal | + kompetensi + `ringkasan_progres` (jumlah screening per hasil, `usulan_menunggu_am`/`usulan_diteruskan`/`usulan_tidak_diteruskan`, terpenuhi, sisa) + `kelengkapan_dokumen` (R36, bukan untuk talent) + `progres_terakhir` |
 | PUT | /job-requirements/{id} | HC, AM | hanya saat `draft`/`diajukan`; parsial; `kompetensi` (+ `kompetensi_baru`, R33) jika dikirim menggantikan daftar lama; `kompetensi_baru` diabaikan tanpa `kompetensi`; klien tidak bisa diganti; `gaji_maks` dibandingkan dengan `gaji_min` baru atau yang tersimpan |
 | PATCH | /job-requirements/{id}/status | HC, AM | body `status_req`: `diajukan` (dari draft, deadline belum lewat) / `dibatalkan` (dari draft/diajukan/diproses; talent yang sedang diproses untuk job ini kembali `tersedia`) |
 | GET | /job-requirements/{id}/rekomendasi | TS | R9; job harus `diajukan`/`diproses`; hanya skor ≥ 70; `meta.skor_minimum` |
@@ -626,13 +634,13 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | PUT | /screening/{id} | TS | ubah catatan/hasil (endpoint lama, tidak dipakai UI baru); `tidak_lolos` final; alasan AM tetap tersimpan saat catatan diubah; ditolak jika sudah diajukan ke klien atau job selesai |
 | PATCH | /screening/{id}/tidak-diteruskan | AM | R11; body `alasan` (wajib, maks 1000); 422 jika usulan sudah diteruskan/tidak diteruskan atau job selesai |
 | GET | /job-requirements/{id}/progres | Internal, HC | data job + indikator SLA terkini + `log_progres` (terbaru dulu) |
-| GET | /progres | Internal | semua job + SLA terkini + `progres_terakhir` + `jumlah_screening`, urut deadline terdekat (untuk tabel monitoring); filter sama dengan GET /job-requirements |
+| GET | /progres | Internal | semua job + SLA terkini + `progres_terakhir` + `jumlah_screening` + `tahap_dokumen` (R36, null jika belum ada kandidat diterima), urut deadline terdekat (untuk tabel monitoring); filter sama dengan GET /job-requirements |
 
 ### Pengajuan, Interview, Evaluasi (FR-10, FR-11, FR-12)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
 | GET | /pengajuan | HC, Internal, T | sesuai scope; filter `status` (nilai `status_tampil`, lihat bagian 8), `id_job_req`, `search`; talent tidak melihat catatan screening & nilai evaluasi |
-| GET | /pengajuan/{id} | HC, Internal, T | detail + `interviews` + `evaluasi` + `id_placement` (sesuai scope) |
+| GET | /pengajuan/{id} | HC, Internal, T | detail + `interviews` + `evaluasi` + `id_placement` (sesuai scope) + `kelengkapan_dokumen` (R36; kandidat diterima, bukan untuk talent) |
 | POST | /pengajuan | AM | R14 ("Teruskan ke Klien"); body `id_screening` (usulan menunggu AM); job harus `diproses` |
 | PATCH | /pengajuan/{id}/status | HC | R15; hanya dari `diajukan` ke `lanjut_interview`/`ditolak` |
 | GET | /interview | HC, Internal, T | sesuai scope, filter `dari`/`sampai` (tanggal), `status`, `id_pengajuan`; urut tanggal & waktu |
@@ -645,7 +653,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
 | GET | /placement | HC, Internal, T | sesuai scope; filter `status`, `id_klien` (internal), `search` |
-| POST | /placement | TS | R18, R19; body `id_evaluasi`, `tanggal_mulai`, `tanggal_selesai`, `posisi_penempatan` (default posisi job) |
+| POST | /placement | TS | R18, R19, R36 (422 dengan daftar dokumen yang belum selesai); body `id_evaluasi`, `tanggal_mulai`, `tanggal_selesai`, `posisi_penempatan` (default posisi job) |
 | GET | /placement/{id} | HC, Internal, T | + `ringkasan` (jumlah cuti, shift, monitoring, keluhan) |
 | PATCH | /placement/{id}/status | TS, M | R20; `selesai`/`dihentikan` dari `aktif`; `tanggal_selesai` default tanggal kontrak atau hari ini |
 
@@ -671,12 +679,14 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
 | GET | /dokumen | semua | dokumen kerja sama saja: **jenis `cv` tidak pernah tampil** dan bukan nilai filter `jenis` yang sah (CV lewat `/talent/cv` & `/talent-pool/{id}/cv`); sesuai scope (internal semua; HC dokumen kliennya; T miliknya; + yang diunggah/harus ditandatangani sendiri); filter `jenis`, `status`, `perlu_ttd`, `search`; tiap item berisi `penandatangan[]` (+ `ada_gambar_ttd`), `unduhan` (`nama_file`, `diolah`, `dengan_tanda_tangan`), dan `aksi` (+ `boleh_unduh_asli`) |
-| POST | /dokumen/upload | AM, HC, M, T | R25 (multipart `file`, `jenis_dokumen` selain cv, `id_placement`/`id_klien`/`id_talent`); unggahan talent langsung `menunggu_ttd` dengan penandatangan talent itu sendiri (R27) |
-| POST | /dokumen/generate | AM | R26 (quotation/PO: `items[]`; PKS: `ketentuan`; + `id_klien`, `nomor_dokumen`, `tanggal_dokumen`, `berlaku_sampai`, `perihal`, `catatan`) |
+| POST | /dokumen/upload | AM, HC, M, T | R25 (multipart `file`, `jenis_dokumen` selain cv). Quotation/PO/PKS wajib `id_job_req`, Kontrak Kerja wajib `id_pengajuan` (atau `id_placement` untuk perpanjangan); klien/talent/placement diambil dari tujuan; urutan & hak unggah R34–R35 (422 / 403). Jenis lain: `id_placement`/`id_klien`/`id_talent` seperti sebelumnya; unggahan talent langsung `menunggu_ttd` dengan penandatangan talent itu sendiri (R27) |
+| POST | /dokumen/generate | AM | R26 (quotation/PO: `items[]`; PKS: `ketentuan`; + `id_job_req` (klien dari permintaan), `nomor_dokumen`, `tanggal_dokumen`, `berlaku_sampai`, `perihal`, `catatan`); urutan & hak unggah R34–R35 berlaku, sehingga PO dari template ditolak 403 (PO diunggah HR Client) |
 | GET | /dokumen/{id}/download | sesuai Policy | PDF/PNG/JPG yang sudah punya penandatangan dikirim sebagai PDF bertanda tangan (R28a, nama = `unduhan.nama_file`); selain itu file asli |
 | GET | /dokumen/{id}/file-asli | pengunggah, AM, TS, M | file asli apa adanya, tanpa tanda tangan; selain itu 403 |
 | GET | /dokumen/{id}/tanda-tangan/{id_ttd}/gambar | sesuai Policy (lihat dokumen) | gambar tanda tangan penandatangan yang sudah menandatangani (inline, untuk thumbnail); 404 jika belum ada |
-| GET | /dokumen/{id}/calon-penandatangan | pengunggah (bukan talent) | sesuai jenis dokumen (R27): komersial → AM, M, HC klien; kepegawaian → talent terkait, AM, M; lainnya → AM, M, HC klien, talent terkait |
+| GET | /dokumen/{id} | sesuai Policy (lihat dokumen) | detail satu dokumen (format sama dengan item daftar); dipakai tautan daftar periksa R36 |
+| GET | /dokumen/tujuan | AM, HC, M | `jenis` = quotation/purchase_order/pks/kontrak_kerja: pilihan permintaan (`id_job_req`, `posisi`, `id_klien`, `nama_perusahaan`) atau kandidat diterima (`id_pengajuan`, `id_job_req`, `nama_lengkap`, `posisi`, `nama_perusahaan`) yang memenuhi urutan R34 dan belum punya dokumen jenis itu yang berjalan/selesai; 403 jika role tidak berhak (R35) |
+| GET | /dokumen/{id}/calon-penandatangan | pengunggah (bukan talent) | tiap calon + `disarankan` (R35: Quotation → HR Client, PO → Manager, PKS → Manager + HR Client, Kontrak Kerja → talent + Manager);  sesuai jenis dokumen (R27): komersial → AM, M, HC klien; kepegawaian → talent terkait, AM, M; lainnya → AM, M, HC klien, talent terkait |
 | POST | /dokumen/{id}/penandatangan | pengunggah (bukan talent) | R27; body `id_user[]` (1–10) dari calon penandatangan; hanya saat `draft` |
 | POST | /dokumen/{id}/tanda-tangan | penandatangan | R28 (multipart `keputusan` ditandatangani/ditolak + `file_tanda_tangan` png/jpg maks 2 MB) |
 
@@ -871,5 +881,6 @@ Setiap fase: kerjakan → jalankan `php artisan test` → semua hijau → commit
 | Tabel `riwayat_pendidikan`, `pengalaman_kerja_talent`, `sertifikat_talent`, `bahasa`, `talent_bahasa` dan 13 kolom profil di `talent` (bagian 4.2, "Profil talent") | Data profil & CV talent yang lebih rinci (SCRUM-8). Lama pengalaman untuk R9 dihitung dari `pengalaman_kerja_talent`, jadi kolom `lama_pengalaman_tahun` tidak diperlukan |
 | Tidak memakai spatie/laravel-permission | Role cukup dari `users.role` (sesuai ERD) |
 | `shifting_talent.status_shift` (`aktif`/`dibatalkan`, default `aktif`) | Revisi bimbingan 2026-11-05: jadwal shift tidak dihapus, hanya dibatalkan |
+| `dokumen.id_job_req` (FK job_requirement) & `dokumen.id_pengajuan` (FK pengajuan_kandidat), nullable | Revisi 2026-11-06: dokumen kerja sama berurutan per permintaan & Kontrak Kerja per kandidat (R34–R36); ERD & class diagram perlu diperbarui |
 | `job_requirement.gaji_min` & `gaji_maks` (nullable) | Revisi bimbingan 2026-11-05: kisaran gaji yang ditawarkan klien; ERD & class diagram perlu diperbarui |
 | `pengajuan_cuti.id_approver_manager` & `status_approval_manager` tidak dipakai lagi (kolom tetap ada) | Revisi bimbingan 2026-11-05: keputusan cuti hanya oleh HR Client; ERD & activity diagram cuti perlu diperbarui |
