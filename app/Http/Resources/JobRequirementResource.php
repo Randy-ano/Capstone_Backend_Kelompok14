@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\Role;
 use App\Models\JobRequirement;
 use App\Services\ProgresService;
 use Illuminate\Http\Request;
@@ -33,6 +34,9 @@ class JobRequirementResource extends JsonResource
             'jumlah_kebutuhan' => $this->jumlah_kebutuhan,
             'terpenuhi' => (int) ($atribut['terpenuhi'] ?? 0),
             'pengalaman_min' => $this->pengalaman_min,
+            // Kisaran gaji (rupiah, opsional): untuk HR Client & internal; endpoint ini memang tidak terbuka bagi talent.
+            'gaji_min' => $this->when(! $request->user()?->hasRole(Role::Talent), $this->gaji_min),
+            'gaji_maks' => $this->when(! $request->user()?->hasRole(Role::Talent), $this->gaji_maks),
             'kualifikasi' => $this->kualifikasi,
             'status_req' => $this->status_req,
             'sla_deadline' => $this->sla_deadline?->toIso8601String(),

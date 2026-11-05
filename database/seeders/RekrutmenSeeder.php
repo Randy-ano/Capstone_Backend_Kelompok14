@@ -62,6 +62,8 @@ class RekrutmenSeeder extends Seeder
         $t = Linimasa::bulan(10, 4);
         $job = $this->buatJob('am', 'PT Maju Jaya', $t, [
             'posisi' => 'Backend Developer',
+            'gaji_min' => 10_000_000,
+            'gaji_maks' => 15_000_000,
             'jumlah_kebutuhan' => 2,
             'pengalaman_min' => 2,
             'sla_deadline' => Linimasa::bulan(8, 28, 17),
@@ -101,6 +103,8 @@ class RekrutmenSeeder extends Seeder
         $t = Linimasa::bulan(12, 15);
         $job = $this->buatJob('am', 'PT Sinar Digital Nusantara', $t, [
             'posisi' => 'QA Engineer',
+            'gaji_min' => 8_000_000,
+            'gaji_maks' => 12_000_000,
             'jumlah_kebutuhan' => 2,
             'pengalaman_min' => 1,
             'sla_deadline' => Linimasa::hari(-3, 17),
@@ -143,6 +147,8 @@ class RekrutmenSeeder extends Seeder
         $t = Linimasa::bulan(4, 6);
         $job = $this->buatJob('am', 'PT Maju Jaya', $t, [
             'posisi' => 'Frontend Developer',
+            'gaji_min' => 9_000_000,
+            'gaji_maks' => 13_000_000,
             'jumlah_kebutuhan' => 2,
             'pengalaman_min' => 1,
             'sla_deadline' => Linimasa::hari(2, 17),
@@ -191,6 +197,8 @@ class RekrutmenSeeder extends Seeder
         $t = Linimasa::bulan(3, 2);
         $job = $this->buatJob('am02', 'PT Nusantara Retail Indonesia', $t, [
             'posisi' => 'DevOps Engineer',
+            'gaji_min' => 14_000_000,
+            'gaji_maks' => 20_000_000,
             'jumlah_kebutuhan' => 1,
             'pengalaman_min' => 3,
             'sla_deadline' => Linimasa::bulan(1, 25, 17),
@@ -216,6 +224,8 @@ class RekrutmenSeeder extends Seeder
         $t = Linimasa::hari(-16);
         $job = $this->buatJob('am', 'PT Sinar Digital Nusantara', $t, [
             'posisi' => 'Data Analyst',
+            'gaji_min' => 8_500_000,
+            'gaji_maks' => 12_500_000,
             'jumlah_kebutuhan' => 1,
             'pengalaman_min' => 2,
             'sla_deadline' => Linimasa::hari(25, 17),
@@ -238,6 +248,8 @@ class RekrutmenSeeder extends Seeder
     {
         $this->buatJob('hr06', 'PT Nusantara Retail Indonesia', Linimasa::hari(-4), [
             'posisi' => 'Fullstack Developer',
+            'gaji_min' => 12_000_000,
+            'gaji_maks' => 18_000_000,
             'jumlah_kebutuhan' => 1,
             'pengalaman_min' => 3,
             'sla_deadline' => Linimasa::hari(30, 17),
@@ -249,6 +261,8 @@ class RekrutmenSeeder extends Seeder
     {
         $this->buatJob('hr05', 'CV Teknologi Andalan', Linimasa::hari(-1), [
             'posisi' => 'UI/UX Designer',
+            'gaji_min' => 8_000_000,
+            'gaji_maks' => 11_000_000,
             'jumlah_kebutuhan' => 1,
             'pengalaman_min' => 1,
             'sla_deadline' => Linimasa::hari(45, 17),

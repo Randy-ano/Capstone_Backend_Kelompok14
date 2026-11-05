@@ -19,7 +19,7 @@ dataset('skema', [
     'notifikasi' => ['notifikasi', ['id_notifikasi', 'id_user_penerima', 'pesan', 'tipe_notifikasi', 'kanal', 'jadwal_kirim', 'status_pengiriman', 'status_baca']],
     'kompetensi' => ['kompetensi', ['id_kompetensi', 'nama_kompetensi', 'kategori']],
     'talent_kompetensi' => ['talent_kompetensi', ['id_talent', 'id_kompetensi']],
-    'job_requirement' => ['job_requirement', ['id_job_req', 'id_klien', 'id_am', 'posisi', 'jumlah_kebutuhan', 'kualifikasi', 'pengalaman_min', 'status_req', 'sla_deadline']],
+    'job_requirement' => ['job_requirement', ['id_job_req', 'id_klien', 'id_am', 'posisi', 'jumlah_kebutuhan', 'kualifikasi', 'pengalaman_min', 'gaji_min', 'gaji_maks', 'status_req', 'sla_deadline']],
     'job_req_kompetensi' => ['job_req_kompetensi', ['id_job_req', 'id_kompetensi']],
     'talent_pool' => ['talent_pool', ['id_talent_pool', 'id_talent', 'tanggal_masuk', 'status_ketersediaan', 'tag_keahlian']],
     'screening_talent' => ['screening_talent', ['id_screening', 'id_talent', 'id_job_req', 'id_ts', 'skor_kecocokan', 'tanggal_screening', 'catatan_screening', 'hasil_screening']],

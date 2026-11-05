@@ -207,14 +207,14 @@ it('membuat 5 penempatan aktif dan 1 selesai yang tersebar, dan grafik tren teri
         ->and($budi->pengajuanKandidat)->not->toBeEmpty();
 });
 
-it('menyediakan 5+ kandidat dengan skor bervariasi untuk minimal 2 permintaan berjalan', function () {
+it('menyediakan beberapa kandidat skor ≥ 70 untuk minimal 2 permintaan berjalan', function () {
     $rekomendasi = app(RekomendasiService::class);
 
     $bervariasi = JobRequirement::whereIn('status_req', [StatusReq::Diajukan, StatusReq::Diproses])->get()
         ->filter(function (JobRequirement $job) use ($rekomendasi) {
             $skor = $rekomendasi->daftar($job)->pluck('skor_kecocokan');
 
-            return $skor->count() >= 5 && $skor->unique()->count() >= 3;
+            return $skor->count() >= 2 && $skor->min() >= RekomendasiService::SKOR_MINIMUM;
         });
 
     expect($bervariasi->count())->toBeGreaterThanOrEqual(2);

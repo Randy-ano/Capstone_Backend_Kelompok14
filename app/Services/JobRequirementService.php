@@ -122,7 +122,7 @@ class JobRequirementService
     {
         return DB::transaction(function () use ($user, $data) {
             $job = JobRequirement::create([
-                ...Arr::only($data, ['posisi', 'jumlah_kebutuhan', 'kualifikasi', 'pengalaman_min', 'sla_deadline']),
+                ...Arr::only($data, ['posisi', 'jumlah_kebutuhan', 'kualifikasi', 'pengalaman_min', 'gaji_min', 'gaji_maks', 'sla_deadline']),
                 'id_klien' => $user->hasRole(Role::HrClient) ? $user->idKlien() : $data['id_klien'],
                 'id_am' => $user->hasRole(Role::AccountManager) ? $user->pegawai->id_pegawai : null,
                 'status_req' => $data['status_req'] ?? StatusReq::Draft->value,
@@ -145,7 +145,7 @@ class JobRequirementService
         }
 
         return DB::transaction(function () use ($job, $data) {
-            $job->update(Arr::only($data, ['posisi', 'jumlah_kebutuhan', 'kualifikasi', 'pengalaman_min', 'sla_deadline']));
+            $job->update(Arr::only($data, ['posisi', 'jumlah_kebutuhan', 'kualifikasi', 'pengalaman_min', 'gaji_min', 'gaji_maks', 'sla_deadline']));
             if (array_key_exists('kompetensi', $data)) {
                 $job->kompetensi()->sync($this->idKompetensi($data));
             }

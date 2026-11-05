@@ -203,6 +203,8 @@ Notasi: `FK→tabel` = foreign key ke primary key tabel tersebut. Semua FK `cons
 | jumlah_kebutuhan | unsignedInteger | |
 | kualifikasi | text, nullable | |
 | pengalaman_min | unsignedInteger, default 0 | tahun |
+| gaji_min | unsignedBigInteger, nullable | kisaran gaji ditawarkan (rupiah/bulan), migration `2026_11_05_200000` |
+| gaji_maks | unsignedBigInteger, nullable | ≥ `gaji_min`; tidak ditampilkan ke talent |
 | status_req | string (enum) | `draft` (default), `diajukan`, `diproses`, `terpenuhi`, `dibatalkan` |
 | sla_deadline | datetime | batas waktu pemenuhan |
 
@@ -501,7 +503,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
   skor_kecocokan  = 0,8 × skor_kompetensi + 0,2 × skor_pengalaman   (dibulatkan 2 desimal)
   ```
   Contoh: job butuh 4 kompetensi dan `pengalaman_min` 2 tahun; talent cocok 3 kompetensi dan pengalaman 1 tahun (Jan–Jun 2023 dan Apr–Des 2023 → digabung Jan–Des 2023). Skor = 0,8 × 75 + 0,2 × 50 = 70.
-  Kandidat yang ditampilkan: `talent_pool.status_ketersediaan = tersedia`, `talent.status_kandidat = tersedia`, belum pernah di-screening untuk job ini, `skor_kompetensi` > 0 (pengalaman saja tidak cukup untuk muncul). Urutkan skor tertinggi. Kembalikan juga daftar kompetensi yang cocok & yang kurang, serta `lama_pengalaman` (tahun, 1 desimal).
+  Kandidat yang ditampilkan: `talent_pool.status_ketersediaan = tersedia`, `talent.status_kandidat = tersedia`, belum pernah di-screening untuk job ini, `skor_kompetensi` > 0 (pengalaman saja tidak cukup untuk muncul), dan **`skor_kecocokan` ≥ `RekomendasiService::SKOR_MINIMUM` (70)** (revisi 2026-11-05; rumus skor tidak berubah). Respons menyertakan `meta.skor_minimum`. Urutkan skor tertinggi. Kembalikan juga daftar kompetensi yang cocok & yang kurang, serta `lama_pengalaman` (tahun, 1 desimal).
 
 ### Screening & Progres (FR-08, FR-09)
 - **R10.** Screening dibuat oleh TS; `skor_kecocokan` diisi dari R9. Saat screening dibuat → talent.status_kandidat = `dalam_proses`, job_requirement.status_req = `diproses` (jika masih `diajukan`).
@@ -579,7 +581,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Profil Talent & Kompetensi (FR-03, FR-04)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /kompetensi | semua | master kompetensi; filter `search`, `kategori`; `meta.kategori` = semua kategori terpakai; `dengan_pemakaian=1` menambah `jumlah_talent` & `jumlah_job_requirement` |
+| GET | /kompetensi | semua | master kompetensi; filter `search` (beberapa kata kunci dipisah koma, salah satu cocok), `kategori` (satu nilai atau `kategori[]` beberapa kategori); `meta.kategori` = semua kategori terpakai; `dengan_pemakaian=1` menambah `jumlah_talent` & `jumlah_job_requirement` |
 | POST/PUT/DELETE | /kompetensi, /kompetensi/{id} | TS, M | kelola master; nama unik tanpa membedakan huruf besar/kecil; DELETE ditolak 422 jika masih dipakai talent/job requirement |
 | GET | /talent/profil | T | profil sendiri + kompetensi |
 | PUT | /talent/profil | T | update profil (R4, R5); `riwayat_pendidikan[]`, `riwayat_pengalaman_kerja[]`, `sertifikat[]`, `bahasa[]` (`nama_bahasa`, `tingkat_kemampuan`) jika dikirim menggantikan daftar lama |
@@ -599,11 +601,11 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
 | GET | /job-requirements | HC, Internal | HC hanya miliknya; filter `status`, `indikator_sla`, `id_klien` (internal), `search` (posisi/klien); `meta.ringkasan` = jumlah per status + `sla_terlambat`, `sla_mendekati` (tidak terpengaruh filter) |
-| POST | /job-requirements | HC, AM | R7; `status_req` awal `draft` (default) atau `diajukan`; `kompetensi[]` (id) dan/atau `kompetensi_baru[]` (nama, R33) |
+| POST | /job-requirements | HC, AM | R7; `status_req` awal `draft` (default) atau `diajukan`; `kompetensi[]` (id) dan/atau `kompetensi_baru[]` (nama, R33); opsional `gaji_min`, `gaji_maks` (rupiah, `gaji_maks` ≥ `gaji_min`) |
 | GET | /job-requirements/{id} | HC, Internal | + kompetensi + `ringkasan_progres` (jumlah screening per hasil, terpenuhi, sisa) + `progres_terakhir` |
-| PUT | /job-requirements/{id} | HC, AM | hanya saat `draft`/`diajukan`; parsial; `kompetensi` (+ `kompetensi_baru`, R33) jika dikirim menggantikan daftar lama; `kompetensi_baru` diabaikan tanpa `kompetensi`; klien tidak bisa diganti |
+| PUT | /job-requirements/{id} | HC, AM | hanya saat `draft`/`diajukan`; parsial; `kompetensi` (+ `kompetensi_baru`, R33) jika dikirim menggantikan daftar lama; `kompetensi_baru` diabaikan tanpa `kompetensi`; klien tidak bisa diganti; `gaji_maks` dibandingkan dengan `gaji_min` baru atau yang tersimpan |
 | PATCH | /job-requirements/{id}/status | HC, AM | body `status_req`: `diajukan` (dari draft, deadline belum lewat) / `dibatalkan` (dari draft/diajukan/diproses; talent yang sedang diproses untuk job ini kembali `tersedia`) |
-| GET | /job-requirements/{id}/rekomendasi | TS | R9; job harus `diajukan`/`diproses` |
+| GET | /job-requirements/{id}/rekomendasi | TS | R9; job harus `diajukan`/`diproses`; hanya skor ≥ 70; `meta.skor_minimum` |
 | GET | /klien | Internal | daftar klien read-only (`search`) untuk pilihan klien saat AM membuat job requirement |
 
 ### Screening & Progres (FR-08, FR-09)
@@ -856,4 +858,5 @@ Setiap fase: kerjakan → jalankan `php artisan test` → semua hijau → commit
 | Tabel `riwayat_pendidikan`, `pengalaman_kerja_talent`, `sertifikat_talent`, `bahasa`, `talent_bahasa` dan 13 kolom profil di `talent` (bagian 4.2, "Profil talent") | Data profil & CV talent yang lebih rinci (SCRUM-8). Lama pengalaman untuk R9 dihitung dari `pengalaman_kerja_talent`, jadi kolom `lama_pengalaman_tahun` tidak diperlukan |
 | Tidak memakai spatie/laravel-permission | Role cukup dari `users.role` (sesuai ERD) |
 | `shifting_talent.status_shift` (`aktif`/`dibatalkan`, default `aktif`) | Revisi bimbingan 2026-11-05: jadwal shift tidak dihapus, hanya dibatalkan |
+| `job_requirement.gaji_min` & `gaji_maks` (nullable) | Revisi bimbingan 2026-11-05: kisaran gaji yang ditawarkan klien; ERD & class diagram perlu diperbarui |
 | `pengajuan_cuti.id_approver_manager` & `status_approval_manager` tidak dipakai lagi (kolom tetap ada) | Revisi bimbingan 2026-11-05: keputusan cuti hanya oleh HR Client; ERD & activity diagram cuti perlu diperbarui |

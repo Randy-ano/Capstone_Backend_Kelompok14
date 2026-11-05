@@ -110,7 +110,9 @@ class TalentSeeder extends Seeder
 
         // Observer R5 membuat entri talent pool saat status berubah menjadi lengkap.
         $talent->update(['status_kelengkapan' => StatusKelengkapan::Lengkap]);
-        $talent->talentPool->update(['tag_keahlian' => implode(', ', array_slice($t['kompetensi'], 0, 3))]);
+        // Tag keahlian = label bidang kerja untuk pencarian cepat, bukan nama kompetensi (agar tidak tampil dobel
+        // dengan daftar kompetensi di talent pool & rekomendasi).
+        $talent->talentPool->update(['tag_keahlian' => self::tagBidang(end($t['pengalaman'])[0])]);
 
         return $talent->refresh();
     }
@@ -255,21 +257,21 @@ class TalentSeeder extends Seeder
                 'pendidikan' => ['S1', 'Teknik Informatika', 'Universitas Hasanuddin', 2],
                 'tentang' => 'Staf data yang sedang mendalami analisis data dan visualisasi.',
                 'pengalaman' => [['Staf Data', 'CV Kode Kreatif', 'Makassar', 12, null]],
-                'kompetensi' => ['Excel', 'Power BI', 'SQL'],
+                'kompetensi' => ['Excel', 'Power BI', 'SQL', 'Data Analysis'],
             ],
             'talent16@intellisys.test' => [
                 'nama' => 'Fajar Ramadhan', 'domisili' => 'Malang', 'umur' => 26, 'gaji' => 9500000, 'daftar_hari_lalu' => 320,
                 'pendidikan' => ['S1', 'Informatika', 'Universitas Muhammadiyah Malang', 3],
                 'tentang' => 'Backend developer yang terbiasa mengembangkan aplikasi internal dengan Laravel.',
                 'pengalaman' => [['Backend Developer', 'CV Kode Kreatif', 'Malang', 18, null]],
-                'kompetensi' => ['Laravel', 'MySQL', 'SQL', 'Git'],
+                'kompetensi' => ['Laravel', 'MySQL', 'SQL', 'Git', 'REST API', 'QA Manual'],
             ],
             'talent17@intellisys.test' => [
                 'nama' => 'Rizky Firmansyah', 'domisili' => 'Bandung', 'umur' => 28, 'gaji' => 13000000, 'daftar_hari_lalu' => 315,
                 'pendidikan' => ['S1', 'Teknik Informatika', 'Universitas Komputer Indonesia', 5],
                 'tentang' => 'Fullstack developer dengan pengalaman Laravel dan React untuk aplikasi perusahaan.',
                 'pengalaman' => [['Fullstack Developer', 'PT Arta Teknologi Indonesia', 'Bandung', 54, null]],
-                'kompetensi' => ['Laravel', 'React', 'SQL', 'REST API', 'Git'],
+                'kompetensi' => ['Laravel', 'React', 'SQL', 'REST API', 'Git', 'Selenium'],
                 'sertifikat' => [['Oracle Certified Associate', 'Oracle', 26]],
                 'bahasa' => ['Indonesia' => 'Penutur Asli', 'Inggris' => 'Menengah'],
             ],
@@ -301,6 +303,24 @@ class TalentSeeder extends Seeder
             str_contains($posisi, 'DevOps'), str_contains($posisi, 'System') => 'Mengelola server dan pipeline CI/CD, memantau layanan produksi, serta mengotomasi proses deployment.',
             str_contains($posisi, 'Data') => 'Mengolah dan menganalisis data operasional, membuat dashboard laporan, serta menyiapkan rekomendasi bisnis.',
             default => 'Mengerjakan tugas sesuai posisi bersama tim dan berkoordinasi dengan pemangku kepentingan.',
+        };
+    }
+
+    /** Label bidang kerja dari posisi terakhir talent. */
+    private static function tagBidang(string $posisi): string
+    {
+        return match (true) {
+            str_contains($posisi, 'Backend'), str_contains($posisi, 'Software') => 'Pengembangan Backend, Integrasi API',
+            str_contains($posisi, 'Fullstack') => 'Pengembangan Fullstack, Aplikasi Web',
+            str_contains($posisi, 'Frontend'), str_contains($posisi, 'UI Developer') => 'Pengembangan Frontend, Antarmuka Web',
+            str_contains($posisi, 'Web Developer') => 'Pengembangan Fullstack, Aplikasi Web',
+            str_contains($posisi, 'Network') => 'Jaringan, Keamanan Sistem',
+            str_contains($posisi, 'Infrastructure') => 'Infrastruktur, Otomasi Deployment',
+            str_contains($posisi, 'UI/UX'), str_contains($posisi, 'Designer') => 'Desain Antarmuka, Riset Pengguna',
+            str_contains($posisi, 'QA') => 'Pengujian Perangkat Lunak',
+            str_contains($posisi, 'DevOps'), str_contains($posisi, 'System') => 'Infrastruktur, Otomasi Deployment',
+            str_contains($posisi, 'Data'), str_contains($posisi, 'Analyst') => 'Analisis Data',
+            default => 'Umum',
         };
     }
 }

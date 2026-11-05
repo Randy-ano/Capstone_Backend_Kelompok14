@@ -21,6 +21,9 @@ class RekomendasiService
 
     private const BOBOT_PENGALAMAN = 0.2;
 
+    /** Kandidat dengan skor_kecocokan di bawah nilai ini tidak direkomendasikan (rumus skor tidak berubah). */
+    public const SKOR_MINIMUM = 70;
+
     /** Status job yang boleh dicarikan kandidat. */
     public const STATUS_TERBUKA = [StatusReq::Diajukan, StatusReq::Diproses];
 
@@ -28,7 +31,7 @@ class RekomendasiService
 
     /**
      * Kandidat untuk job: talent di pool berstatus tersedia, belum pernah di-screening untuk job ini,
-     * dan cocok minimal 1 kompetensi. Urut skor tertinggi.
+     * cocok minimal 1 kompetensi, dan skor_kecocokan minimal SKOR_MINIMUM. Urut skor tertinggi.
      *
      * @return Collection<int, array<string, mixed>>
      */
@@ -45,7 +48,7 @@ class RekomendasiService
             ->whereHas('kompetensi', fn (Builder $q) => $q->whereIn('kompetensi.id_kompetensi', $job->kompetensi->modelKeys()))
             ->get()
             ->map(fn (Talent $talent) => ['talent' => $talent, ...$this->skor($job, $talent)])
-            ->filter(fn (array $kandidat) => $kandidat['skor_kompetensi'] > 0)
+            ->filter(fn (array $kandidat) => $kandidat['skor_kompetensi'] > 0 && $kandidat['skor_kecocokan'] >= self::SKOR_MINIMUM)
             ->sortBy([['skor_kecocokan', 'desc'], ['lama_pengalaman', 'desc'], [fn ($a, $b) => strcmp($a['talent']->nama_lengkap, $b['talent']->nama_lengkap)]])
             ->values();
     }
