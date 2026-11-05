@@ -401,7 +401,10 @@ Kolom dan tabel berikut ditambahkan untuk profil & CV talent (FR-03, FR-04); lih
 |---|---|---|
 | id_monitoring | PK | |
 | id_placement | FK→placement, cascade | |
-| id_manager | FK→pegawai, nullable, set null | |
+| id_manager | FK→pegawai, nullable, set null | **tidak dipakai lagi** sejak revisi 2026-11-06 (data lama dipindah ke `id_user_pencatat`) |
+| id_user_pencatat | FK→users, nullable, set null | HR Client atau Manager yang mencatat (migration `2026_11_06_200000`) |
+| tipe | string (enum) | `catatan` (default) atau `sp` (Surat Peringatan) — migration `2026_11_06_200000` |
+| id_dokumen | FK→dokumen, nullable, set null | lampiran SP (dokumen jenis `surat_peringatan`) — migration `2026_11_06_200000` |
 | tanggal_monitoring | datetime | |
 | hasil_monitoring | text | |
 | catatan_tindak_lanjut | text, nullable | |
@@ -536,7 +539,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
   - Tanggal: `tanggal_mulai` paling cepat besok, `tanggal_selesai` ≥ `tanggal_mulai`, keduanya dalam periode placement, dan rentang minimal berisi satu hari kerja.
   - Talent boleh membatalkan selama masih `menunggu`.
 - **R22. Shift:** dikelola HR Client (klien yang sama) atau Manager. Dukung input massal (satu request untuk banyak tanggal). Talent hanya melihat shift miliknya. **Shift tidak dihapus**, melainkan dibatalkan (`status_shift` = `dibatalkan`, tetap tampil di daftar); shift yang dibatalkan tidak bisa diubah, dan aktif kembali bila tanggalnya diatur ulang lewat input massal.
-- **R23. Monitoring:** dicatat oleh Manager untuk placement mana pun; dilihat Manager & AM, dan talent untuk placement miliknya (read-only, FR-15).
+- **R23. Monitoring per talent** (revisi 2026-11-06)**:** HR Client mencatat **catatan** (absensi, shift, kinerja harian) untuk talent yang ditempatkan di perusahaannya; Manager mencatat catatan atau memberi **Surat Peringatan** (`tipe = sp`) untuk talent mana pun. SP wajib `id_dokumen` berjenis `surat_peringatan` milik talent penempatan itu, tidak `ditolak`, dan belum dipakai SP lain; nomor SP (SP 1, SP 2, …) dihitung berurutan per penempatan; SP dinotifikasi ke talent & HR Client klien (`sp_diberikan`). Catatan/SP hanya untuk penempatan berstatus tampil **Aktif** (422). AM & TS hanya melihat; HR Client melihat talent di perusahaannya; talent melihat riwayat miliknya (read-only, FR-15).
 - **R24. Laporan keluhan:** dibuat HR Client untuk placement di kliennya (status `baru`). AM/Manager menindaklanjuti: isi `id_penindak_lanjut`, `hasil_tindak_lanjut`, `tanggal_tindak_lanjut`, ubah status.
 
 ### Dokumen (FR-13)
@@ -669,8 +672,9 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | POST | /shift | HC, M | input massal (R22): `id_placement`, `tanggal[]` (maks 62), `jenis_shift`, `keterangan`; tanggal yang sudah ada diperbarui; respons `{ dibuat, diperbarui }` |
 | PUT | /shift/{id} | HC, M | placement harus `aktif`; tanggal dalam periode placement; shift dibatalkan tidak bisa diubah |
 | PATCH | /shift/{id}/batal | HC, M | `status_shift` → `dibatalkan` (tidak ada lagi DELETE) |
-| GET | /monitoring | M, AM, T | filter `id_placement`, `search`; talent hanya catatan placement miliknya (FR-15, read-only) |
-| POST | /monitoring | M | R23; `tanggal_monitoring` default sekarang, tidak boleh di masa depan |
+| GET | /monitoring | semua (sesuai scope) | linimasa catatan & SP, terbaru dulu; filter `id_placement`, `tipe`, `search`; tiap item + `tipe`, `label_tipe` ("Catatan"/"SP n"), `nomor_sp`, `pencatat` (`nama`, `role`, `label_role`), `dokumen` (lampiran SP); HR Client hanya kliennya, talent hanya miliknya (FR-15, read-only) |
+| GET | /monitoring/talent | semua (sesuai scope) | kartu per penempatan: ringkasan placement + `status_tampil`, `tanggal_mulai`, `tanggal_selesai`, `sisa_hari`, `hari_menuju_mulai`, `jumlah_catatan`, `jumlah_sp`; filter `status` (belum_aktif/aktif/selesai), `id_klien` (internal), `search`; `meta.ringkasan` jumlah per status |
+| POST | /monitoring | HC, M | R23; body `id_placement`, `tipe` (catatan/sp; sp khusus Manager), `id_dokumen` (wajib untuk sp), `hasil_monitoring`, `catatan_tindak_lanjut`, `tanggal_monitoring` (default sekarang, tidak boleh di masa depan) |
 | GET | /laporan-keluhan | HC, AM, M | sesuai scope; filter `status`, `id_placement`, `search`; `meta.ringkasan` per status |
 | POST | /laporan-keluhan | HC | R24 |
 | PATCH | /laporan-keluhan/{id}/tindak-lanjut | AM, M | R24; `status_laporan` diproses/selesai, `hasil_tindak_lanjut` wajib saat selesai; laporan selesai final |
@@ -678,7 +682,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Dokumen (FR-13)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /dokumen | semua | dokumen kerja sama saja: **jenis `cv` tidak pernah tampil** dan bukan nilai filter `jenis` yang sah (CV lewat `/talent/cv` & `/talent-pool/{id}/cv`); sesuai scope (internal semua; HC dokumen kliennya; T miliknya; + yang diunggah/harus ditandatangani sendiri); filter `jenis`, `status`, `perlu_ttd`, `search`; tiap item berisi `penandatangan[]` (+ `ada_gambar_ttd`), `unduhan` (`nama_file`, `diolah`, `dengan_tanda_tangan`), dan `aksi` (+ `boleh_unduh_asli`) |
+| GET | /dokumen | semua | filter tambahan `id_talent` (dipakai form SP); dokumen kerja sama saja: **jenis `cv` tidak pernah tampil** dan bukan nilai filter `jenis` yang sah (CV lewat `/talent/cv` & `/talent-pool/{id}/cv`); sesuai scope (internal semua; HC dokumen kliennya; T miliknya; + yang diunggah/harus ditandatangani sendiri); filter `jenis`, `status`, `perlu_ttd`, `search`; tiap item berisi `penandatangan[]` (+ `ada_gambar_ttd`), `unduhan` (`nama_file`, `diolah`, `dengan_tanda_tangan`), dan `aksi` (+ `boleh_unduh_asli`) |
 | POST | /dokumen/upload | AM, HC, M, T | R25 (multipart `file`, `jenis_dokumen` selain cv). Quotation/PO/PKS wajib `id_job_req`, Kontrak Kerja wajib `id_pengajuan` (atau `id_placement` untuk perpanjangan); klien/talent/placement diambil dari tujuan; urutan & hak unggah R34–R35 (422 / 403). Jenis lain: `id_placement`/`id_klien`/`id_talent` seperti sebelumnya; unggahan talent langsung `menunggu_ttd` dengan penandatangan talent itu sendiri (R27) |
 | POST | /dokumen/generate | AM | R26 (quotation/PO: `items[]`; PKS: `ketentuan`; + `id_job_req` (klien dari permintaan), `nomor_dokumen`, `tanggal_dokumen`, `berlaku_sampai`, `perihal`, `catatan`); urutan & hak unggah R34–R35 berlaku, sehingga PO dari template ditolak 403 (PO diunggah HR Client) |
 | GET | /dokumen/{id}/download | sesuai Policy | PDF/PNG/JPG yang sudah punya penandatangan dikirim sebagai PDF bertanda tangan (R28a, nama = `unduhan.nama_file`); selain itu file asli |
@@ -881,6 +885,7 @@ Setiap fase: kerjakan → jalankan `php artisan test` → semua hijau → commit
 | Tabel `riwayat_pendidikan`, `pengalaman_kerja_talent`, `sertifikat_talent`, `bahasa`, `talent_bahasa` dan 13 kolom profil di `talent` (bagian 4.2, "Profil talent") | Data profil & CV talent yang lebih rinci (SCRUM-8). Lama pengalaman untuk R9 dihitung dari `pengalaman_kerja_talent`, jadi kolom `lama_pengalaman_tahun` tidak diperlukan |
 | Tidak memakai spatie/laravel-permission | Role cukup dari `users.role` (sesuai ERD) |
 | `shifting_talent.status_shift` (`aktif`/`dibatalkan`, default `aktif`) | Revisi bimbingan 2026-11-05: jadwal shift tidak dihapus, hanya dibatalkan |
+| `monitoring_talent.id_user_pencatat` (FK users), `tipe` (`catatan`/`sp`), `id_dokumen` (FK dokumen); `id_manager` tidak dipakai lagi | Revisi 2026-11-06: monitoring per talent oleh HR Client, SP oleh Manager dengan lampiran dokumen (R23); ERD & class diagram perlu diperbarui |
 | `dokumen.id_job_req` (FK job_requirement) & `dokumen.id_pengajuan` (FK pengajuan_kandidat), nullable | Revisi 2026-11-06: dokumen kerja sama berurutan per permintaan & Kontrak Kerja per kandidat (R34–R36); ERD & class diagram perlu diperbarui |
 | `job_requirement.gaji_min` & `gaji_maks` (nullable) | Revisi bimbingan 2026-11-05: kisaran gaji yang ditawarkan klien; ERD & class diagram perlu diperbarui |
 | `pengajuan_cuti.id_approver_manager` & `status_approval_manager` tidak dipakai lagi (kolom tetap ada) | Revisi bimbingan 2026-11-05: keputusan cuti hanya oleh HR Client; ERD & activity diagram cuti perlu diperbarui |
