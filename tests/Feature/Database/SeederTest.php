@@ -225,8 +225,13 @@ it('mencakup status cuti, shift beberapa minggu, monitoring, dan tiket', functio
     foreach (StatusCuti::cases() as $s) {
         expect($cuti->pluck('status_cuti')->contains($s))->toBeTrue();
     }
-    expect($cuti->contains(fn ($c) => $c->status_cuti === StatusCuti::Menunggu && $c->status_approval_klien->value === 'disetujui'))->toBeTrue();
+    // Keputusan cuti hanya HR Client: tidak ada lagi cuti "menunggu manager", kolom approval manager tidak dipakai.
+    expect($cuti->contains(fn ($c) => $c->status_cuti === StatusCuti::Menunggu && $c->status_approval_klien->value !== 'menunggu'))->toBeFalse()
+        ->and($cuti->whereIn('status_cuti', [StatusCuti::Disetujui, StatusCuti::Ditolak])->every(fn ($c) => $c->status_approval_klien->value === $c->status_cuti->value && $c->id_approver_klien !== null))->toBeTrue()
+        ->and($cuti->every(fn ($c) => $c->status_approval_manager->value === 'menunggu' && $c->id_approver_manager === null))->toBeTrue()
+        ->and($cuti->every(fn ($c) => ! $c->tanggal_mulai->isWeekend() && ! $c->tanggal_selesai->isWeekend()))->toBeTrue();
 
+    expect(ShiftingTalent::where('status_shift', 'dibatalkan')->count())->toBe(1);
     expect(ShiftingTalent::count())->toBeGreaterThanOrEqual(5 * 7 * 3)
         ->and(MonitoringTalent::count())->toBeGreaterThanOrEqual(5);
 
