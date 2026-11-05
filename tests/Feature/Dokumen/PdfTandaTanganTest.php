@@ -76,9 +76,11 @@ describe('Dokumen buatan sistem: blok tanda tangan di template', function () {
     it('menyimpan data template dan merender tanda tangan saat diunduh (manager, HR Client)', function () {
         $am = loginSebagai(Role::AccountManager);
         $klien = Klien::factory()->create(['nama_perusahaan' => 'PT Uji Tanda Tangan']);
+        $pengajuan = rekrutmenPengajuan(rekrutmenJob($klien->id_klien), App\Enums\StatusPengajuan::LanjutInterview);
+        rekrutmenEvaluasi($pengajuan);
         $id = $this->postJson('/api/v1/dokumen/generate', [
             'jenis_dokumen' => 'quotation',
-            'id_klien' => $klien->id_klien,
+            'id_job_req' => $pengajuan->id_job_req,
             'nomor_dokumen' => 'QUO/2026/11/001',
             'tanggal_dokumen' => now()->toDateString(),
             'perihal' => 'Penawaran talent',

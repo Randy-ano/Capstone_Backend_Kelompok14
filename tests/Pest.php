@@ -128,6 +128,31 @@ function rekrutmenEvaluasi(App\Models\PengajuanKandidat $pengajuan, App\Enums\St
     return App\Models\EvaluasiKandidat::factory()->create(['id_pengajuan' => $pengajuan->id_pengajuan, 'status_evaluasi' => $status]);
 }
 
+/**
+ * Dokumen berurutan (R34–R36) untuk kandidat diterima: Quotation, PO, PKS permintaannya dan Kontrak Kerja
+ * kandidatnya. `$sampai` = jenis terakhir yang dibuat; `$statusTerakhir` = status dokumen terakhir itu.
+ */
+function rekrutmenDokumen(
+    App\Models\PengajuanKandidat $pengajuan,
+    App\Enums\JenisDokumen $sampai = App\Enums\JenisDokumen::KontrakKerja,
+    App\Enums\StatusDokumen $statusTerakhir = App\Enums\StatusDokumen::Ditandatangani,
+): void {
+    foreach (App\Services\KelengkapanDokumenService::URUTAN as $jenis) {
+        $kontrak = $jenis === App\Enums\JenisDokumen::KontrakKerja;
+        App\Models\Dokumen::factory()->create([
+            'jenis_dokumen' => $jenis,
+            'id_job_req' => $pengajuan->id_job_req,
+            'id_pengajuan' => $kontrak ? $pengajuan->id_pengajuan : null,
+            'id_talent' => $kontrak ? $pengajuan->id_talent : null,
+            'id_klien' => $pengajuan->jobRequirement->id_klien,
+            'status_dokumen' => $jenis === $sampai ? $statusTerakhir : App\Enums\StatusDokumen::Ditandatangani,
+        ]);
+        if ($jenis === $sampai) {
+            return;
+        }
+    }
+}
+
 /*
 |--------------------------------------------------------------------------
 | Fase 6: operasional (cuti, shift, monitoring, keluhan)

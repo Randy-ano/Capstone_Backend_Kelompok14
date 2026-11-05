@@ -21,11 +21,20 @@ function gambarTtd(): UploadedFile
     return UploadedFile::fake()->create('ttd.png', 20, 'image/png');
 }
 
+/** Permintaan dengan satu kandidat diterima (syarat Quotation, R34). */
+function permintaanDiterima(): App\Models\PengajuanKandidat
+{
+    $pengajuan = rekrutmenPengajuan(rekrutmenJob(), App\Enums\StatusPengajuan::LanjutInterview);
+    rekrutmenEvaluasi($pengajuan);
+
+    return $pengajuan;
+}
+
 function dataGenerate(array $ubah = []): array
 {
     return [
         'jenis_dokumen' => 'quotation',
-        'id_klien' => Klien::factory()->create()->id_klien,
+        'id_job_req' => permintaanDiterima()->id_job_req,
         'nomor_dokumen' => 'QUO/2026/10/001',
         'tanggal_dokumen' => now()->toDateString(),
         'perihal' => 'Penawaran 2 Backend Developer',
@@ -40,13 +49,13 @@ describe('POST /dokumen/upload (R25)', function () {
         $klien = Klien::factory()->create();
 
         $respons = $this->post('/api/v1/dokumen/upload', [
-            'file' => UploadedFile::fake()->create('Kontrak Kerja Budi.pdf', 300, 'application/pdf'),
-            'jenis_dokumen' => 'kontrak_kerja',
+            'file' => UploadedFile::fake()->create('Berita Acara Budi.pdf', 300, 'application/pdf'),
+            'jenis_dokumen' => 'lainnya',
             'id_klien' => $klien->id_klien,
         ], ['Accept' => 'application/json'])
             ->assertCreated()
             ->assertJsonPath('message', 'Dokumen berhasil diunggah.')
-            ->assertJsonPath('data.nama_file', 'kontrak-kerja-budi.pdf')
+            ->assertJsonPath('data.nama_file', 'berita-acara-budi.pdf')
             ->assertJsonPath('data.status_dokumen', 'draft')
             ->assertJsonPath('data.uploader.id_user', $am->id_user)
             ->assertJsonPath('data.klien.id_klien', $klien->id_klien)
@@ -66,7 +75,7 @@ describe('POST /dokumen/upload (R25)', function () {
 
         // HR Client tanpa placement: klien miliknya, id_klien kiriman diabaikan.
         $hr = loginSebagai(Role::HrClient);
-        $this->post('/api/v1/dokumen/upload', ['file' => UploadedFile::fake()->create('po.pdf', 10), 'jenis_dokumen' => 'purchase_order', 'id_klien' => $placement->id_klien], ['Accept' => 'application/json'])
+        $this->post('/api/v1/dokumen/upload', ['file' => UploadedFile::fake()->create('memo.pdf', 10), 'jenis_dokumen' => 'lainnya', 'id_klien' => $placement->id_klien], ['Accept' => 'application/json'])
             ->assertJsonPath('data.klien.id_klien', $hr->idKlien());
 
         $talent = loginTalentPlacement($placement);
@@ -115,7 +124,8 @@ describe('POST /dokumen/generate (R26)', function () {
             ->assertJsonPath('message', 'Quotation berhasil dibuat.')
             ->assertJsonPath('data.jenis_dokumen', 'quotation')
             ->assertJsonPath('data.nama_file', 'quotation-quo-2026-10-001.pdf')
-            ->assertJsonPath('data.klien.id_klien', $data['id_klien'])
+            ->assertJsonPath('data.klien.id_klien', App\Models\JobRequirement::find($data['id_job_req'])->id_klien)
+            ->assertJsonPath('data.permintaan.id_job_req', $data['id_job_req'])
             ->assertJsonPath('data.uploader.nama', $am->pegawai->nama_pegawai);
 
         $isi = Storage::disk('local')->get(Dokumen::sole()->file_path);
@@ -125,7 +135,10 @@ describe('POST /dokumen/generate (R26)', function () {
     it('PKS memakai ketentuan, tanpa item', function () {
         loginSebagai(Role::AccountManager);
 
-        $this->postJson('/api/v1/dokumen/generate', dataGenerate(['jenis_dokumen' => 'pks', 'items' => null, 'ketentuan' => "1. Masa kerja 12 bulan.\n2. Evaluasi tiap 3 bulan."]))
+        $pengajuan = permintaanDiterima();
+        rekrutmenDokumen($pengajuan, JenisDokumen::PurchaseOrder);
+
+        $this->postJson('/api/v1/dokumen/generate', dataGenerate(['jenis_dokumen' => 'pks', 'id_job_req' => $pengajuan->id_job_req, 'items' => null, 'ketentuan' => "1. Masa kerja 12 bulan.\n2. Evaluasi tiap 3 bulan."]))
             ->assertCreated()
             ->assertJsonPath('message', 'Perjanjian Kerja Sama berhasil dibuat.');
     });
@@ -142,7 +155,7 @@ describe('POST /dokumen/generate (R26)', function () {
         'item tidak lengkap' => [['items' => [['deskripsi' => '', 'jumlah' => 0]]], ['items.0.deskripsi', 'items.0.jumlah', 'items.0.harga_satuan']],
         'pks tanpa ketentuan' => [['jenis_dokumen' => 'pks'], ['ketentuan' => 'Ketentuan wajib diisi untuk Perjanjian Kerja Sama.']],
         'berlaku sebelum tanggal' => [['berlaku_sampai' => now()->subDay()->toDateString()], ['berlaku_sampai']],
-        'tanpa klien & nomor' => [['id_klien' => null, 'nomor_dokumen' => ''], ['id_klien', 'nomor_dokumen']],
+        'tanpa permintaan & nomor' => [['id_job_req' => null, 'nomor_dokumen' => ''], ['id_job_req', 'nomor_dokumen']],
     ]);
 
     it('menolak selain AM (403)', function (Role $role) {

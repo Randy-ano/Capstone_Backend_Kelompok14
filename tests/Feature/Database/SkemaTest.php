@@ -32,7 +32,7 @@ dataset('skema', [
     'shifting_talent' => ['shifting_talent', ['id_shift', 'id_placement', 'id_pengelola', 'tanggal_shift', 'jenis_shift', 'keterangan', 'status_shift']],
     'monitoring_talent' => ['monitoring_talent', ['id_monitoring', 'id_placement', 'id_manager', 'tanggal_monitoring', 'hasil_monitoring', 'catatan_tindak_lanjut']],
     'laporan_keluhan' => ['laporan_keluhan', ['id_laporan', 'id_placement', 'id_hr_client', 'id_penindak_lanjut', 'judul_laporan', 'deskripsi_keluhan', 'tanggal_laporan', 'status_laporan', 'hasil_tindak_lanjut', 'tanggal_tindak_lanjut']],
-    'dokumen' => ['dokumen', ['id_dokumen', 'id_user_uploader', 'id_klien', 'id_talent', 'id_placement', 'jenis_dokumen', 'file_path', 'status_dokumen', 'tanggal_unggah']],
+    'dokumen' => ['dokumen', ['id_dokumen', 'id_user_uploader', 'id_klien', 'id_talent', 'id_placement', 'id_job_req', 'id_pengajuan', 'jenis_dokumen', 'file_path', 'status_dokumen', 'tanggal_unggah']],
     'tanda_tangan_dokumen' => ['tanda_tangan_dokumen', ['id_ttd', 'id_dokumen', 'id_user_penandatangan', 'file_tanda_tangan', 'tanggal_ttd', 'status_ttd']],
 ]);
 

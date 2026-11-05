@@ -14,10 +14,13 @@ use App\Models\Placement;
 use App\Models\Talent;
 use App\Models\TalentPool;
 
-/** Evaluasi diterima untuk job tertentu, siap dibuatkan placement. */
+/** Evaluasi diterima untuk job tertentu dengan dokumen Quotation–Kontrak Kerja selesai (R36), siap dibuatkan placement. */
 function evaluasiDiterima(?App\Models\JobRequirement $job = null): App\Models\EvaluasiKandidat
 {
-    return rekrutmenEvaluasi(rekrutmenPengajuan($job ?? rekrutmenJob(), StatusPengajuan::LanjutInterview));
+    $evaluasi = rekrutmenEvaluasi(rekrutmenPengajuan($job ?? rekrutmenJob(), StatusPengajuan::LanjutInterview));
+    rekrutmenDokumen($evaluasi->pengajuan);
+
+    return $evaluasi;
 }
 
 describe('POST /placement', function () {
@@ -215,6 +218,9 @@ describe('Alur penuh rekrutmen (Fase 5)', function () {
 
         // FR-12: HR Client menerima kandidat.
         $idEvaluasi = $this->actingAs($hrUser)->postJson('/api/v1/evaluasi', ['id_pengajuan' => $idPengajuan, 'nilai_score' => 90, 'status_evaluasi' => 'diterima'])->assertCreated()->json('data.id_evaluasi');
+
+        // R34–R36: Quotation, PO, PKS, Kontrak Kerja selesai (alur unggah diuji di DokumenBerurutanTest).
+        rekrutmenDokumen(App\Models\PengajuanKandidat::find($idPengajuan));
 
         // FR-17: TS membuat placement → job terpenuhi.
         $this->actingAs($ts)->postJson('/api/v1/placement', ['id_evaluasi' => $idEvaluasi, 'tanggal_mulai' => now()->addWeek()->toDateString()])->assertCreated();

@@ -27,8 +27,8 @@ describe('GET /dashboard/manager (R32)', function () {
             ->assertJsonPath('data.laporan_keluhan_terbuka', 3)
             // 20 talent di pool − 5 ditempatkan − 9 dalam proses.
             ->assertJsonPath('data.kandidat_per_tahapan.0', ['tahap' => 'tersedia', 'label' => 'Tersedia, belum diproses', 'jumlah' => 6])
-            // Usulan TS menunggu AM: Bagas (Frontend), Intan & Farhan (Data Analyst).
-            ->assertJsonPath('data.kandidat_per_tahapan.1', ['tahap' => 'diusulkan', 'label' => 'Diusulkan ke AM', 'jumlah' => 3])
+            // Usulan TS menunggu AM: Bagas (Frontend) & Farhan (Data Analyst); Intan sudah diterima (dokumen berurutan).
+            ->assertJsonPath('data.kandidat_per_tahapan.1', ['tahap' => 'diusulkan', 'label' => 'Diusulkan ke AM', 'jumlah' => 2])
             ->assertJsonPath('data.kandidat_per_tahapan.5', ['tahap' => 'ditempatkan', 'label' => 'Ditempatkan', 'jumlah' => 5])
             ->assertJsonCount(12, 'data.tren_placement')
             ->assertJsonPath('data.tren_placement.11.bulan', now()->format('Y-m'))
@@ -96,8 +96,8 @@ describe('GET /dashboard/ringkasan', function () {
         }
     })->with([
         'manager' => ['manager@intellisys.test', ['job_aktif' => 4, 'sla_terlambat' => 1, 'placement_aktif' => 5, 'cuti_menunggu' => 2, 'keluhan_terbuka' => 3, 'ttd_menunggu' => 2]],
-        'account manager' => ['am@intellisys.test', ['job_aktif' => 4, 'usulan_menunggu' => 3, 'menunggu_klien' => 1, 'interview_mendatang' => 2, 'keluhan_terbuka' => 3, 'ttd_menunggu' => 0]],
-        'talent support' => ['ts@intellisys.test', ['talent_tersedia' => 6, 'job_terbuka' => 4, 'usulan_menunggu' => 3, 'menunggu_placement' => 2]],
+        'account manager' => ['am@intellisys.test', ['job_aktif' => 4, 'usulan_menunggu' => 2, 'menunggu_klien' => 1, 'interview_mendatang' => 2, 'keluhan_terbuka' => 3, 'ttd_menunggu' => 0]],
+        'talent support' => ['ts@intellisys.test', ['talent_tersedia' => 6, 'job_terbuka' => 4, 'usulan_menunggu' => 2, 'menunggu_placement' => 3]],
         'hr client (PT Maju Jaya)' => ['hr@intellisys.test', ['job_aktif' => 1, 'perlu_ditinjau' => 1, 'interview_mendatang' => 1, 'placement_aktif' => 3, 'cuti_menunggu' => 1, 'ttd_menunggu' => 1]],
         'talent (Budi)' => ['talent@intellisys.test', ['status_profil' => 'Lengkap', 'status_kandidat' => 'Ditempatkan', 'interview_mendatang' => 0, 'cuti_menunggu' => 1]],
     ]);
