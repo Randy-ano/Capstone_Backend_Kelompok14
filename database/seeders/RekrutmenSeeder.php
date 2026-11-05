@@ -97,7 +97,7 @@ class RekrutmenSeeder extends Seeder
 
     /**
      * Diproses 1/2, SLA terlambat: Putri kontraknya sudah selesai (kembali ke pool), Yoga aktif,
-     * Nadia diterima menunggu penempatan, Hafiz ditolak klien.
+     * Nadia diterima dan sudah dibuatkan penempatan yang mulai minggu depan (Belum Aktif), Hafiz ditolak klien.
      */
     private function qaEngineer(): void
     {
@@ -106,7 +106,7 @@ class RekrutmenSeeder extends Seeder
             'posisi' => 'QA Engineer',
             'gaji_min' => 8_000_000,
             'gaji_maks' => 12_000_000,
-            'jumlah_kebutuhan' => 2,
+            'jumlah_kebutuhan' => 3,
             'pengalaman_min' => 1,
             'sla_deadline' => Linimasa::hari(-3, 17),
             'kualifikasi' => 'Menyusun skenario uji manual dan otomatis (Selenium) serta memeriksa data dengan SQL.',
@@ -138,8 +138,13 @@ class RekrutmenSeeder extends Seeder
         $this->tinjau($pNadia, StatusPengajuan::LanjutInterview, Linimasa::hari(-18));
         $this->interviewSelesai($pNadia, Linimasa::hari(-12), 'Interview bersama QA Lead.');
         $evNadia = $this->nilai('hr03', $pNadia, 82, 'diterima', 'Teliti; siap mulai bulan depan.', Linimasa::hari(-2));
-        // Quotation, PO, PKS QA sudah selesai (penempatan Putri); Kontrak Kerja Nadia menunggu tanda tangan Nadia & Manager.
-        $this->dokumen->kontrak($evNadia->pengajuan, Linimasa::hari(-1, 10));
+        // Quotation, PO, PKS QA sudah selesai (penempatan Putri); Kontrak Kerja Nadia selesai, penempatan mulai minggu depan.
+        $this->dokumen->kontrak($evNadia->pengajuan, Linimasa::hari(-2, 13), ['talent' => true, 'manager' => true]);
+        Linimasa::pada(Linimasa::hari(-1, 10), fn () => $this->placement->buat([
+            'id_evaluasi' => $evNadia->id_evaluasi,
+            'tanggal_mulai' => Linimasa::hari(7)->toDateString(),
+            'tanggal_selesai' => Linimasa::hari(7)->addYear()->toDateString(),
+        ]));
     }
 
     /**

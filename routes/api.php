@@ -292,12 +292,15 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
+    // Revisi 2026-11-06: monitoring per talent. Lihat: semua role sesuai scope; catat: HR Client (catatan) & Manager (catatan/SP).
     Route::get('/monitoring', [MonitoringController::class, 'index'])
-        ->middleware('role:manager,account_manager,talent')
         ->name('monitoring.index');
 
+    Route::get('/monitoring/talent', [MonitoringController::class, 'perTalent'])
+        ->name('monitoring.talent');
+
     Route::post('/monitoring', [MonitoringController::class, 'store'])
-        ->middleware('role:manager')
+        ->middleware('role:hr_client,manager')
         ->name('monitoring.store');
 
     Route::prefix('laporan-keluhan')->group(function () {

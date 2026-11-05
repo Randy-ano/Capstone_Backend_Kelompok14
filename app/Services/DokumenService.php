@@ -77,6 +77,7 @@ class DokumenService
             ->where('jenis_dokumen', '!=', JenisDokumen::Cv)
             ->with(self::RELASI)
             ->when($filter['jenis'] ?? null, fn (Builder $q, string $jenis) => $q->where('jenis_dokumen', $jenis))
+            ->when($filter['id_talent'] ?? null, fn (Builder $q, int|string $id) => $q->where('id_talent', $id))
             ->when($filter['status'] ?? null, fn (Builder $q, string $status) => $q->where('status_dokumen', $status))
             ->when($filter['perlu_ttd'] ?? false, fn (Builder $q) => $q
                 ->where('status_dokumen', StatusDokumen::MenungguTtd)

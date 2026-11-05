@@ -18,9 +18,11 @@ use App\Enums\StatusPengajuan;
 use App\Enums\StatusPlacement;
 use App\Enums\StatusReq;
 use App\Enums\StatusTtd;
+use App\Enums\TipeMonitoring;
 use App\Models\JadwalInterview;
 use App\Models\JobRequirement;
 use App\Models\LaporanKeluhan;
+use App\Models\MonitoringTalent;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanKandidat;
 use App\Models\Placement;
@@ -131,7 +133,8 @@ class DashboardService
         return [
             $this->kartu('job_aktif', 'Permintaan berjalan', $this->jobAktif()->count(), 'diajukan & diproses', '/permintaan-kebutuhan'),
             $this->kartu('sla_terlambat', 'SLA terlambat', $this->jumlahSla(IndikatorSla::Terlambat), "{$this->jumlahSla(IndikatorSla::Mendekati)} mendekati deadline", '/pipeline-rekrutmen'),
-            $this->kartu('placement_aktif', 'Talent ditempatkan', Placement::where('status_placement', StatusPlacement::Aktif)->count(), 'penempatan aktif', '/penugasan-penempatan'),
+            // Revisi monitoring per talent: keterangan = talent berjalan yang sudah menerima SP; kartu membuka Monitoring Kinerja.
+            $this->kartu('placement_aktif', 'Talent ditempatkan', Placement::where('status_placement', StatusPlacement::Aktif)->count(), $this->talentDenganSp().' talent dengan SP', '/monitoring-kinerja'),
             $this->kartu('cuti_menunggu', 'Cuti menunggu HR Client', PengajuanCuti::where('status_cuti', StatusCuti::Menunggu)->count(), 'diputuskan HR Client', '/pengajuan-cuti-shift'),
             $this->kartu('keluhan_terbuka', 'Keluhan terbuka', LaporanKeluhan::whereIn('status_laporan', [StatusLaporan::Baru, StatusLaporan::Diproses])->count(), 'baru & diproses', '/tiket-komplain-klien'),
             $this->kartu('ttd_menunggu', 'Perlu tanda tangan Anda', $this->ttdMenunggu($user), 'dokumen', '/dokumen-quotation-po'),
@@ -170,7 +173,7 @@ class DashboardService
             $this->kartu('job_aktif', 'Permintaan berjalan', $this->jobAktif()->where('id_klien', $idKlien)->count(), 'diajukan & diproses', '/permintaan-kebutuhan'),
             $this->kartu('perlu_ditinjau', 'Kandidat perlu ditinjau', PengajuanKandidat::where('status_pengajuan', StatusPengajuan::Diajukan)->whereHas('jobRequirement', $milikKlien)->count(), null, '/pengajuan-kandidat'),
             $this->kartu('interview_mendatang', 'Interview 7 hari ke depan', $this->interviewMendatang()->whereHas('pengajuan.jobRequirement', $milikKlien)->count(), null, '/jadwal-interview'),
-            $this->kartu('placement_aktif', 'Talent ditempatkan', Placement::where('status_placement', StatusPlacement::Aktif)->where('id_klien', $idKlien)->count(), 'di perusahaan Anda', '/penugasan-penempatan'),
+            $this->kartu('placement_aktif', 'Talent ditempatkan', Placement::where('status_placement', StatusPlacement::Aktif)->where('id_klien', $idKlien)->count(), $this->catatanBulanIni($idKlien).' catatan monitoring bulan ini', '/monitoring-kinerja'),
             $this->kartu('cuti_menunggu', 'Cuti menunggu keputusan', PengajuanCuti::where('status_cuti', StatusCuti::Menunggu)->where('status_approval_klien', StatusApproval::Menunggu)->whereHas('placement', $milikKlien)->count(), 'perlu persetujuan Anda', '/pengajuan-cuti-shift'),
             $this->kartu('ttd_menunggu', 'Perlu tanda tangan Anda', $this->ttdMenunggu($user), 'dokumen', '/dokumen-quotation-po'),
         ];
@@ -218,6 +221,21 @@ class DashboardService
         return TandaTanganDokumen::where('id_user_penandatangan', $user->id_user)
             ->where('status_ttd', StatusTtd::Menunggu)
             ->whereHas('dokumen', fn (Builder $q) => $q->where('status_dokumen', StatusDokumen::MenungguTtd)->where('jenis_dokumen', '!=', JenisDokumen::Cv))
+            ->count();
+    }
+
+    /** Penempatan berjalan (Belum Aktif/Aktif) yang punya minimal satu Surat Peringatan. */
+    private function talentDenganSp(): int
+    {
+        return Placement::berjalan()->whereHas('monitorings', fn (Builder $q) => $q->where('tipe', TipeMonitoring::Sp))->count();
+    }
+
+    /** Catatan monitoring bulan berjalan untuk penempatan di klien HR Client. */
+    private function catatanBulanIni(?int $idKlien): int
+    {
+        return MonitoringTalent::where('tipe', TipeMonitoring::Catatan)
+            ->where('tanggal_monitoring', '>=', now()->startOfMonth())
+            ->whereHas('placement', fn (Builder $q) => $q->where('id_klien', $idKlien))
             ->count();
     }
 

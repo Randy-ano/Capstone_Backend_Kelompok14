@@ -106,6 +106,23 @@ class Placement extends Model
         };
     }
 
+    /** Padanan query dari statusTampil(). */
+    public function scopeStatusTampil(Builder $query, StatusTampilPlacement $status): Builder
+    {
+        $hariIni = now()->toDateString();
+        if ($status === StatusTampilPlacement::Selesai) {
+            return $query->where(fn (Builder $q) => $q
+                ->where('status_placement', '!=', StatusPlacement::Aktif)
+                ->orWhereDate('tanggal_selesai', '<', $hariIni));
+        }
+
+        return $query->berjalan()->when(
+            $status === StatusTampilPlacement::BelumAktif,
+            fn (Builder $q) => $q->whereDate('tanggal_mulai', '>', $hariIni),
+            fn (Builder $q) => $q->whereDate('tanggal_mulai', '<=', $hariIni),
+        );
+    }
+
     /** Placement berstatus tampil Belum Aktif atau Aktif: status aktif dan tanggal selesai belum lewat. */
     public function scopeBerjalan(Builder $query): Builder
     {
