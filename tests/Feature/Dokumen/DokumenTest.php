@@ -50,7 +50,7 @@ describe('POST /dokumen/upload (R25)', function () {
             ->assertJsonPath('data.status_dokumen', 'draft')
             ->assertJsonPath('data.uploader.id_user', $am->id_user)
             ->assertJsonPath('data.klien.id_klien', $klien->id_klien)
-            ->assertJsonPath('data.aksi', ['boleh_atur_penandatangan' => true, 'perlu_tanda_tangan_saya' => false]);
+            ->assertJsonPath('data.aksi', ['boleh_unduh_asli' => true, 'boleh_atur_penandatangan' => true, 'perlu_tanda_tangan_saya' => false]);
 
         Storage::disk('local')->assertExists(Dokumen::sole()->file_path);
         expect(Dokumen::sole()->file_path)->toStartWith('dokumen/');

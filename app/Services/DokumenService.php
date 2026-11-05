@@ -36,6 +36,9 @@ class DokumenService
     /** Jenis yang dibuat dari template (R26). */
     public const JENIS_TEMPLATE = [JenisDokumen::Quotation, JenisDokumen::PurchaseOrder, JenisDokumen::Pks];
 
+    /** Ekstensi file yang bisa diberi tanda tangan saat diunduh. DOC/DOCX dikirim apa adanya (tidak dapat dikonversi tanpa aplikasi pengolah kata). */
+    public const EKSTENSI_BERTANDA_TANGAN = ['pdf', 'png', 'jpg', 'jpeg'];
+
     public function __construct(
         private readonly PemberitahuanService $pemberitahuan,
         private readonly PdfTandaTanganService $pdfTtd,
@@ -281,24 +284,45 @@ class DokumenService
             throw new DataTidakDitemukanException('File dokumen tidak ditemukan.');
         }
 
-        $adaPenandatangan = $dokumen->tandaTangan()->exists();
-        if (! $adaPenandatangan || strtolower(pathinfo($dokumen->file_path, PATHINFO_EXTENSION)) !== 'pdf') {
-            return Storage::disk(self::DISK)->download($dokumen->file_path, self::namaFile($dokumen));
+        $isi = self::diolah($dokumen) ? $this->pdfBertandaTangan($dokumen) : null;
+        if ($isi === null) {
+            return $this->unduhAsli($dokumen);
         }
-
-        $isi = $this->pdfBertandaTangan($dokumen);
 
         return response()->streamDownload(function () use ($isi) {
             echo $isi;
-        }, self::namaFile($dokumen), ['Content-Type' => 'application/pdf']);
+        }, self::namaFileUnduhan($dokumen), ['Content-Type' => 'application/pdf']);
+    }
+
+    /** File asli apa adanya (tanpa tanda tangan). Hak akses: DokumenPolicy::unduhAsli. */
+    public function unduhAsli(Dokumen $dokumen): StreamedResponse
+    {
+        if (! Storage::disk(self::DISK)->exists($dokumen->file_path)) {
+            throw new DataTidakDitemukanException('File dokumen tidak ditemukan.');
+        }
+
+        return Storage::disk(self::DISK)->download($dokumen->file_path, self::namaFile($dokumen));
+    }
+
+    /** Gambar tanda tangan satu penandatangan (inline, untuk thumbnail di detail dokumen). */
+    public function gambarTandaTangan(Dokumen $dokumen, int $idTtd): StreamedResponse
+    {
+        $ttd = $dokumen->tandaTangan()->whereKey($idTtd)->first();
+        if (! $ttd?->file_tanda_tangan || $ttd->status_ttd !== StatusTtd::Ditandatangani || ! Storage::disk(self::DISK)->exists($ttd->file_tanda_tangan)) {
+            throw new DataTidakDitemukanException('Gambar tanda tangan tidak ditemukan.');
+        }
+
+        return Storage::disk(self::DISK)->response($ttd->file_tanda_tangan, basename($ttd->file_tanda_tangan), [], 'inline');
     }
 
     /**
      * PDF yang diunduh memuat tanda tangan penandatangan yang sudah menandatangani; sisanya "Belum ditandatangani".
-     * Dokumen buatan sistem dirender ulang dari template.json; PDF unggahan diberi Lembar Pengesahan di akhir.
+     * Dokumen buatan sistem dirender ulang dari template.json; PDF unggahan diberi Lembar Pengesahan di akhir;
+     * gambar unggahan (PNG/JPG) dijadikan PDF (halaman gambar + Lembar Pengesahan).
      * Dibuat setiap kali diunduh, sehingga selalu sesuai tanda tangan terbaru. File asli tidak diubah.
+     * Null jika gambar tidak dapat dijadikan PDF (file asli dikirim).
      */
-    public function pdfBertandaTangan(Dokumen $dokumen): string
+    public function pdfBertandaTangan(Dokumen $dokumen): ?string
     {
         $pathTemplate = self::pathTemplate($dokumen->file_path);
         if (Storage::disk(self::DISK)->exists($pathTemplate)) {
@@ -307,7 +331,30 @@ class DokumenService
             return $this->pdfTtd->template('pdf.dokumen-template', self::dataView($template), $dokumen);
         }
 
-        return $this->pdfTtd->lembarPengesahan(Storage::disk(self::DISK)->get($dokumen->file_path), $dokumen);
+        if (self::ekstensi($dokumen) === 'pdf') {
+            return $this->pdfTtd->lembarPengesahan(Storage::disk(self::DISK)->get($dokumen->file_path), $dokumen);
+        }
+
+        return $this->pdfTtd->gambarDenganPengesahan(Storage::disk(self::DISK)->path($dokumen->file_path), $dokumen);
+    }
+
+    public static function ekstensi(Dokumen $dokumen): string
+    {
+        return strtolower(pathinfo($dokumen->file_path, PATHINFO_EXTENSION));
+    }
+
+    /** Unduhan berbeda dari file asli: ada penandatangan dan formatnya bisa diberi tanda tangan. */
+    public static function diolah(Dokumen $dokumen): bool
+    {
+        $ada = $dokumen->relationLoaded('tandaTangan') ? $dokumen->tandaTangan->isNotEmpty() : $dokumen->tandaTangan()->exists();
+
+        return $ada && in_array(self::ekstensi($dokumen), self::EKSTENSI_BERTANDA_TANGAN, true);
+    }
+
+    /** Nama file unduhan: gambar yang diolah menjadi PDF berakhiran .pdf. */
+    public static function namaFileUnduhan(Dokumen $dokumen): string
+    {
+        return self::diolah($dokumen) ? pathinfo($dokumen->file_path, PATHINFO_FILENAME).'.pdf' : self::namaFile($dokumen);
     }
 
     /** Lokasi data template dokumen buatan sistem (satu folder dengan PDF-nya). */

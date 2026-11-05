@@ -111,7 +111,7 @@ describe('Dokumen unggahan talent', function () {
             ->assertJsonPath('data.status_dokumen', 'menunggu_ttd')
             ->assertJsonCount(1, 'data.penandatangan')
             ->assertJsonPath('data.penandatangan.0.id_user', $talent->id_user)
-            ->assertJsonPath('data.aksi', ['boleh_atur_penandatangan' => false, 'perlu_tanda_tangan_saya' => true]);
+            ->assertJsonPath('data.aksi', ['boleh_unduh_asli' => true, 'boleh_atur_penandatangan' => false, 'perlu_tanda_tangan_saya' => true]);
 
         $dokumen = Dokumen::sole();
         $this->post("/api/v1/dokumen/{$dokumen->id_dokumen}/tanda-tangan", ['keputusan' => 'ditandatangani', 'file_tanda_tangan' => UploadedFile::fake()->create('ttd.png', 20, 'image/png')], ['Accept' => 'application/json'])

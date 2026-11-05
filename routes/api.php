@@ -327,6 +327,15 @@ Route::middleware('auth:sanctum')->group(function () {
             ->can('view', 'dokumen')
             ->name('dokumen.download');
 
+        Route::get('/{dokumen}/file-asli', [DokumenController::class, 'fileAsli'])
+            ->can('unduhAsli', 'dokumen')
+            ->name('dokumen.file-asli');
+
+        Route::get('/{dokumen}/tanda-tangan/{ttd}/gambar', [DokumenController::class, 'gambarTandaTangan'])
+            ->whereNumber('ttd')
+            ->can('view', 'dokumen')
+            ->name('dokumen.gambar-tanda-tangan');
+
         Route::get('/{dokumen}/calon-penandatangan', [DokumenController::class, 'calonPenandatangan'])
             ->can('aturPenandatangan', 'dokumen')
             ->name('dokumen.calon-penandatangan');

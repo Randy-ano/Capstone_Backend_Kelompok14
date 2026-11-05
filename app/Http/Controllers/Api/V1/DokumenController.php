@@ -71,7 +71,9 @@ class DokumenController extends Controller
     /**
      * Unduh dokumen.
      *
-     * Mengirim file asli dokumen (PDF/DOC/DOCX/PNG/JPG).
+     * Dokumen yang punya penandatangan dan berformat PDF/PNG/JPG dikirim sebagai PDF bertanda tangan
+     * (blok tanda tangan di template, atau Lembar Pengesahan di akhir; gambar dijadikan halaman PDF, nama file berakhiran .pdf).
+     * DOC/DOCX dan dokumen tanpa penandatangan dikirim apa adanya.
      *
      * @response 200 scenario="File dokumen" <Isi file biner, Content-Disposition: attachment>
      * @response 403 {"message": "Anda tidak memiliki akses ke dokumen ini."}
@@ -79,6 +81,34 @@ class DokumenController extends Controller
     public function download(Dokumen $dokumen): StreamedResponse
     {
         return $this->dokumen->download($dokumen);
+    }
+
+    /**
+     * Unduh file asli.
+     *
+     * File yang diunggah/dibuat apa adanya, tanpa tanda tangan. Hanya pengunggah dan tim internal.
+     *
+     * @response 200 scenario="File asli" <Isi file biner, Content-Disposition: attachment>
+     * @response 403 {"message": "File asli hanya dapat diunduh oleh pengunggah dokumen dan tim internal."}
+     */
+    public function fileAsli(Dokumen $dokumen): StreamedResponse
+    {
+        return $this->dokumen->unduhAsli($dokumen);
+    }
+
+    /**
+     * Gambar tanda tangan.
+     *
+     * Gambar tanda tangan seorang penandatangan yang sudah menandatangani (inline), untuk thumbnail di detail dokumen.
+     *
+     * @urlParam ttd integer required ID tanda tangan (`penandatangan[].id_ttd`). Example: 1
+     *
+     * @response 200 scenario="Gambar" <Isi gambar PNG/JPG, Content-Disposition: inline>
+     * @response 404 {"message": "Gambar tanda tangan tidak ditemukan."}
+     */
+    public function gambarTandaTangan(Dokumen $dokumen, int $ttd): StreamedResponse
+    {
+        return $this->dokumen->gambarTandaTangan($dokumen, $ttd);
     }
 
     /**

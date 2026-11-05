@@ -46,6 +46,34 @@ class PdfTandaTanganService
      */
     public function lembarPengesahan(string $pdfAsli, Dokumen $dokumen): string
     {
+        try {
+            return $this->denganLembar($pdfAsli, $dokumen);
+        } catch (Throwable $e) {
+            Log::warning("Lembar pengesahan dokumen {$dokumen->id_dokumen} tidak dapat ditambahkan: {$e->getMessage()}");
+
+            return $pdfAsli;
+        }
+    }
+
+    /**
+     * Gambar unggahan (PNG/JPG): halaman pertama berisi gambar dimuat utuh & proporsional di A4
+     * (lanskap bila gambar lebih lebar daripada tinggi), lalu Lembar Pengesahan.
+     * Null jika gambar tidak dapat dibaca FPDF (mis. PNG interlaced/16-bit); pemanggil mengirim file asli.
+     */
+    public function gambarDenganPengesahan(string $pathGambar, Dokumen $dokumen): ?string
+    {
+        try {
+            return $this->denganLembar($this->pdfGambar($pathGambar), $dokumen);
+        } catch (Throwable $e) {
+            Log::warning("Dokumen gambar {$dokumen->id_dokumen} tidak dapat dijadikan PDF: {$e->getMessage()}");
+
+            return null;
+        }
+    }
+
+    /** PDF asli + Lembar Pengesahan dengan gambar tanda tangan. */
+    private function denganLembar(string $pdfAsli, Dokumen $dokumen): string
+    {
         $penandatangan = $this->penandatangan($dokumen);
         [$lembar, $kotak] = $this->render('pdf.lembar-pengesahan', [
             'judul' => DokumenService::judul($dokumen->jenis_dokumen),
@@ -54,13 +82,29 @@ class PdfTandaTanganService
             'penandatangan' => $penandatangan,
         ]);
 
-        try {
-            return $this->susun([[$pdfAsli, []], [$lembar, $kotak]], $this->gambar($penandatangan));
-        } catch (Throwable $e) {
-            Log::warning("Lembar pengesahan dokumen {$dokumen->id_dokumen} tidak dapat ditambahkan: {$e->getMessage()}");
+        return $this->susun([[$pdfAsli, []], [$lembar, $kotak]], $this->gambar($penandatangan));
+    }
 
-            return $pdfAsli;
+    /** Satu halaman A4 (pt) berisi gambar, diperkecil agar muat dengan margin 36 pt; tidak diperbesar melebihi 1 pt/piksel. */
+    private function pdfGambar(string $path): string
+    {
+        $info = @getimagesize($path);
+        if (! $info || $info[0] <= 0 || $info[1] <= 0 || ! in_array($info[2], [IMAGETYPE_PNG, IMAGETYPE_JPEG], true)) {
+            throw new \RuntimeException('File bukan gambar PNG/JPG yang valid.');
         }
+
+        $lanskap = $info[0] > $info[1];
+        [$lebarHalaman, $tinggiHalaman] = $lanskap ? [841.89, 595.28] : [595.28, 841.89];
+        $margin = 36.0;
+        $skala = min(($lebarHalaman - 2 * $margin) / $info[0], ($tinggiHalaman - 2 * $margin) / $info[1], 1.0);
+        [$w, $h] = [$info[0] * $skala, $info[1] * $skala];
+
+        $fpdf = new Fpdi($lanskap ? 'L' : 'P', 'pt', 'A4');
+        $fpdf->SetAutoPageBreak(false);
+        $fpdf->AddPage();
+        $fpdf->Image($path, ($lebarHalaman - $w) / 2, ($tinggiHalaman - $h) / 2, $w, $h, $info[2] === IMAGETYPE_PNG ? 'PNG' : 'JPG');
+
+        return $fpdf->Output('S');
     }
 
     /**
@@ -86,8 +130,7 @@ class PdfTandaTanganService
                 },
                 'waktu' => $ttd->tanggal_ttd?->timezone(config('app.timezone'))->translatedFormat('d F Y, H:i').($ttd->tanggal_ttd ? ' WIB' : ''),
                 'gambar' => $ttd->status_ttd === StatusTtd::Ditandatangani && $ttd->file_tanda_tangan
-                    && Storage::disk(DokumenService::DISK)->exists($ttd->file_tanda_tangan)
-                        ? Storage::disk(DokumenService::DISK)->path($ttd->file_tanda_tangan)
+                    && Storage::disk(DokumenService::DISK)->exists($ttd->file_tanda_tangan) ? Storage::disk(DokumenService::DISK)->path($ttd->file_tanda_tangan)
                         : null,
             ])
             ->values()
