@@ -12,7 +12,7 @@ class IndexDokumenRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'jenis' => ['nullable', Rule::enum(JenisDokumen::class)],
+            'jenis' => ['nullable', Rule::in(array_values(array_diff(JenisDokumen::values(), [JenisDokumen::Cv->value])))],
             'status' => ['nullable', Rule::enum(StatusDokumen::class)],
             'perlu_ttd' => ['nullable', 'boolean'],
             'search' => ['nullable', 'string', 'max:255'],
@@ -29,7 +29,7 @@ class IndexDokumenRequest extends FormRequest
     public function queryParameters(): array
     {
         return [
-            'jenis' => ['description' => 'quotation, purchase_order, pks, kontrak_kerja, surat_peringatan, cv, lainnya.', 'example' => 'quotation'],
+            'jenis' => ['description' => 'quotation, purchase_order, pks, kontrak_kerja, surat_peringatan, lainnya (CV tidak tampil di daftar dokumen).', 'example' => 'quotation'],
             'status' => ['description' => 'draft, menunggu_ttd, ditandatangani, ditolak.', 'example' => 'menunggu_ttd'],
             'perlu_ttd' => ['description' => 'Jika 1, hanya dokumen yang menunggu tanda tangan user yang login.', 'example' => 1],
             'search' => ['description' => 'Cari nama file, klien, atau talent.', 'example' => 'quotation'],

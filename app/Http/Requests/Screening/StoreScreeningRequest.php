@@ -19,7 +19,7 @@ class StoreScreeningRequest extends FormRequest
         return [
             'id_job_req' => ['required', 'integer', 'exists:job_requirement,id_job_req'],
             'id_talent' => ['required', 'integer', 'exists:talent,id_talent'],
-            'catatan_screening' => ['nullable', 'string', 'max:2000'],
+            'catatan_screening' => ['nullable', 'string', 'max:1000'],
         ];
     }
 
@@ -28,7 +28,7 @@ class StoreScreeningRequest extends FormRequest
         return [
             'id_job_req' => 'permintaan kebutuhan',
             'id_talent' => 'talent',
-            'catatan_screening' => 'catatan screening',
+            'catatan_screening' => 'catatan untuk AM',
         ];
     }
 
@@ -36,8 +36,8 @@ class StoreScreeningRequest extends FormRequest
     {
         return [
             'id_job_req' => ['description' => 'Permintaan kebutuhan berstatus diajukan/diproses.', 'example' => 1],
-            'id_talent' => ['description' => 'Talent di talent pool yang tersedia.', 'example' => 1],
-            'catatan_screening' => ['example' => 'Kompetensi sesuai, jadwalkan wawancara internal.'],
+            'id_talent' => ['description' => 'Talent di talent pool yang tersedia (boleh di luar rekomendasi / skor < 70).', 'example' => 1],
+            'catatan_screening' => ['description' => 'Catatan untuk Account Manager (opsional, maks. 1000 karakter).', 'example' => 'Lulusan S1 Informatika, cocok dengan budaya klien.'],
         ];
     }
 }

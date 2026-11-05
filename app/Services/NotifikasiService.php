@@ -6,6 +6,7 @@ use App\Enums\KanalNotifikasi;
 use App\Enums\Role;
 use App\Enums\StatusPengiriman;
 use App\Jobs\KirimEmailNotifikasi;
+use App\Models\JobRequirement;
 use App\Models\Notifikasi;
 use App\Models\User;
 use Carbon\CarbonInterface;
@@ -111,6 +112,28 @@ class NotifikasiService
     public static function managerAktif(): Collection
     {
         return User::where('role', Role::Manager)->where('status_aktif', true)->get();
+    }
+
+    /** @return Collection<int, User> */
+    public static function talentSupportAktif(): Collection
+    {
+        return User::where('role', Role::TalentSupport)->where('status_aktif', true)->get();
+    }
+
+    /**
+     * AM penanggung jawab permintaan kebutuhan; semua AM aktif jika job belum punya AM (dibuat HR Client).
+     *
+     * @return Collection<int, User>
+     */
+    public static function amPenanggungJawab(JobRequirement $job): Collection
+    {
+        $job->loadMissing('accountManager.user');
+        $am = $job->accountManager?->user;
+        if ($am !== null) {
+            return $am->status_aktif ? new Collection([$am]) : new Collection;
+        }
+
+        return User::where('role', Role::AccountManager)->where('status_aktif', true)->get();
     }
 
     /** @return Collection<int, User> */

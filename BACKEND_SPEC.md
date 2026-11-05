@@ -21,7 +21,7 @@
 Sistem mengelola proses outsourcing talent dari kebutuhan klien sampai talent ditempatkan dan dimonitor.
 
 **Alur inti:**
-`Job Requirement → Rekomendasi Kandidat → Screening → Pengajuan ke Klien → Interview → Evaluasi Klien → Placement → Cuti / Shift / Monitoring / Laporan Keluhan`
+`Job Requirement → Rekomendasi Kandidat / Talent Pool → Usulan TS ke AM → Pengajuan ke Klien → Interview → Evaluasi Klien → Placement → Cuti / Shift / Monitoring / Laporan Keluhan`
 
 Didukung oleh: Progres Pemenuhan (tahapan + SLA), Dokumen & Tanda Tangan Digital, Notifikasi & Reminder, Dashboard.
 
@@ -298,7 +298,7 @@ Kolom dan tabel berikut ditambahkan untuk profil & CV talent (FR-03, FR-04); lih
 
 ### 4.3 Proses Rekrutmen
 
-**screening_talent**
+**screening_talent** — satu baris = satu **usulan kandidat** dari Talent Support ke Account Manager (revisi 2026-11-05, tanpa perubahan kolom)
 | Kolom | Tipe | Keterangan |
 |---|---|---|
 | id_screening | PK | |
@@ -307,9 +307,9 @@ Kolom dan tabel berikut ditambahkan untuk profil & CV talent (FR-03, FR-04); lih
 | id_ts | FK→pegawai, nullable, set null | Talent Support yang menyaring |
 | skor_kecocokan | decimal(5,2), nullable | 0–100, dari RekomendasiService |
 | tanggal_screening | datetime | |
-| catatan_screening | text, nullable | |
-| hasil_screening | string (enum) | `pending` (default), `lolos`, `tidak_lolos` |
-| *unique* | (id_talent, id_job_req) | talent tidak boleh di-screening 2x untuk job yang sama |
+| catatan_screening | text, nullable | catatan TS untuk AM; bila AM tidak meneruskan, alasannya ditambahkan setelah penanda `[Tidak diteruskan AM] ` (dipisah lagi di respons) |
+| hasil_screening | string (enum) | `pending` (default, hanya data lama), `lolos` (= usulan berlaku), `tidak_lolos` (= tidak diteruskan AM) |
+| *unique* | (id_talent, id_job_req) | talent tidak boleh diusulkan 2x untuk job yang sama |
 
 **progres_pemenuhan** — **log** perubahan tahapan (bukan sumber status utama)
 | Kolom | Tipe | Keterangan |
@@ -506,9 +506,9 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
   Kandidat yang ditampilkan: `talent_pool.status_ketersediaan = tersedia`, `talent.status_kandidat = tersedia`, belum pernah di-screening untuk job ini, `skor_kompetensi` > 0 (pengalaman saja tidak cukup untuk muncul), dan **`skor_kecocokan` ≥ `RekomendasiService::SKOR_MINIMUM` (70)** (revisi 2026-11-05; rumus skor tidak berubah). Respons menyertakan `meta.skor_minimum`. Urutkan skor tertinggi. Kembalikan juga daftar kompetensi yang cocok & yang kurang, serta `lama_pengalaman` (tahun, 1 desimal).
 
 ### Screening & Progres (FR-08, FR-09)
-- **R10.** Screening dibuat oleh TS; `skor_kecocokan` diisi dari R9. Saat screening dibuat → talent.status_kandidat = `dalam_proses`, job_requirement.status_req = `diproses` (jika masih `diajukan`).
-- **R11.** Jika hasil `tidak_lolos` → talent.status_kandidat kembali `tersedia`.
-- **R12.** **Progres otomatis** (Observer): setiap perubahan tahapan (screening dibuat, pengajuan dibuat, interview dijadwalkan, evaluasi disimpan, placement dibuat, atau kandidat ditolak di tahap mana pun) membuat 1 baris `progres_pemenuhan`. Pemetaan: screening dibuat → `screening`; screening `tidak_lolos` → `ditolak`; pengajuan dibuat → `diajukan`; pengajuan ditolak klien → `ditolak`; tiap interview dijadwalkan → `interview`; evaluasi `diterima` → `evaluasi`, `ditolak` → `ditolak`; placement dibuat → `placement`.
+- **R10. Usulan kandidat** (revisi 2026-11-05, menggantikan keputusan Lolos/Tidak Lolos): TS mengusulkan talent ke AM dari Rekomendasi Kandidat atau Talent Pool, dengan catatan opsional (maks. 1000 karakter). Usulan = baris `screening_talent` dengan `hasil_screening = lolos`. Talent **boleh di luar rekomendasi** (skor < 70 atau kompetensi tidak lengkap) karena syarat lain (kampus, pendidikan, latar belakang) dicek manusia; `skor_kecocokan` tetap dihitung dari R9 sebagai informasi. Talent harus ada di pool `tersedia` dan `status_kandidat = tersedia`; satu talent hanya sekali per job (422). Saat usulan dibuat → talent.status_kandidat = `dalam_proses`, job_requirement.status_req = `diproses` (jika masih `diajukan`), dan AM penanggung jawab job dinotifikasi (semua AM aktif bila job belum punya AM).
+- **R11. Tinjauan AM.** AM meneruskan usulan ke klien (R14) atau **tidak meneruskan** dengan alasan wajib (maks. 1000 karakter): `hasil_screening` → `tidak_lolos` (final), alasan disimpan, talent.status_kandidat kembali `tersedia` (bisa diusulkan untuk permintaan lain), TS pengusul dinotifikasi. Status usulan turunan (`status_usulan`): `menunggu_am` (belum `tidak_lolos` & belum ada pengajuan), `diteruskan` (sudah ada pengajuan), `tidak_diteruskan` (`tidak_lolos`).
+- **R12.** **Progres otomatis** (Observer): setiap perubahan tahapan (screening dibuat, pengajuan dibuat, interview dijadwalkan, evaluasi disimpan, placement dibuat, atau kandidat ditolak di tahap mana pun) membuat 1 baris `progres_pemenuhan`. Pemetaan: usulan dibuat → `screening` (label UI "Diusulkan ke AM"); usulan tidak diteruskan → `ditolak`; pengajuan dibuat → `diajukan`; pengajuan ditolak klien → `ditolak`; tiap interview dijadwalkan → `interview`; evaluasi `diterima` → `evaluasi`, `ditolak` → `ditolak`; placement dibuat → `placement`.
 - **R13. Indikator SLA** dari `job_requirement.sla_deadline`:
   - `terlambat` jika sekarang > deadline dan status_req bukan `terpenuhi`/`dibatalkan`
   - `mendekati` jika sisa ≤ 3 hari (dan status_req bukan `terpenuhi`/`dibatalkan`)
@@ -516,7 +516,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
   (implementasi: `ProgresService::indikatorSla`; padanan SQL untuk filter: `ProgresService::filterIndikatorSla`)
 
 ### Pengajuan, Interview, Evaluasi (FR-10, FR-11, FR-12)
-- **R14.** Pengajuan hanya bisa dibuat dari screening dengan hasil `lolos`. `id_talent` & `id_job_req` disalin dari screening.
+- **R14.** Pengajuan ("Teruskan ke Klien") dibuat AM dari usulan yang belum diteruskan dan belum `tidak_lolos` (hasil `lolos`, atau `pending` pada data lama). `id_talent` & `id_job_req` disalin dari usulan.
 - **R15.** HR Client meninjau pengajuan: `lanjut_interview` atau `ditolak`. Jika ditolak → talent.status_kandidat = `tersedia`.
 - **R16.** Interview hanya bisa dijadwalkan untuk pengajuan berstatus `lanjut_interview`. Bisa lebih dari satu (ronde). Interview dibuat, dijadwal ulang, dan ditandai selesai/dibatalkan **hanya oleh Account Manager**; HR Client & talent hanya melihat. Talent & HR Client menerima notifikasi.
 - **R17.** Evaluasi oleh HR Client dari klien yang sama, maksimal 1 per pengajuan, dan hanya jika minimal 1 interview berstatus `selesai`. Jika `ditolak` → talent.status_kandidat = `tersedia`.
@@ -555,7 +555,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
 
 ### Notifikasi & Reminder (FR-16)
 - **R29.** Gunakan satu `NotifikasiService::kirim(user, tipe, pesan, kanal)` yang menyimpan ke tabel `notifikasi` dan, jika kanal `email`, mengirim email lewat queue lalu memperbarui `status_pengiriman`.
-- **R30. Event yang memicu notifikasi:** pengajuan kandidat dibuat (→ HR Client), status pengajuan berubah (→ AM, Talent), interview dijadwalkan/diubah (→ Talent, HR Client), evaluasi disimpan (→ AM, TS), placement dibuat (→ Talent, HR Client), cuti diajukan (→ HR Client, Manager), cuti diputuskan (→ Talent), laporan keluhan baru (→ AM, Manager), permintaan tanda tangan (→ penandatangan).
+- **R30. Event yang memicu notifikasi:** permintaan kebutuhan diajukan oleh HR Client/AM (→ semua TS aktif + AM penanggung jawab, atau semua AM aktif bila belum ada; pelaku tidak dinotifikasi), usulan kandidat dibuat (→ AM penanggung jawab), usulan tidak diteruskan (→ TS pengusul), pengajuan kandidat dibuat (→ HR Client), status pengajuan berubah (→ AM, Talent), interview dijadwalkan/diubah (→ Talent, HR Client), evaluasi disimpan (→ AM, TS), placement dibuat (→ Talent, HR Client), cuti diajukan (→ HR Client, Manager), cuti diputuskan (→ Talent), laporan keluhan baru (→ AM, Manager), permintaan tanda tangan (→ penandatangan).
 - **R31. Scheduler harian (pukul 07:00 WIB):**
   - Job requirement dengan SLA `mendekati`/`terlambat` → AM & Manager
   - Interview besok → Talent & HR Client
@@ -603,7 +603,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
 | GET | /talent-pool | Internal | filter: `status`, `kompetensi[]` (harus punya semua), `search`; `talent.pendidikan` = ringkasan riwayat pendidikan terbaru; `meta.ringkasan` = `{ total, tersedia, tidak_tersedia }` dari seluruh pool (tidak terpengaruh filter) |
-| GET | /talent-pool/{id} | Internal | detail + profil + `riwayat_pengalaman_kerja` + `lama_pengalaman_tahun` + riwayat screening |
+| GET | /talent-pool/{id} | Internal | detail + profil + `riwayat_pengalaman_kerja` + `lama_pengalaman_tahun` + `riwayat_screening` (riwayat usulan: `id_job_req`, `catatan_screening`, `alasan_tidak_diteruskan`, `status_usulan`, `label_status_usulan`) |
 | GET | /talent-pool/{id}/cv | Internal | download CV talent (PDF); 404 jika belum dibuat |
 | PATCH | /talent-pool/{id} | TS | ubah status_ketersediaan / tag_keahlian |
 
@@ -612,18 +612,19 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 |---|---|---|---|
 | GET | /job-requirements | HC, Internal | HC hanya miliknya; filter `status`, `indikator_sla`, `id_klien` (internal), `search` (posisi/klien); `meta.ringkasan` = jumlah per status + `sla_terlambat`, `sla_mendekati` (tidak terpengaruh filter) |
 | POST | /job-requirements | HC, AM | R7; `status_req` awal `draft` (default) atau `diajukan`; `kompetensi[]` (id) dan/atau `kompetensi_baru[]` (nama, R33); opsional `gaji_min`, `gaji_maks` (rupiah, `gaji_maks` ≥ `gaji_min`) |
-| GET | /job-requirements/{id} | HC, Internal | + kompetensi + `ringkasan_progres` (jumlah screening per hasil, terpenuhi, sisa) + `progres_terakhir` |
+| GET | /job-requirements/{id} | HC, Internal | + kompetensi + `ringkasan_progres` (jumlah screening per hasil, `usulan_menunggu_am`/`usulan_diteruskan`/`usulan_tidak_diteruskan`, terpenuhi, sisa) + `progres_terakhir` |
 | PUT | /job-requirements/{id} | HC, AM | hanya saat `draft`/`diajukan`; parsial; `kompetensi` (+ `kompetensi_baru`, R33) jika dikirim menggantikan daftar lama; `kompetensi_baru` diabaikan tanpa `kompetensi`; klien tidak bisa diganti; `gaji_maks` dibandingkan dengan `gaji_min` baru atau yang tersimpan |
 | PATCH | /job-requirements/{id}/status | HC, AM | body `status_req`: `diajukan` (dari draft, deadline belum lewat) / `dibatalkan` (dari draft/diajukan/diproses; talent yang sedang diproses untuk job ini kembali `tersedia`) |
 | GET | /job-requirements/{id}/rekomendasi | TS | R9; job harus `diajukan`/`diproses`; hanya skor ≥ 70; `meta.skor_minimum` |
 | GET | /klien | Internal | daftar klien read-only (`search`) untuk pilihan klien saat AM membuat job requirement |
 
-### Screening & Progres (FR-08, FR-09)
+### Usulan Kandidat (Screening) & Progres (FR-08, FR-09)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /screening | TS, AM, M | filter id_job_req, id_talent, hasil, search |
-| POST | /screening | TS | R10; body `id_job_req`, `id_talent`, `catatan_screening`; job harus `diajukan`/`diproses`, talent harus tersedia |
-| PUT | /screening/{id} | TS | ubah hasil/catatan (R11); `tidak_lolos` final; ditolak jika sudah diajukan ke klien atau job selesai |
+| GET | /screening | TS, AM, M | filter `id_job_req`, `id_talent`, `hasil`, `status_usulan` (`menunggu_am`/`diteruskan`/`tidak_diteruskan`), `search`; tiap item + `status_usulan`, `label_status_usulan`, `catatan_screening` (catatan TS saja), `alasan_tidak_diteruskan` |
+| POST | /screening | TS | usulkan ke AM (R10); body `id_job_req`, `id_talent`, `catatan_screening` (maks 1000); job harus `diajukan`/`diproses`, talent harus tersedia; tanpa batas skor |
+| PUT | /screening/{id} | TS | ubah catatan/hasil (endpoint lama, tidak dipakai UI baru); `tidak_lolos` final; alasan AM tetap tersimpan saat catatan diubah; ditolak jika sudah diajukan ke klien atau job selesai |
+| PATCH | /screening/{id}/tidak-diteruskan | AM | R11; body `alasan` (wajib, maks 1000); 422 jika usulan sudah diteruskan/tidak diteruskan atau job selesai |
 | GET | /job-requirements/{id}/progres | Internal, HC | data job + indikator SLA terkini + `log_progres` (terbaru dulu) |
 | GET | /progres | Internal | semua job + SLA terkini + `progres_terakhir` + `jumlah_screening`, urut deadline terdekat (untuk tabel monitoring); filter sama dengan GET /job-requirements |
 
@@ -632,7 +633,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 |---|---|---|---|
 | GET | /pengajuan | HC, Internal, T | sesuai scope; filter `status` (nilai `status_tampil`, lihat bagian 8), `id_job_req`, `search`; talent tidak melihat catatan screening & nilai evaluasi |
 | GET | /pengajuan/{id} | HC, Internal, T | detail + `interviews` + `evaluasi` + `id_placement` (sesuai scope) |
-| POST | /pengajuan | AM | R14; body `id_screening`; job harus `diproses` |
+| POST | /pengajuan | AM | R14 ("Teruskan ke Klien"); body `id_screening` (usulan menunggu AM); job harus `diproses` |
 | PATCH | /pengajuan/{id}/status | HC | R15; hanya dari `diajukan` ke `lanjut_interview`/`ditolak` |
 | GET | /interview | HC, Internal, T | sesuai scope, filter `dari`/`sampai` (tanggal), `status`, `id_pengajuan`; urut tanggal & waktu |
 | POST | /interview | AM | R16; pengajuan `lanjut_interview` yang belum dievaluasi; tanggal ≥ hari ini, waktu `H:i` |
@@ -669,7 +670,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Dokumen (FR-13)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /dokumen | semua | sesuai scope (internal semua; HC dokumen kliennya; T miliknya; + yang diunggah/harus ditandatangani sendiri); filter `jenis`, `status`, `perlu_ttd`, `search`; tiap item berisi `penandatangan[]` (+ `ada_gambar_ttd`), `unduhan` (`nama_file`, `diolah`, `dengan_tanda_tangan`), dan `aksi` (+ `boleh_unduh_asli`) |
+| GET | /dokumen | semua | dokumen kerja sama saja: **jenis `cv` tidak pernah tampil** dan bukan nilai filter `jenis` yang sah (CV lewat `/talent/cv` & `/talent-pool/{id}/cv`); sesuai scope (internal semua; HC dokumen kliennya; T miliknya; + yang diunggah/harus ditandatangani sendiri); filter `jenis`, `status`, `perlu_ttd`, `search`; tiap item berisi `penandatangan[]` (+ `ada_gambar_ttd`), `unduhan` (`nama_file`, `diolah`, `dengan_tanda_tangan`), dan `aksi` (+ `boleh_unduh_asli`) |
 | POST | /dokumen/upload | AM, HC, M, T | R25 (multipart `file`, `jenis_dokumen` selain cv, `id_placement`/`id_klien`/`id_talent`); unggahan talent langsung `menunggu_ttd` dengan penandatangan talent itu sendiri (R27) |
 | POST | /dokumen/generate | AM | R26 (quotation/PO: `items[]`; PKS: `ketentuan`; + `id_klien`, `nomor_dokumen`, `tanggal_dokumen`, `berlaku_sampai`, `perihal`, `catatan`) |
 | GET | /dokumen/{id}/download | sesuai Policy | PDF/PNG/JPG yang sudah punya penandatangan dikirim sebagai PDF bertanda tangan (R28a, nama = `unduhan.nama_file`); selain itu file asli |
@@ -692,7 +693,7 @@ Scheduler: `php artisan notifikasi:pengingat` (terjadwal 07:00 WIB, R31). Jalank
 ### Dashboard (FR-20)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /dashboard/manager | M | R32: `job_requirement` (total & per status), `sla` (terlambat/mendekati, job diajukan/diproses), `kandidat_per_tahapan` (tersedia, screening, lolos_screening, diajukan, interview, diterima, ditempatkan), `placement_aktif`, `laporan_keluhan_terbuka`, `tren_placement` (12 bulan, per bulan mulai) |
+| GET | /dashboard/manager | M | R32: `job_requirement` (total & per status), `sla` (terlambat/mendekati, job diajukan/diproses), `kandidat_per_tahapan` (tersedia, diusulkan [usulan menunggu AM], diajukan, interview, diterima, ditempatkan), `placement_aktif`, `laporan_keluhan_terbuka`, `tren_placement` (12 bulan, per bulan mulai) |
 | GET | /dashboard/ringkasan | semua | `kartu[]` (`kunci`, `label`, `nilai`, `keterangan`, `tujuan`) sesuai role + `notifikasi_belum_dibaca` |
 
 ---

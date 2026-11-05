@@ -56,7 +56,7 @@ class PengajuanResource extends JsonResource
             'screening' => $this->when(! $olehTalent && $this->relationLoaded('screening'), fn () => [
                 'id_screening' => $this->screening->id_screening,
                 'skor_kecocokan' => $this->screening->skor_kecocokan === null ? null : (float) $this->screening->skor_kecocokan,
-                'catatan_screening' => $this->screening->catatan_screening,
+                'catatan_screening' => $this->screening->catatanTs(),
             ]),
             'jumlah_interview' => $this->whenCounted('interviews'),
             'interviews' => InterviewResource::collection($this->whenLoaded('interviews')),

@@ -94,14 +94,15 @@ class PengajuanService
     }
 
     /**
-     * R14: hanya dari screening lolos yang belum diajukan; talent & job disalin dari screening.
+     * R14 (revisi): AM meneruskan usulan TS ke klien — usulan yang belum diteruskan dan belum "tidak diteruskan"
+     * (hasil lolos, atau pending pada data lama); talent & job disalin dari usulan.
      */
     public function buat(User $user, int $idScreening): PengajuanKandidat
     {
         $screening = ScreeningTalent::with('jobRequirement')->findOrFail($idScreening);
 
-        if ($screening->hasil_screening !== HasilScreening::Lolos) {
-            throw ValidationException::withMessages(['id_screening' => 'Hanya kandidat yang lolos screening yang dapat diajukan ke klien.']);
+        if ($screening->hasil_screening === HasilScreening::TidakLolos) {
+            throw ValidationException::withMessages(['id_screening' => 'Usulan ini sudah tidak diteruskan sehingga tidak dapat diajukan ke klien.']);
         }
         if ($screening->pengajuan()->exists()) {
             throw ValidationException::withMessages(['id_screening' => 'Kandidat ini sudah diajukan ke klien.']);

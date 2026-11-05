@@ -19,8 +19,12 @@ class ScreeningResource extends JsonResource
             'id_screening' => $this->id_screening,
             'skor_kecocokan' => $this->skor_kecocokan === null ? null : (float) $this->skor_kecocokan,
             'tanggal_screening' => $this->tanggal_screening?->toIso8601String(),
-            'catatan_screening' => $this->catatan_screening,
+            // Catatan TS untuk AM; alasan AM dipisah ke `alasan_tidak_diteruskan`.
+            'catatan_screening' => $this->catatanTs(),
+            'alasan_tidak_diteruskan' => $this->alasanTidakDiteruskan(),
             'hasil_screening' => $this->hasil_screening,
+            'status_usulan' => $this->when($this->relationLoaded('pengajuan'), fn () => $this->statusUsulan()),
+            'label_status_usulan' => $this->when($this->relationLoaded('pengajuan'), fn () => ScreeningTalent::STATUS_USULAN[$this->statusUsulan()]),
             'id_pengajuan' => $this->whenLoaded('pengajuan', fn () => $this->pengajuan?->id_pengajuan),
             'talent' => [
                 'id_talent' => $this->talent->id_talent,

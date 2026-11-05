@@ -91,10 +91,12 @@ it('tetap bermakna kapan pun seeder dijalankan: tanggal relatif terhadap hari se
 });
 
 it('menempatkan kandidat di setiap tahap', function () {
-    $hasil = ScreeningTalent::pluck('hasil_screening');
-    foreach (HasilScreening::cases() as $h) {
-        expect($hasil->contains($h))->toBeTrue();
-    }
+    // Usulan TS: menunggu AM, diteruskan ke klien, dan tidak diteruskan (dengan alasan); semua usulan berisi catatan.
+    $usulan = ScreeningTalent::with('pengajuan')->get();
+    expect($usulan->map->statusUsulan()->unique()->sort()->values()->all())->toBe(['diteruskan', 'menunggu_am', 'tidak_diteruskan'])
+        ->and($usulan->every(fn (ScreeningTalent $s) => filled($s->catatanTs())))->toBeTrue()
+        ->and($usulan->filter(fn (ScreeningTalent $s) => $s->statusUsulan() === 'tidak_diteruskan')->sole()->alasanTidakDiteruskan())->not->toBeEmpty()
+        ->and($usulan->where('hasil_screening', HasilScreening::Pending))->toBeEmpty();
 
     $status = PengajuanKandidat::pluck('status_pengajuan');
     foreach (StatusPengajuan::cases() as $s) {

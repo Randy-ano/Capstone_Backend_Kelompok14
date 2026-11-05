@@ -71,7 +71,9 @@ class DokumenService
      */
     public function daftar(User $user, array $filter): LengthAwarePaginator
     {
+        // Menu Dokumen khusus dokumen kerja sama; CV diakses lewat profil talent / talent pool (revisi 2026-11-05).
         return self::scope(Dokumen::query(), $user)
+            ->where('jenis_dokumen', '!=', JenisDokumen::Cv)
             ->with(self::RELASI)
             ->when($filter['jenis'] ?? null, fn (Builder $q, string $jenis) => $q->where('jenis_dokumen', $jenis))
             ->when($filter['status'] ?? null, fn (Builder $q, string $status) => $q->where('status_dokumen', $status))

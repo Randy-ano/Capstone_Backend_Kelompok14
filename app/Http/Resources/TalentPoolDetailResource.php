@@ -54,6 +54,10 @@ class TalentPoolDetailResource extends TalentPoolResource
             'skor_kecocokan' => $s->skor_kecocokan,
             'tanggal_screening' => $s->tanggal_screening?->toIso8601String(),
             'hasil_screening' => $s->hasil_screening,
+            'catatan_screening' => $s->catatanTs(),
+            'alasan_tidak_diteruskan' => $s->alasanTidakDiteruskan(),
+            'status_usulan' => $s->statusUsulan(),
+            'label_status_usulan' => ScreeningTalent::STATUS_USULAN[$s->statusUsulan()],
         ]);
 
         return $data;

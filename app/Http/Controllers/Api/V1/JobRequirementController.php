@@ -89,7 +89,7 @@ class JobRequirementController extends Controller
     {
         $status = StatusReq::from($request->validated('status_req'));
 
-        return (new JobRequirementResource($this->jobRequirement->ubahStatus($jobRequirement, $status)))
+        return (new JobRequirementResource($this->jobRequirement->ubahStatus($jobRequirement, $status, $request->user())))
             ->additional(['message' => $status === StatusReq::Diajukan
                 ? 'Permintaan kebutuhan berhasil diajukan.'
                 : 'Permintaan kebutuhan berhasil dibatalkan.']);

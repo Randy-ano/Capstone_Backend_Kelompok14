@@ -9,6 +9,7 @@ use App\Enums\StatusKandidat;
 use App\Enums\StatusPlacement;
 use App\Enums\StatusReq;
 use App\Models\JobRequirement;
+use App\Models\ScreeningTalent;
 use App\Models\Talent;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -35,6 +36,7 @@ class JobRequirementService
     public function __construct(
         private readonly ProgresService $progres,
         private readonly KompetensiService $kompetensi,
+        private readonly PemberitahuanService $pemberitahuan,
     ) {}
 
     /** withCount untuk jumlah placement aktif (kolom "terpenuhi"). */
@@ -109,6 +111,9 @@ class JobRequirementService
                 ...collect(HasilScreening::cases())->mapWithKeys(fn (HasilScreening $h) => [
                     "screenings as screening_{$h->value}" => fn (Builder $q) => $q->where('hasil_screening', $h),
                 ])->all(),
+                ...collect(array_keys(ScreeningTalent::STATUS_USULAN))->mapWithKeys(fn (string $s) => [
+                    "screenings as usulan_{$s}" => fn (Builder $q) => $q->statusUsulan($s),
+                ])->all(),
             ]);
     }
 
@@ -120,7 +125,7 @@ class JobRequirementService
      */
     public function buat(User $user, array $data): JobRequirement
     {
-        return DB::transaction(function () use ($user, $data) {
+        $job = DB::transaction(function () use ($user, $data) {
             $job = JobRequirement::create([
                 ...Arr::only($data, ['posisi', 'jumlah_kebutuhan', 'kualifikasi', 'pengalaman_min', 'gaji_min', 'gaji_maks', 'sla_deadline']),
                 'id_klien' => $user->hasRole(Role::HrClient) ? $user->idKlien() : $data['id_klien'],
@@ -129,8 +134,13 @@ class JobRequirementService
             ]);
             $job->kompetensi()->sync($this->idKompetensi($data));
 
-            return $this->detail($job);
+            return $job;
         });
+        if ($job->status_req === StatusReq::Diajukan) {
+            $this->pemberitahuan->permintaanDiajukan($job, $user);
+        }
+
+        return $this->detail($job);
     }
 
     /**
@@ -157,8 +167,9 @@ class JobRequirementService
     /**
      * Ajukan (draft → diajukan) atau batalkan (draft/diajukan/diproses → dibatalkan).
      * Membatalkan job melepas talent yang sedang diproses untuk job ini kembali menjadi tersedia.
+     * Mengajukan job mengirim notifikasi ke semua Talent Support & AM penanggung jawab (selain pelaku).
      */
-    public function ubahStatus(JobRequirement $job, StatusReq $status): JobRequirement
+    public function ubahStatus(JobRequirement $job, StatusReq $status, ?User $pelaku = null): JobRequirement
     {
         if ($status === StatusReq::Diajukan) {
             if ($job->status_req !== StatusReq::Draft) {
@@ -173,15 +184,18 @@ class JobRequirementService
             throw ValidationException::withMessages(['status_req' => 'Permintaan kebutuhan yang sudah terpenuhi atau dibatalkan tidak dapat dibatalkan.']);
         }
 
-        return DB::transaction(function () use ($job, $status) {
+        DB::transaction(function () use ($job, $status) {
             if ($status === StatusReq::Dibatalkan) {
                 $this->lepasTalentDalamProses($job);
             }
 
             $job->update(['status_req' => $status]);
-
-            return $this->detail($job);
         });
+        if ($status === StatusReq::Diajukan) {
+            $this->pemberitahuan->permintaanDiajukan($job, $pelaku);
+        }
+
+        return $this->detail($job);
     }
 
     /**
