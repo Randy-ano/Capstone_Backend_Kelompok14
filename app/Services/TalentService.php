@@ -12,6 +12,8 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class TalentService
 {
+    public function __construct(private readonly SertifikatService $sertifikat) {}
+
     /** Relasi yang ikut ditampilkan di profil talent. */
     public const RELASI_PROFIL = [
         'kompetensi',
@@ -31,8 +33,9 @@ class TalentService
     }
 
     /**
-     * Memperbarui profil utama talent. Riwayat pendidikan/pengalaman, sertifikat,
-     * dan bahasa, jika dikirim, menggantikan seluruh daftar lama.
+     * Memperbarui profil utama talent. Riwayat pendidikan/pengalaman dan bahasa, jika dikirim, menggantikan
+     * seluruh daftar lama. Sertifikat, jika dikirim, disinkronkan per `id_sertifikat` (baris lama tanpa id di daftar
+     * dihapus beserta filenya).
      */
     public function updateProfile(
         User $user,
@@ -56,9 +59,9 @@ class TalentService
                 ));
             }
 
+            // Sertifikat disinkronkan per id agar file yang sudah diunggah tidak hilang.
             if (array_key_exists('sertifikat', $data)) {
-                $talent->sertifikat()->delete();
-                $talent->sertifikat()->createMany($data['sertifikat']);
+                $this->sertifikat->sinkron($talent, $data['sertifikat']);
             }
 
             if (array_key_exists('bahasa', $data)) {
