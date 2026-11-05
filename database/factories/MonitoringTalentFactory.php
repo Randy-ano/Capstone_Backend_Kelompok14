@@ -16,7 +16,10 @@ class MonitoringTalentFactory extends Factory
     {
         return [
             'id_placement' => Placement::factory(),
-            'id_manager' => Pegawai::factory()->manager(),
+            'id_manager' => null,
+            'id_user_pencatat' => fn () => Pegawai::factory()->manager()->create()->id_user,
+            'tipe' => 'catatan',
+            'id_dokumen' => null,
             'tanggal_monitoring' => now(),
             'hasil_monitoring' => fake()->paragraph(),
             'catatan_tindak_lanjut' => null,
