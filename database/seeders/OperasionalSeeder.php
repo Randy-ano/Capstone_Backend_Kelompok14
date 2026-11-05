@@ -4,14 +4,19 @@ namespace Database\Seeders;
 
 use App\Enums\StatusApproval;
 use App\Enums\StatusPlacement;
+use App\Enums\StatusTtd;
+use App\Models\MonitoringTalent;
 use App\Models\Placement;
 use App\Models\ShiftingTalent;
 use App\Models\User;
 use App\Services\CutiService;
+use App\Services\DokumenService;
 use App\Services\LaporanKeluhanService;
 use App\Services\MonitoringService;
 use App\Services\ShiftService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Seeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 
 /**
@@ -25,6 +30,8 @@ class OperasionalSeeder extends Seeder
         private readonly CutiService $cuti,
         private readonly MonitoringService $monitoring,
         private readonly LaporanKeluhanService $laporan,
+        private readonly DokumenService $dokumenService,
+        private readonly RangkaianDokumen $rangkaian,
     ) {}
 
     public function run(): void
@@ -104,28 +111,67 @@ class OperasionalSeeder extends Seeder
         Linimasa::pada(Linimasa::hari(-3), fn () => $this->cuti->batal($batal));
     }
 
+    /**
+     * Monitoring per talent (revisi 2026-11-06): catatan harian/berkala dari HR Client klien, satu catatan Manager,
+     * dan satu Surat Peringatan (SP 1) dari Manager untuk Yoga dengan dokumen SP yang sudah ditandatangani.
+     */
     private function monitoringKinerja(): void
     {
         $catatan = [
-            ['Budi Santoso', Linimasa::bulan(8, 8), 'Adaptasi baik; tugas sprint pertama selesai tepat waktu.', 'Pantau kembali setelah 3 bulan.'],
-            ['Budi Santoso', Linimasa::bulan(5, 10), 'Mulai memimpin pengembangan modul pembayaran. Umpan balik klien positif.', null],
-            ['Budi Santoso', Linimasa::hari(-12), 'Kinerja stabil; dokumentasi kode masih perlu ditingkatkan.', 'Diskusikan standar dokumentasi API bersama klien.'],
-            ['Dimas Prasetyo', Linimasa::bulan(6, 12), 'Kontribusi teknis tinggi dan aktif membantu anggota tim baru.', null],
-            ['Putri Ayu Lestari', Linimasa::bulan(9, 20), 'Kinerja baik selama kontrak; klien puas dengan cakupan pengujian.', 'Masuk daftar prioritas untuk permintaan QA berikutnya.'],
-            ['Yoga Pratama', Linimasa::bulan(4, 15), 'Pengujian rilis berjalan lancar, tidak ada bug kritis yang lolos.', null],
-            ['Yoga Pratama', Linimasa::hari(-20), 'Beberapa kali terlambat hadir pada rapat harian.', 'Bicarakan dengan talent dan HR klien.'],
-            ['Salsabila Putri', Linimasa::bulan(2, 8), 'Cepat beradaptasi dengan sistem desain klien.', null],
-            ['Wahyu Nugroho', Linimasa::hari(-10), 'Migrasi pipeline CI/CD selesai lebih cepat dari rencana.', 'Evaluasi beban piket setelah 3 bulan.'],
+            ['hr', 'Budi Santoso', Linimasa::bulan(8, 8), 'Adaptasi baik; tugas sprint pertama selesai tepat waktu. Absensi lengkap.', 'Pantau kembali setelah 3 bulan.'],
+            ['hr', 'Budi Santoso', Linimasa::bulan(5, 10), 'Mulai memimpin pengembangan modul pembayaran. Umpan balik tim positif.', null],
+            ['hr', 'Budi Santoso', Linimasa::hari(-12), 'Kinerja stabil; dokumentasi kode masih perlu ditingkatkan.', 'Diskusikan standar dokumentasi API bersama tim.'],
+            ['hr02', 'Dimas Prasetyo', Linimasa::bulan(6, 12), 'Kontribusi teknis tinggi dan aktif membantu anggota tim baru.', null],
+            ['hr03', 'Yoga Pratama', Linimasa::bulan(4, 15), 'Pengujian rilis berjalan lancar, tidak ada bug kritis yang lolos.', null],
+            ['hr03', 'Yoga Pratama', Linimasa::hari(-20), 'Terlambat hadir pada rapat harian 4 kali dalam 2 minggu; shift pagi sering dimulai lewat 30 menit.', 'Sudah ditegur lisan oleh lead QA.'],
+            ['hr', 'Salsabila Putri', Linimasa::bulan(2, 8), 'Cepat beradaptasi dengan sistem desain perusahaan.', null],
+            ['hr', 'Salsabila Putri', Linimasa::hari(-6), 'Absensi lengkap bulan ini; revisi desain halaman checkout masih tertunda satu sprint.', 'Ingatkan prioritas sprint berikutnya.'],
+            ['hr06', 'Wahyu Nugroho', Linimasa::hari(-10), 'Migrasi pipeline CI/CD selesai lebih cepat dari rencana.', 'Evaluasi beban piket setelah 3 bulan.'],
+            ['manager', 'Wahyu Nugroho', Linimasa::hari(-4), 'Kunjungan rutin PT Intellisys: klien puas, talent tidak memiliki kendala.', null],
         ];
-
-        $manager = $this->user('manager');
-        foreach ($catatan as [$nama, $waktu, $hasil, $tindakLanjut]) {
-            Linimasa::pada($waktu, fn () => $this->monitoring->catat($manager, [
-                'id_placement' => Placement::whereHas('talent', fn ($q) => $q->where('nama_lengkap', $nama))->latest('id_placement')->value('id_placement'),
+        foreach ($catatan as [$pencatat, $nama, $waktu, $hasil, $tindakLanjut]) {
+            Linimasa::pada($waktu, fn () => $this->monitoring->catat($this->user($pencatat), [
+                'id_placement' => $this->placementTerakhir($nama)->id_placement,
                 'hasil_monitoring' => $hasil,
                 'catatan_tindak_lanjut' => $tindakLanjut,
             ]));
         }
+
+        // Catatan historis Putri: penempatannya kini sudah Selesai sehingga Service menolak catatan baru; dicatat langsung
+        // dengan waktu saat kontrak masih berjalan.
+        Linimasa::pada(Linimasa::bulan(9, 20), fn () => MonitoringTalent::create([
+            'id_placement' => $this->placementTerakhir('Putri Ayu Lestari')->id_placement,
+            'id_user_pencatat' => $this->user('hr03')->id_user,
+            'tanggal_monitoring' => now(),
+            'hasil_monitoring' => 'Kinerja baik selama kontrak; cakupan pengujian memuaskan.',
+            'catatan_tindak_lanjut' => 'Masuk daftar prioritas untuk permintaan QA berikutnya.',
+        ]));
+
+        // SP 1 untuk Yoga: Manager mengunggah dokumen Surat Peringatan, ditandatangani Manager & Yoga, lalu dicatat.
+        $yoga = $this->placementTerakhir('Yoga Pratama');
+        $waktu = Linimasa::hari(-15);
+        $pdf = Pdf::loadHTML('<h2>Surat Peringatan 1</h2><p>Talent: Yoga Pratama</p><p>Perihal: keterlambatan berulang pada rapat harian dan shift pagi.</p><p>Dokumen contoh untuk keperluan demo.</p>')->output();
+        $sp = Linimasa::pada($waktu, fn () => $this->dokumenService->unggah($this->user('manager'), [
+            'file' => UploadedFile::fake()->createWithContent('surat-peringatan-1-yoga-pratama.pdf', $pdf),
+            'jenis_dokumen' => 'surat_peringatan',
+            'id_placement' => $yoga->id_placement,
+        ]));
+        $emailYoga = strstr($yoga->talent->user->email, '@', true);
+        $this->rangkaian->minta($sp, ['manager', $emailYoga], $waktu);
+        $this->rangkaian->putus($sp, 'manager', StatusTtd::Ditandatangani, $waktu->copy()->addHours(1));
+        $this->rangkaian->putus($sp, $emailYoga, StatusTtd::Ditandatangani, $waktu->copy()->addHours(5));
+        Linimasa::pada($waktu->copy()->addDay(), fn () => $this->monitoring->catat($this->user('manager'), [
+            'id_placement' => $yoga->id_placement,
+            'tipe' => 'sp',
+            'id_dokumen' => $sp->id_dokumen,
+            'hasil_monitoring' => 'Surat Peringatan 1: keterlambatan berulang pada rapat harian dan shift pagi setelah teguran lisan.',
+            'catatan_tindak_lanjut' => 'Evaluasi kehadiran 30 hari ke depan bersama HR Client.',
+        ]));
+    }
+
+    private function placementTerakhir(string $nama): Placement
+    {
+        return Placement::with('talent.user')->whereHas('talent', fn ($q) => $q->where('nama_lengkap', $nama))->latest('id_placement')->firstOrFail();
     }
 
     private function tiketKomplain(): void
