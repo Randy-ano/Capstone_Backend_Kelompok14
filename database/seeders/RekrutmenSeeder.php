@@ -6,6 +6,7 @@ use App\Enums\StatusInterview;
 use App\Enums\StatusPengajuan;
 use App\Enums\StatusPlacement;
 use App\Enums\StatusReq;
+use App\Enums\StatusTtd;
 use App\Models\EvaluasiKandidat;
 use App\Models\JadwalInterview;
 use App\Models\JobRequirement;
@@ -42,6 +43,7 @@ class RekrutmenSeeder extends Seeder
         private readonly InterviewService $interview,
         private readonly EvaluasiService $evaluasi,
         private readonly PlacementService $placement,
+        private readonly RangkaianDokumen $dokumen,
     ) {}
 
     public function run(): void
@@ -135,7 +137,9 @@ class RekrutmenSeeder extends Seeder
         $pNadia = $this->ajukan($nadia, Linimasa::hari(-20));
         $this->tinjau($pNadia, StatusPengajuan::LanjutInterview, Linimasa::hari(-18));
         $this->interviewSelesai($pNadia, Linimasa::hari(-12), 'Interview bersama QA Lead.');
-        $this->nilai('hr03', $pNadia, 82, 'diterima', 'Teliti; siap mulai bulan depan.', Linimasa::hari(-2));
+        $evNadia = $this->nilai('hr03', $pNadia, 82, 'diterima', 'Teliti; siap mulai bulan depan.', Linimasa::hari(-2));
+        // Quotation, PO, PKS QA sudah selesai (penempatan Putri); Kontrak Kerja Nadia menunggu tanda tangan Nadia & Manager.
+        $this->dokumen->kontrak($evNadia->pengajuan, Linimasa::hari(-1, 10));
     }
 
     /**
@@ -217,7 +221,10 @@ class RekrutmenSeeder extends Seeder
         $this->tempatkan($ev, Linimasa::bulan(1, 5), Linimasa::bulan(-11, 5));
     }
 
-    /** Diproses 0/1, SLA aman: usulan menunggu AM, satu usulan tidak diteruskan AM, dan interview yang dijadwal ulang. */
+    /**
+     * Diproses 0/1, SLA aman: usulan menunggu AM, satu usulan tidak diteruskan AM, interview yang dijadwal ulang,
+     * dan Intan diterima dengan dokumen belum lengkap (Quotation pertama ditolak, Quotation & PO selesai, PKS menunggu HR Client).
+     */
     private function dataAnalyst(): void
     {
         $t = Linimasa::hari(-16);
@@ -237,7 +244,20 @@ class RekrutmenSeeder extends Seeder
         $iv = $this->jadwalkan($pArif, Linimasa::hari(1), '10:00', 'Studi kasus analisis data.', Linimasa::hari(-8));
         Linimasa::pada(Linimasa::hari(-4), fn () => $this->interview->ubah($iv, ['tanggal_interview' => Linimasa::hari(5)->toDateString(), 'waktu_interview' => '14:00']));
 
-        $this->usul($job, 'Intan Permata', Linimasa::hari(-5), 'Sertifikasi Power BI; siap diajukan.');
+        $intan = $this->usul($job, 'Intan Permata', Linimasa::hari(-14), 'Sertifikasi Power BI; siap diajukan.');
+        $pIntan = $this->ajukan($intan, Linimasa::hari(-13));
+        $this->tinjau($pIntan, StatusPengajuan::LanjutInterview, Linimasa::hari(-12));
+        $this->interviewSelesai($pIntan, Linimasa::hari(-9), 'Studi kasus dashboard penjualan.');
+        $this->nilai('hr03', $pIntan, 89, 'diterima', 'Dashboard rapi dan analisis tajam.', Linimasa::hari(-8));
+
+        $quotation = $this->dokumen->quotation($job, Linimasa::hari(-7));
+        $this->dokumen->minta($quotation, ['hr03'], Linimasa::hari(-7));
+        $this->dokumen->putus($quotation, 'hr03', StatusTtd::Ditolak, Linimasa::hari(-7, 15));
+        $this->dokumen->quotationSelesai($job, Linimasa::hari(-6));
+        $this->dokumen->poSelesai($job, Linimasa::hari(-4));
+        $pks = $this->dokumen->pks($job, Linimasa::hari(-2));
+        $this->dokumen->minta($pks, ['manager', 'hr03'], Linimasa::hari(-2));
+        $this->dokumen->putus($pks, 'manager', StatusTtd::Ditandatangani, Linimasa::hari(-1, 11));
         $citra = $this->usul($job, 'Citra Dewi', Linimasa::hari(-5, 11), 'Kompetensi SQL & Python kuat, pengalaman 1 tahun; mohon pertimbangkan.');
         $this->tidakDiteruskan($citra, 'Klien mensyaratkan pengalaman minimal 2 tahun.', Linimasa::hari(-4, 9));
         $this->usul($job, 'Farhan Maulana', Linimasa::hari(-2), 'Latar statistika dan Python; cocok untuk analisis penjualan klien.');
@@ -356,9 +376,13 @@ class RekrutmenSeeder extends Seeder
         ]));
     }
 
+    /** R36: dokumen Quotation → PO → PKS → Kontrak Kerja diselesaikan dulu, lalu TS membuat penempatan. */
     private function tempatkan(EvaluasiKandidat $evaluasi, Carbon $mulai, Carbon $selesai): Placement
     {
-        return Linimasa::pada($mulai->copy()->subDays(4), fn () => $this->placement->buat([
+        $dibuat = $mulai->copy()->subDays(4);
+        $this->dokumen->lengkapiUntukPenempatan($evaluasi->pengajuan, $evaluasi->created_at, $dibuat->copy()->subHours(6));
+
+        return Linimasa::pada($dibuat, fn () => $this->placement->buat([
             'id_evaluasi' => $evaluasi->id_evaluasi,
             'tanggal_mulai' => $mulai->toDateString(),
             'tanggal_selesai' => $selesai->toDateString(),
