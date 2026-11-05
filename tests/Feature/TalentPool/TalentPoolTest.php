@@ -174,7 +174,7 @@ describe('GET /talent-pool/{id}', function () {
         // Jan–Jun 2023 dan Apr–Des 2023 tumpang tindih → 1 tahun; Jan 2024–Jan 2025 → 1 tahun.
         PengalamanKerjaTalent::factory()->for($talent)->create(['nama_perusahaan' => 'PT A', 'posisi' => 'QA', 'tanggal_mulai' => '2023-01-01', 'tanggal_selesai' => '2023-06-30']);
         PengalamanKerjaTalent::factory()->for($talent)->create(['nama_perusahaan' => 'PT B', 'posisi' => 'Backend', 'tanggal_mulai' => '2023-04-01', 'tanggal_selesai' => '2024-01-01']);
-        PengalamanKerjaTalent::factory()->for($talent)->create(['nama_perusahaan' => 'PT C', 'posisi' => 'Lead', 'tanggal_mulai' => '2024-01-01', 'tanggal_selesai' => '2025-01-01']);
+        PengalamanKerjaTalent::factory()->for($talent)->create(['nama_perusahaan' => 'PT C', 'posisi' => 'Lead', 'tanggal_mulai' => '2024-01-01', 'tanggal_selesai' => '2025-01-01', 'jenis_pekerjaan' => 'Skripsi', 'lokasi' => 'Bandung', 'deskripsi' => 'Memimpin tim backend.']);
         $pool = TalentPool::factory()->for($talent)->create();
 
         $klien = Klien::factory()->create(['nama_perusahaan' => 'PT Maju Jaya']);
@@ -189,9 +189,12 @@ describe('GET /talent-pool/{id}', function () {
             ->assertJsonPath('data.talent.riwayat_pengalaman_kerja.0', [
                 'nama_perusahaan' => 'PT C',
                 'posisi' => 'Lead',
+                'jenis_pekerjaan' => 'Skripsi',
+                'lokasi' => 'Bandung',
                 'tanggal_mulai' => '2024-01-01',
                 'tanggal_selesai' => '2025-01-01',
                 'masih_bekerja' => false,
+                'deskripsi' => 'Memimpin tim backend.',
             ])
             ->assertJsonMissingPath('data.talent.pengalaman_kerja')
             ->assertJsonPath('data.talent.riwayat_pendidikan.0.nama_institusi', $talent->riwayatPendidikan->first()->nama_institusi)
