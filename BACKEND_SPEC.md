@@ -278,7 +278,7 @@ Kolom dan tabel berikut ditambahkan untuk profil & CV talent (FR-03, FR-04); lih
 | penerbit | string, nullable | |
 | tanggal_terbit | date, nullable | |
 | tanggal_kedaluwarsa | date, nullable | |
-| file_sertifikat | string, nullable | path file |
+| file_sertifikat | string, nullable | path file di disk private (`sertifikat/{id_talent}/{id_sertifikat}/{nama}.{ext}`); respons API hanya mengirim nama file |
 | url_sertifikat | string, nullable | tautan verifikasi |
 
 **bahasa** — master data
@@ -591,10 +591,12 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | GET | /kompetensi | semua | master kompetensi; filter `search` (beberapa kata kunci dipisah koma, salah satu cocok), `kategori` (satu nilai atau `kategori[]` beberapa kategori); `meta.kategori` = semua kategori terpakai; `dengan_pemakaian=1` menambah `jumlah_talent` & `jumlah_job_requirement` |
 | POST/PUT/DELETE | /kompetensi, /kompetensi/{id} | TS, M | kelola master; nama unik tanpa membedakan huruf besar/kecil; DELETE ditolak 422 jika masih dipakai talent/job requirement |
 | GET | /talent/profil | T | profil sendiri + kompetensi |
-| PUT | /talent/profil | T | update profil (R4, R5); `riwayat_pendidikan[]`, `riwayat_pengalaman_kerja[]`, `sertifikat[]`, `bahasa[]` (`nama_bahasa`, `tingkat_kemampuan`) jika dikirim menggantikan daftar lama |
+| PUT | /talent/profil | T | update profil (R4, R5); `riwayat_pendidikan[]`, `riwayat_pengalaman_kerja[]`, `bahasa[]` (`nama_bahasa`, `tingkat_kemampuan`) jika dikirim menggantikan daftar lama; `sertifikat[]` disinkronkan per `id_sertifikat` (baris ber-id diperbarui dan filenya tetap, tanpa id dibuat, yang tidak dikirim dihapus beserta filenya) |
 | PUT | /talent/profil/kompetensi | T | sync daftar `id_kompetensi` |
 | POST | /talent/cv/generate | T | R6; 422 jika profil belum lengkap (R4) |
 | GET | /talent/cv/download | T | download CV milik sendiri (PDF); 404 jika belum dibuat |
+| POST | /talent/sertifikat/{id}/file | T (pemilik) | unggah/ganti file sertifikat: multipart `file` pdf/jpg/png maks 2 MB, disk private; file lama dihapus |
+| GET | /sertifikat/{id}/file | T pemilik, AM, TS, M, HC (jika talent pernah diajukan ke kliennya) | buka file sertifikat inline (pratinjau); 404 jika belum diunggah |
 
 ### Talent Pool (FR-06)
 | Method | Path | Role | Keterangan |
