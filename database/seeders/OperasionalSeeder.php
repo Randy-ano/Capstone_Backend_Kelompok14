@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\StatusApproval;
 use App\Enums\StatusPlacement;
 use App\Models\Placement;
+use App\Models\ShiftingTalent;
 use App\Models\User;
 use App\Services\CutiService;
 use App\Services\LaporanKeluhanService;
@@ -67,32 +68,39 @@ class OperasionalSeeder extends Seeder
                 }
             });
         }
+
+        // Satu shift Budi minggu depan dibatalkan HR Client (shift tidak dihapus, tetap tampil berstatus dibatalkan).
+        $budi = $this->placementAktif('Budi Santoso');
+        $rabuDepan = $seninLalu->copy()->addWeeks(2)->addDays(2)->toDateString();
+        Linimasa::pada(Linimasa::hari(-1), fn () => $this->shift->batal(
+            $this->user('hr'),
+            ShiftingTalent::where('id_placement', $budi->id_placement)->whereDate('tanggal_shift', $rabuDepan)->firstOrFail(),
+        ));
     }
 
+    /** Cuti diputuskan hanya oleh HR Client; tanggal digeser ke hari kerja agar lolos aturan hari kerja & kuota. */
     private function cuti(): void
     {
-        // Disetujui kedua pihak (sudah lewat).
-        $selesai = $this->ajukanCuti('Budi Santoso', -45, -44, 'Mengurus keperluan keluarga di luar kota.', -50);
-        $this->putuskan('hr', $selesai, StatusApproval::Disetujui, -49);
-        $this->putuskan('manager', $selesai, StatusApproval::Disetujui, -48);
+        // Disetujui HR Client (sudah lewat).
+        $lalu = $this->ajukanCuti('Budi Santoso', -45, 2, 'Mengurus keperluan keluarga di luar kota.', -50);
+        $this->putuskan('hr', $lalu, StatusApproval::Disetujui, -49);
 
-        // Menunggu HR Client & Manager.
-        $this->ajukanCuti('Budi Santoso', 10, 11, 'Menghadiri pernikahan saudara di luar kota.', -2);
+        // Menunggu keputusan HR Client.
+        $this->ajukanCuti('Budi Santoso', 10, 2, 'Menghadiri pernikahan saudara di luar kota.', -2);
 
-        // Disetujui sebagian: klien setuju, menunggu Manager.
-        $sebagian = $this->ajukanCuti('Dimas Prasetyo', 14, 16, 'Liburan keluarga yang sudah direncanakan.', -6);
-        $this->putuskan('hr', $sebagian, StatusApproval::Disetujui, -4);
+        // Disetujui HR Client.
+        $disetujui = $this->ajukanCuti('Dimas Prasetyo', 14, 3, 'Liburan keluarga yang sudah direncanakan.', -6);
+        $this->putuskan('hr', $disetujui, StatusApproval::Disetujui, -4);
 
-        // Ditolak Manager karena bertepatan dengan rilis.
-        $ditolak = $this->ajukanCuti('Salsabila Putri', 6, 8, 'Keperluan pribadi.', -9);
-        $this->putuskan('hr02', $ditolak, StatusApproval::Disetujui, -8);
-        $this->putuskan('manager', $ditolak, StatusApproval::Ditolak, -7);
+        // Ditolak HR Client karena bertepatan dengan rilis.
+        $ditolak = $this->ajukanCuti('Salsabila Putri', 6, 3, 'Keperluan pribadi.', -9);
+        $this->putuskan('hr02', $ditolak, StatusApproval::Ditolak, -8);
 
         // Menunggu, klien lain.
-        $this->ajukanCuti('Yoga Pratama', 20, 20, 'Mengurus perpanjangan dokumen kependudukan.', -1);
+        $this->ajukanCuti('Yoga Pratama', 20, 1, 'Mengurus perpanjangan dokumen kependudukan.', -1);
 
         // Dibatalkan talent.
-        $batal = $this->ajukanCuti('Wahyu Nugroho', 12, 13, 'Acara keluarga.', -5);
+        $batal = $this->ajukanCuti('Wahyu Nugroho', 12, 2, 'Acara keluarga.', -5);
         Linimasa::pada(Linimasa::hari(-3), fn () => $this->cuti->batal($batal));
     }
 
@@ -150,14 +158,19 @@ class OperasionalSeeder extends Seeder
         ]));
     }
 
-    private function ajukanCuti(string $nama, int $mulai, int $selesai, string $alasan, int $diajukan)
+    /** Cuti `$hariKerja` hari kerja mulai hari kerja pertama sejak `$mulai` hari dari hari seed. */
+    private function ajukanCuti(string $nama, int $mulai, int $hariKerja, string $alasan, int $diajukan)
     {
         $placement = $this->placementAktif($nama);
+        $tanggalMulai = Linimasa::hari($mulai);
+        if ($tanggalMulai->isWeekend()) {
+            $tanggalMulai = $tanggalMulai->nextWeekday();
+        }
 
         return Linimasa::pada(Linimasa::hari($diajukan), fn () => $this->cuti->ajukan($placement->talent->user, [
             'id_placement' => $placement->id_placement,
-            'tanggal_mulai' => Linimasa::hari($mulai)->toDateString(),
-            'tanggal_selesai' => Linimasa::hari($selesai)->toDateString(),
+            'tanggal_mulai' => $tanggalMulai->toDateString(),
+            'tanggal_selesai' => $tanggalMulai->copy()->addWeekdays($hariKerja - 1)->toDateString(),
             'alasan_cuti' => $alasan,
         ]));
     }
