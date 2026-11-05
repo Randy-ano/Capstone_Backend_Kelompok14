@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\Role;
 use App\Enums\StatusPlacement;
+use App\Enums\StatusShift;
 use App\Http\Resources\PlacementResource;
 use App\Models\Placement;
 use App\Models\ShiftingTalent;
@@ -18,7 +19,8 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
  * FR-15, R22: shift dikelola HR Client (klien yang sama) atau Manager, dengan input massal.
- * Talent hanya melihat shift miliknya. Satu shift per placement per tanggal.
+ * Talent hanya melihat shift miliknya. Satu shift per placement per tanggal. Shift tidak dihapus, melainkan
+ * dibatalkan (status_shift = dibatalkan) sehingga tetap terlihat di daftar.
  */
 class ShiftService
 {
@@ -46,7 +48,8 @@ class ShiftService
     }
 
     /**
-     * Input massal: satu jenis shift untuk banyak tanggal. Tanggal yang sudah punya shift diperbarui.
+     * Input massal: satu jenis shift untuk banyak tanggal. Tanggal yang sudah punya shift diperbarui
+     * (shift yang dibatalkan pada tanggal itu aktif kembali).
      *
      * @param  array{id_placement: int, tanggal: list<string>, jenis_shift: string, keterangan?: string|null}  $data
      * @return array{dibuat: int, diperbarui: int}
@@ -69,6 +72,7 @@ class ShiftService
                     'id_pengelola' => $user->id_user,
                     'jenis_shift' => $data['jenis_shift'],
                     'keterangan' => $data['keterangan'] ?? null,
+                    'status_shift' => StatusShift::Aktif,
                 ])->save();
             }
 
@@ -83,6 +87,9 @@ class ShiftService
     {
         $placement = $shift->placement;
         $this->pastikanBolehKelola($user, $placement, 'jenis_shift');
+        if ($shift->status_shift === StatusShift::Dibatalkan) {
+            throw ValidationException::withMessages(['status_shift' => 'Shift yang sudah dibatalkan tidak dapat diubah. Atur ulang lewat tambah shift.']);
+        }
 
         if (isset($data['tanggal_shift'])) {
             $this->pastikanDalamPeriode($placement, $data['tanggal_shift'], $data['tanggal_shift'], 'tanggal_shift');
@@ -100,10 +107,16 @@ class ShiftService
         return $shift->load(self::RELASI);
     }
 
-    public function hapus(User $user, ShiftingTalent $shift): void
+    /** Membatalkan shift (bukan menghapus); shift tetap tampil dengan status dibatalkan. */
+    public function batal(User $user, ShiftingTalent $shift): ShiftingTalent
     {
-        $this->pastikanBolehKelola($user, $shift->placement, 'id_shift');
-        $shift->delete();
+        $this->pastikanBolehKelola($user, $shift->placement, 'status_shift');
+        if ($shift->status_shift === StatusShift::Dibatalkan) {
+            throw ValidationException::withMessages(['status_shift' => 'Shift ini sudah dibatalkan.']);
+        }
+        $shift->update(['status_shift' => StatusShift::Dibatalkan, 'id_pengelola' => $user->id_user]);
+
+        return $shift->load(self::RELASI);
     }
 
     /** HR Client hanya placement di kliennya; shift hanya untuk placement aktif. */

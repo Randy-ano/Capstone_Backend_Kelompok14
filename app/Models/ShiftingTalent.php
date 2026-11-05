@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\JenisShift;
+use App\Enums\StatusShift;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,11 @@ class ShiftingTalent extends Model
         'tanggal_shift',
         'jenis_shift',
         'keterangan',
+        'status_shift',
+    ];
+
+    protected $attributes = [
+        'status_shift' => StatusShift::Aktif->value,
     ];
 
     protected function casts(): array
@@ -28,6 +34,7 @@ class ShiftingTalent extends Model
         return [
             'tanggal_shift' => 'date',
             'jenis_shift' => JenisShift::class,
+            'status_shift' => StatusShift::class,
         ];
     }
 
