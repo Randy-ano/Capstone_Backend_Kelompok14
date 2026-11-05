@@ -27,6 +27,21 @@ describe('GET /kompetensi (pemakaian & kategori)', function () {
 });
 
 describe('POST /kompetensi', function () {
+    it('mencari beberapa kata kunci dipisah koma dan memfilter beberapa kategori sekaligus', function () {
+        loginSebagai(Role::TalentSupport);
+        foreach ([['Laravel', 'Backend'], ['React', 'Frontend'], ['SQL', 'Database'], ['MySQL', 'Database'], ['Figma', 'Design']] as [$nama, $kategori]) {
+            Kompetensi::factory()->create(['nama_kompetensi' => $nama, 'kategori' => $kategori]);
+        }
+        $nama = fn ($r) => collect($r->json('data'))->pluck('nama_kompetensi')->all();
+
+        expect($nama($this->getJson('/api/v1/kompetensi?search='.urlencode('laravel, react , sql,,'))))->toBe(['Laravel', 'MySQL', 'React', 'SQL'])
+            ->and($nama($this->getJson('/api/v1/kompetensi?kategori[]=Database&kategori[]=Design')))->toBe(['Figma', 'MySQL', 'SQL'])
+            ->and($nama($this->getJson('/api/v1/kompetensi?kategori=Frontend')))->toBe(['React'])
+            ->and($nama($this->getJson('/api/v1/kompetensi?search=sql&kategori[]=Database')))->toBe(['MySQL', 'SQL'])
+            ->and($nama($this->getJson('/api/v1/kompetensi?search='.urlencode(' , '))))->toHaveCount(5);
+        $this->getJson('/api/v1/kompetensi?kategori[]='.str_repeat('a', 256))->assertUnprocessable()->assertJsonValidationErrors(['kategori.0']);
+    });
+
     it('menambah kompetensi dengan nama & kategori yang dirapikan', function (Role $role) {
         loginSebagai($role);
 

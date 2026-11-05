@@ -80,27 +80,61 @@ describe('GET /job-requirements/{id}/rekomendasi', function () {
         )->create();
         $job = jobDengan([$laravel, $mysql, $docker], 2);
 
-        kandidat('Sebagian', [$laravel], 3);
+        kandidat('Sebagian', [$laravel, $mysql], 3);
         $terbaik = kandidat('Terbaik', [$laravel, $mysql, $docker], 2);
         kandidat('Hanya Pengalaman', [$react], 10);
 
         $this->getJson("/api/v1/job-requirements/{$job->id_job_req}/rekomendasi")
             ->assertOk()
             ->assertJsonPath('message', '2 kandidat direkomendasikan')
+            ->assertJsonPath('meta.skor_minimum', RekomendasiService::SKOR_MINIMUM)
             ->assertJsonCount(2, 'data')
             ->assertJsonPath('data.0.id_talent', $terbaik->id_talent)
             ->assertJsonPath('data.0.id_talent_pool', $terbaik->talentPool->id_talent_pool)
             ->assertJsonPath('data.0.skor_kecocokan', 100)
             ->assertJsonPath('data.0.kompetensi_kurang', [])
             ->assertJsonPath('data.1.nama_lengkap', 'Sebagian')
-            ->assertJsonPath('data.1.kompetensi_cocok', ['Laravel'])
-            ->assertJsonPath('data.1.kompetensi_kurang', ['MySQL', 'Docker'])
-            ->assertJsonPath('data.1.skor_kompetensi', 33.33)
+            ->assertJsonPath('data.1.kompetensi_cocok', ['Laravel', 'MySQL'])
+            ->assertJsonPath('data.1.kompetensi_kurang', ['Docker'])
+            ->assertJsonPath('data.1.skor_kompetensi', 66.67)
+            ->assertJsonPath('data.1.skor_kecocokan', 73.33)
             ->assertJsonPath('data.1.status_ketersediaan', 'tersedia')
             ->assertJsonStructure(['data' => [[
                 'id_talent', 'id_talent_pool', 'nama_lengkap', 'pendidikan', 'skor_kecocokan', 'skor_kompetensi',
                 'skor_pengalaman', 'lama_pengalaman', 'kompetensi_cocok', 'kompetensi_kurang', 'status_ketersediaan', 'tag_keahlian',
             ]]]);
+    });
+
+    it('hanya menampilkan kandidat dengan skor minimal 70 (batas 70 ikut tampil)', function () {
+        loginSebagai(Role::TalentSupport);
+        $this->travelTo('2026-11-05');
+        $k = Kompetensi::factory()->count(4)->create();
+        $job = jobDengan($k->all(), 2);
+
+        kandidat('Pas 70', $k->take(3)->all(), 1);      // 0,8 × 75 + 0,2 × 50 = 70
+        kandidat('Di bawah', $k->take(3)->all(), 0.5);  // 0,8 × 75 + 0,2 × 25 = 65
+        kandidat('Setengah', $k->take(2)->all(), 5);    // 0,8 × 50 + 0,2 × 100 = 60
+
+        $this->getJson("/api/v1/job-requirements/{$job->id_job_req}/rekomendasi")
+            ->assertOk()
+            ->assertJsonPath('message', '1 kandidat direkomendasikan')
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.nama_lengkap', 'Pas 70')
+            ->assertJsonPath('data.0.skor_kecocokan', 70);
+        expect(RekomendasiService::SKOR_MINIMUM)->toBe(70);
+    });
+
+    it('mengembalikan daftar kosong jika tidak ada kandidat yang memenuhi skor minimum', function () {
+        loginSebagai(Role::TalentSupport);
+        $k = Kompetensi::factory()->count(4)->create();
+        $job = jobDengan($k->all());
+        kandidat('Satu Kompetensi', [$k[0]], 5); // 0,8 × 25 + 20 = 40
+
+        $this->getJson("/api/v1/job-requirements/{$job->id_job_req}/rekomendasi")
+            ->assertOk()
+            ->assertJsonCount(0, 'data')
+            ->assertJsonPath('message', '0 kandidat direkomendasikan')
+            ->assertJsonPath('meta.skor_minimum', 70);
     });
 
     it('tidak menampilkan talent yang tidak tersedia, sedang diproses, di luar pool, atau sudah di-screening', function () {
