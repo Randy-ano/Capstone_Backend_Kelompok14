@@ -195,11 +195,14 @@ describe('penempatan & operasional', function () {
             ->and($pengelola->shiftDikelola->first()->is($shift))->toBeTrue();
     });
 
-    it('menghubungkan monitoring dengan placement dan manager', function () {
-        $monitoring = MonitoringTalent::factory()->create();
+    it('menghubungkan monitoring dengan placement, pencatat, dan dokumen SP', function () {
+        $dokumen = App\Models\Dokumen::factory()->create(['jenis_dokumen' => App\Enums\JenisDokumen::SuratPeringatan]);
+        $monitoring = MonitoringTalent::factory()->create(['tipe' => 'sp', 'id_dokumen' => $dokumen->id_dokumen]);
 
         expect($monitoring->placement->monitorings->first()->is($monitoring))->toBeTrue()
-            ->and($monitoring->manager->monitorings->first()->is($monitoring))->toBeTrue();
+            ->and($monitoring->pencatat->role)->toBe(Role::Manager)
+            ->and($monitoring->dokumen->is($dokumen))->toBeTrue()
+            ->and($monitoring->tipe)->toBe(App\Enums\TipeMonitoring::Sp);
     });
 
     it('menghubungkan laporan keluhan dengan placement, pelapor, dan penindak lanjut', function () {

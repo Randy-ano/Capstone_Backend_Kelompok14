@@ -189,12 +189,15 @@ it('konsisten dengan aturan: jumlah terpenuhi dan log progres', function () {
     });
 });
 
-it('membuat 5 penempatan aktif dan 1 selesai yang tersebar, dan grafik tren terisi', function () {
-    expect(Placement::where('status_placement', StatusPlacement::Aktif)->count())->toBe(5)
-        ->and(Placement::where('status_placement', StatusPlacement::Selesai)->count())->toBe(1);
+it('membuat 6 penempatan aktif (1 Belum Aktif) dan 1 selesai yang tersebar, dan grafik tren terisi', function () {
+    expect(Placement::where('status_placement', StatusPlacement::Aktif)->count())->toBe(6)
+        ->and(Placement::where('status_placement', StatusPlacement::Selesai)->count())->toBe(1)
+        ->and(Placement::all()->map(fn (Placement $p) => $p->statusTampil()->value)->countBy()->all())
+        ->toMatchArray(['aktif' => 5, 'belum_aktif' => 1, 'selesai' => 1]);
 
+    // Tren 12 bulan menurut bulan mulai; penempatan Nadia mulai minggu depan bisa jatuh di bulan berikutnya.
     $tren = collect(app(DashboardService::class)->trenPlacement())->pluck('jumlah');
-    expect($tren->sum())->toBe(6)->and($tren->filter()->count())->toBeGreaterThanOrEqual(6);
+    expect($tren->sum())->toBeGreaterThanOrEqual(6)->and($tren->filter()->count())->toBeGreaterThanOrEqual(6);
 
     // Talent dari penempatan yang sudah selesai kembali tersedia.
     $selesai = Placement::where('status_placement', StatusPlacement::Selesai)->sole()->talent;
@@ -236,6 +239,15 @@ it('mencakup status cuti, shift beberapa minggu, monitoring, dan tiket', functio
     expect(ShiftingTalent::where('status_shift', 'dibatalkan')->count())->toBe(1);
     expect(ShiftingTalent::count())->toBeGreaterThanOrEqual(5 * 7 * 3)
         ->and(MonitoringTalent::count())->toBeGreaterThanOrEqual(5);
+
+    // Monitoring per talent: catatan mayoritas dari HR Client, satu SP (Yoga) dengan dokumen Surat Peringatan.
+    $monitoring = MonitoringTalent::with(['pencatat', 'dokumen', 'placement.talent'])->get();
+    $sp = $monitoring->where('tipe', App\Enums\TipeMonitoring::Sp)->sole();
+    expect($monitoring->filter(fn ($m) => $m->pencatat?->role === Role::HrClient)->count())->toBeGreaterThanOrEqual(5)
+        ->and($monitoring->every(fn ($m) => $m->id_user_pencatat !== null && $m->id_manager === null))->toBeTrue()
+        ->and($sp->placement->talent->nama_lengkap)->toBe('Yoga Pratama')
+        ->and($sp->pencatat->role)->toBe(Role::Manager)
+        ->and($sp->dokumen->jenis_dokumen)->toBe(App\Enums\JenisDokumen::SuratPeringatan);
 
     foreach (StatusLaporan::cases() as $s) {
         expect(LaporanKeluhan::pluck('status_laporan')->contains($s))->toBeTrue();
