@@ -105,7 +105,10 @@ class JobRequirementController extends Controller
         $kandidat = $this->rekomendasi->daftar($jobRequirement);
 
         return RekomendasiResource::collection($kandidat)
-            ->additional(['message' => "{$kandidat->count()} kandidat direkomendasikan"]);
+            ->additional([
+                'message' => "{$kandidat->count()} kandidat direkomendasikan",
+                'meta' => ['skor_minimum' => RekomendasiService::SKOR_MINIMUM],
+            ]);
     }
 
     /**
