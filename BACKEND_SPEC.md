@@ -546,11 +546,12 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
   - `lainnya`: Account Manager, Manager, HR Client klien dokumen, dan talent terkait.
   Talent Support tidak menandatangani dokumen. **Dokumen yang diunggah talent:** penandatangan otomatis talent itu sendiri (dibuat saat unggah, status langsung `menunggu_ttd`); talent tidak dapat mengatur penandatangan (403).
 - **R28.** Penandatangan mengunggah gambar tanda tangan → status_ttd `ditandatangani`. Jika semua sudah → status_dokumen `ditandatangani`. Jika ada yang menolak → `ditolak`.
-- **R28a.** Dokumen PDF yang sudah punya penandatangan diunduh dalam bentuk **PDF bertanda tangan**, dibuat saat diunduh (file asli di disk tidak diubah):
+- **R28a.** Dokumen PDF/PNG/JPG yang sudah punya penandatangan diunduh dalam bentuk **PDF bertanda tangan**, dibuat saat diunduh (file asli di disk tidak diubah):
   - dokumen buatan sistem (R26) dirender ulang dari templatenya dengan blok tanda tangan per penandatangan (peran/jabatan, gambar tanda tangan, nama, status, tanggal & jam);
   - PDF unggahan diberi halaman **Lembar Pengesahan** di akhir: per penandatangan gambar tanda tangan, nama, peran/jabatan, tanggal & jam, dan status;
+  - gambar unggahan (PNG/JPG) dijadikan PDF: halaman pertama berisi gambar itu dimuat utuh & proporsional di A4 (lanskap bila gambar melebar), lalu Lembar Pengesahan; nama file unduhan berakhiran `.pdf`;
   - penandatangan yang belum memutuskan ditulis "Belum ditandatangani"; yang menolak "Ditolak".
-  Dokumen tanpa penandatangan (draft) dan file non-PDF diunduh apa adanya.
+  Dokumen tanpa penandatangan (draft) dan DOC/DOCX diunduh apa adanya. File asli (tanpa tanda tangan) tetap dapat diunduh pengunggah dan internal lewat `GET /dokumen/{id}/file-asli`.
 
 ### Notifikasi & Reminder (FR-16)
 - **R29.** Gunakan satu `NotifikasiService::kirim(user, tipe, pesan, kanal)` yang menyimpan ke tabel `notifikasi` dan, jika kanal `email`, mengirim email lewat queue lalu memperbarui `status_pengiriman`.
@@ -668,10 +669,12 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Dokumen (FR-13)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /dokumen | semua | sesuai scope (internal semua; HC dokumen kliennya; T miliknya; + yang diunggah/harus ditandatangani sendiri); filter `jenis`, `status`, `perlu_ttd`, `search`; tiap item berisi `penandatangan[]` dan `aksi` |
+| GET | /dokumen | semua | sesuai scope (internal semua; HC dokumen kliennya; T miliknya; + yang diunggah/harus ditandatangani sendiri); filter `jenis`, `status`, `perlu_ttd`, `search`; tiap item berisi `penandatangan[]` (+ `ada_gambar_ttd`), `unduhan` (`nama_file`, `diolah`, `dengan_tanda_tangan`), dan `aksi` (+ `boleh_unduh_asli`) |
 | POST | /dokumen/upload | AM, HC, M, T | R25 (multipart `file`, `jenis_dokumen` selain cv, `id_placement`/`id_klien`/`id_talent`); unggahan talent langsung `menunggu_ttd` dengan penandatangan talent itu sendiri (R27) |
 | POST | /dokumen/generate | AM | R26 (quotation/PO: `items[]`; PKS: `ketentuan`; + `id_klien`, `nomor_dokumen`, `tanggal_dokumen`, `berlaku_sampai`, `perihal`, `catatan`) |
-| GET | /dokumen/{id}/download | sesuai Policy | nama file asli; PDF yang sudah punya penandatangan dikirim bertanda tangan (R28a) |
+| GET | /dokumen/{id}/download | sesuai Policy | PDF/PNG/JPG yang sudah punya penandatangan dikirim sebagai PDF bertanda tangan (R28a, nama = `unduhan.nama_file`); selain itu file asli |
+| GET | /dokumen/{id}/file-asli | pengunggah, AM, TS, M | file asli apa adanya, tanpa tanda tangan; selain itu 403 |
+| GET | /dokumen/{id}/tanda-tangan/{id_ttd}/gambar | sesuai Policy (lihat dokumen) | gambar tanda tangan penandatangan yang sudah menandatangani (inline, untuk thumbnail); 404 jika belum ada |
 | GET | /dokumen/{id}/calon-penandatangan | pengunggah (bukan talent) | sesuai jenis dokumen (R27): komersial → AM, M, HC klien; kepegawaian → talent terkait, AM, M; lainnya → AM, M, HC klien, talent terkait |
 | POST | /dokumen/{id}/penandatangan | pengunggah (bukan talent) | R27; body `id_user[]` (1–10) dari calon penandatangan; hanya saat `draft` |
 | POST | /dokumen/{id}/tanda-tangan | penandatangan | R28 (multipart `keputusan` ditandatangani/ditolak + `file_tanda_tangan` png/jpg maks 2 MB) |
