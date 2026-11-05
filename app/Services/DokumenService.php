@@ -31,7 +31,7 @@ class DokumenService
 {
     public const DISK = 'local';
 
-    public const RELASI = ['uploader.talent', 'uploader.hrClient', 'uploader.pegawai', 'klien', 'talent', 'tandaTangan.penandatangan.talent', 'tandaTangan.penandatangan.hrClient', 'tandaTangan.penandatangan.pegawai'];
+    public const RELASI = ['jobRequirement', 'uploader.talent', 'uploader.hrClient', 'uploader.pegawai', 'klien', 'talent', 'tandaTangan.penandatangan.talent', 'tandaTangan.penandatangan.hrClient', 'tandaTangan.penandatangan.pegawai'];
 
     /** Jenis yang dibuat dari template (R26). */
     public const JENIS_TEMPLATE = [JenisDokumen::Quotation, JenisDokumen::PurchaseOrder, JenisDokumen::Pks];
@@ -42,6 +42,7 @@ class DokumenService
     public function __construct(
         private readonly PemberitahuanService $pemberitahuan,
         private readonly PdfTandaTanganService $pdfTtd,
+        private readonly KelengkapanDokumenService $kelengkapan,
     ) {}
 
     /**
@@ -94,10 +95,17 @@ class DokumenService
      * R25: unggah file. Placement (jika dikirim) menentukan talent & klien. HR Client selalu untuk kliennya,
      * talent selalu untuk dirinya; internal bebas memilih klien/talent.
      *
-     * @param  array{file: UploadedFile, jenis_dokumen: string, id_klien?: int|null, id_talent?: int|null, id_placement?: int|null}  $data
+     * Quotation, Purchase Order, PKS, dan Kontrak Kerja mengikuti urutan & hak unggah (R34–R35): tujuannya permintaan
+     * (`id_job_req`) atau kandidat diterima (`id_pengajuan`); klien, talent, dan placement diambil dari tujuan itu.
+     *
+     * @param  array{file: UploadedFile, jenis_dokumen: string, id_klien?: int|null, id_talent?: int|null, id_placement?: int|null, id_job_req?: int|null, id_pengajuan?: int|null}  $data
      */
     public function unggah(User $user, array $data): Dokumen
     {
+        $jenis = JenisDokumen::from($data['jenis_dokumen']);
+        if (KelengkapanDokumenService::berurutan($jenis)) {
+            $tautan = $this->tautanBerurutan($user, $jenis, $data);
+        }
         [$idKlien, $idTalent, $idPlacement] = [$data['id_klien'] ?? null, $data['id_talent'] ?? null, $data['id_placement'] ?? null];
 
         if ($idPlacement) {
@@ -116,6 +124,9 @@ class DokumenService
         } elseif ($user->hasRole(Role::Talent)) {
             [$idKlien, $idTalent] = [null, $user->talent->id_talent];
         }
+        if (isset($tautan)) {
+            ['id_klien' => $idKlien, 'id_talent' => $idTalent, 'id_placement' => $idPlacement] = $tautan;
+        }
 
         /** @var UploadedFile $file */
         $file = $data['file'];
@@ -127,7 +138,9 @@ class DokumenService
             'id_klien' => $idKlien,
             'id_talent' => $idTalent,
             'id_placement' => $idPlacement,
-            'jenis_dokumen' => $data['jenis_dokumen'],
+            'id_job_req' => $tautan['id_job_req'] ?? null,
+            'id_pengajuan' => $tautan['id_pengajuan'] ?? null,
+            'jenis_dokumen' => $jenis,
             'file_path' => $path,
             'tanggal_unggah' => now(),
         ]);
@@ -151,7 +164,8 @@ class DokumenService
     public function generate(User $user, array $data): Dokumen
     {
         $jenis = JenisDokumen::from($data['jenis_dokumen']);
-        $klien = Klien::findOrFail($data['id_klien']);
+        $tautan = $this->tautanBerurutan($user, $jenis, $data);
+        $klien = Klien::findOrFail($tautan['id_klien']);
         $items = collect($data['items'] ?? [])->map(fn (array $i) => [...$i, 'subtotal' => $i['jumlah'] * $i['harga_satuan']]);
 
         $template = [
@@ -171,12 +185,37 @@ class DokumenService
         $dokumen = Dokumen::create([
             'id_user_uploader' => $user->id_user,
             'id_klien' => $klien->id_klien,
+            'id_job_req' => $tautan['id_job_req'],
             'jenis_dokumen' => $jenis,
             'file_path' => $path,
             'tanggal_unggah' => now(),
         ]);
 
         return $dokumen->load(self::RELASI);
+    }
+
+    /**
+     * Cek urutan & hak unggah (R34–R35), lalu tentukan tautan dokumen: Quotation/PO/PKS → permintaan & kliennya;
+     * Kontrak Kerja → pengajuan, permintaan, talent, klien, dan placement (jika sudah ada). Kontrak Kerja yang dikirim
+     * dengan `id_placement` (perpanjangan) memakai pengajuan dari penempatan itu.
+     *
+     * @return array{id_job_req: int, id_pengajuan: int|null, id_klien: int, id_talent: int|null, id_placement: int|null}
+     */
+    private function tautanBerurutan(User $user, JenisDokumen $jenis, array $data): array
+    {
+        $idPengajuan = $data['id_pengajuan'] ?? null;
+        if ($jenis === JenisDokumen::KontrakKerja && ! $idPengajuan && ($data['id_placement'] ?? null)) {
+            $idPengajuan = Placement::with('evaluasi')->find($data['id_placement'])?->evaluasi?->id_pengajuan;
+        }
+        [$job, $pengajuan] = $this->kelengkapan->pastikanBolehUnggah($user, $jenis, $data['id_job_req'] ?? null, $idPengajuan);
+
+        return [
+            'id_job_req' => $job->id_job_req,
+            'id_pengajuan' => $pengajuan?->id_pengajuan,
+            'id_klien' => $job->id_klien,
+            'id_talent' => $pengajuan?->id_talent,
+            'id_placement' => $pengajuan?->evaluasi?->placement?->id_placement,
+        ];
     }
 
     /** Dokumen komersial: ditandatangani AM, Manager, dan HR Client klien dokumen. */

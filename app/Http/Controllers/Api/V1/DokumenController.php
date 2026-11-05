@@ -8,11 +8,14 @@ use App\Http\Requests\Dokumen\GenerateDokumenRequest;
 use App\Http\Requests\Dokumen\IndexDokumenRequest;
 use App\Http\Requests\Dokumen\PenandatanganRequest;
 use App\Http\Requests\Dokumen\TandaTanganRequest;
+use App\Http\Requests\Dokumen\TujuanDokumenRequest;
 use App\Http\Requests\Dokumen\UploadDokumenRequest;
 use App\Http\Resources\DokumenResource;
 use App\Models\Dokumen;
 use App\Models\User;
+use App\Enums\JenisDokumen;
 use App\Services\DokumenService;
+use App\Services\KelengkapanDokumenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -25,7 +28,36 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class DokumenController extends Controller
 {
-    public function __construct(private readonly DokumenService $dokumen) {}
+    public function __construct(
+        private readonly DokumenService $dokumen,
+        private readonly KelengkapanDokumenService $kelengkapan,
+    ) {}
+
+    /**
+     * Detail dokumen.
+     *
+     * Sesuai scope (DokumenPolicy::view); dipakai tautan dari daftar periksa kelengkapan dokumen (R36).
+     */
+    public function show(Dokumen $dokumen): DokumenResource
+    {
+        return (new DokumenResource($dokumen->load(DokumenService::RELASI)))->additional(['message' => 'Berhasil']);
+    }
+
+    /**
+     * Pilihan tujuan dokumen berurutan.
+     *
+     * Untuk form unggah: permintaan kebutuhan (quotation, purchase_order, pks) atau kandidat diterima (kontrak_kerja)
+     * yang sudah memenuhi urutan (R34) dan belum punya dokumen jenis itu yang masih berjalan atau sudah selesai.
+     * 403 jika role tidak berhak mengunggah jenis tersebut (R35).
+     *
+     * @response 200 {"data": [{"id_job_req": 5, "posisi": "Data Analyst", "id_klien": 2, "nama_perusahaan": "PT Sinar Digital Nusantara"}], "message": "Berhasil"}
+     */
+    public function tujuan(TujuanDokumenRequest $request): JsonResponse
+    {
+        $data = $this->kelengkapan->tujuan($request->user(), JenisDokumen::from($request->validated('jenis')));
+
+        return response()->json(['data' => $data, 'message' => 'Berhasil']);
+    }
 
     /**
      * Daftar dokumen.
@@ -122,9 +154,12 @@ class DokumenController extends Controller
      */
     public function calonPenandatangan(Dokumen $dokumen): JsonResponse
     {
-        $data = $this->dokumen->calonPenandatangan($dokumen)->map(fn (User $u) => [
+        $calon = $this->dokumen->calonPenandatangan($dokumen);
+        $disarankan = $this->kelengkapan->penandatanganDisarankan($dokumen, $calon);
+        $data = $calon->map(fn (User $u) => [
             ...DokumenResource::user($u),
             'keterangan' => $u->hrClient?->klien?->nama_perusahaan ?? $u->pegawai?->jabatan ?? 'Talent',
+            'disarankan' => in_array($u->id_user, $disarankan, true),
         ]);
 
         return response()->json(['data' => $data, 'message' => 'Berhasil']);

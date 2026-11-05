@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Enums\Role;
 use App\Models\JobRequirement;
+use App\Services\KelengkapanDokumenService;
 use App\Services\ProgresService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -56,6 +57,12 @@ class JobRequirementResource extends JsonResource
                 'terpenuhi' => (int) ($atribut['terpenuhi'] ?? 0),
                 'sisa_kebutuhan' => max(0, $this->jumlah_kebutuhan - (int) ($atribut['terpenuhi'] ?? 0)),
             ]),
+            // R36: kelengkapan dokumen kerja sama (detail, bukan untuk talent) dan ringkasan tahap dokumen (monitoring /progres).
+            'kelengkapan_dokumen' => $this->when(
+                array_key_exists('screening_pending', $atribut) && ! $request->user()?->hasRole(Role::Talent),
+                fn () => app(KelengkapanDokumenService::class)->untukPermintaan($this->resource),
+            ),
+            'tahap_dokumen' => $this->when($request->routeIs('progres.index'), fn () => app(KelengkapanDokumenService::class)->tahapPermintaan($this->resource)),
             'progres_terakhir' => new ProgresPemenuhanResource($this->whenLoaded('progresTerakhir')),
             'log_progres' => ProgresPemenuhanResource::collection($this->whenLoaded('progres')),
         ];

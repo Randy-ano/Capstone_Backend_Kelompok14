@@ -22,6 +22,8 @@ class UserResource extends JsonResource
             'profil' => $this->profilResource(),
             // Hanya talent: punya penempatan Belum Aktif/Aktif, sehingga menu cuti, shift, dan dokumen terbuka.
             'sudah_ditempatkan' => $this->when($this->role === Role::Talent, fn () => (bool) $this->talent?->sudahDitempatkan()),
+            // Hanya talent: menu Dokumen terbuka (sudah ditempatkan atau punya Kontrak Kerja untuk ditandatangani).
+            'akses_dokumen' => $this->when($this->role === Role::Talent, fn () => (bool) $this->talent?->bolehAksesDokumen()),
         ];
     }
 

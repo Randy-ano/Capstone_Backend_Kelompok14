@@ -22,6 +22,8 @@ class Dokumen extends Model
         'id_klien',
         'id_talent',
         'id_placement',
+        'id_job_req',
+        'id_pengajuan',
         'jenis_dokumen',
         'file_path',
         'status_dokumen',
@@ -59,6 +61,18 @@ class Dokumen extends Model
     public function placement(): BelongsTo
     {
         return $this->belongsTo(Placement::class, 'id_placement', 'id_placement');
+    }
+
+    /** Permintaan kebutuhan (Quotation, Purchase Order, PKS, dan Kontrak Kerja lewat pengajuannya). */
+    public function jobRequirement(): BelongsTo
+    {
+        return $this->belongsTo(JobRequirement::class, 'id_job_req', 'id_job_req');
+    }
+
+    /** Pengajuan kandidat untuk Kontrak Kerja. */
+    public function pengajuan(): BelongsTo
+    {
+        return $this->belongsTo(PengajuanKandidat::class, 'id_pengajuan', 'id_pengajuan');
     }
 
     public function tandaTangan(): HasMany

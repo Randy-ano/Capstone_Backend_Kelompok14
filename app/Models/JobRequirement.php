@@ -91,4 +91,10 @@ class JobRequirement extends Model
     {
         return $this->hasMany(Placement::class, 'id_job_req', 'id_job_req');
     }
+
+    /** Dokumen kerja sama permintaan ini (Quotation, Purchase Order, PKS, Kontrak Kerja). */
+    public function dokumen(): HasMany
+    {
+        return $this->hasMany(Dokumen::class, 'id_job_req', 'id_job_req');
+    }
 }

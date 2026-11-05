@@ -73,6 +73,12 @@ class PengajuanKandidat extends Model
         return $this->hasOne(EvaluasiKandidat::class, 'id_pengajuan', 'id_pengajuan');
     }
 
+    /** Kontrak Kerja kandidat ini. */
+    public function dokumen(): HasMany
+    {
+        return $this->hasMany(Dokumen::class, 'id_pengajuan', 'id_pengajuan');
+    }
+
     /**
      * Status yang ditampilkan ke pengguna: tahap terakhir yang sudah ada di data.
      * Padanan query-nya ada di PengajuanService (filter status), harus sama persis.

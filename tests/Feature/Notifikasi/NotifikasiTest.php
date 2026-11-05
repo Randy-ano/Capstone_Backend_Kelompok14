@@ -141,6 +141,7 @@ describe('R30: notifikasi otomatis dari event', function () {
         expect(tipeDiterima($pengajuan->accountManager->user))->toBe(['evaluasi_disimpan'])
             ->and(tipeDiterima($ts))->toBe(['evaluasi_disimpan']);
 
+        rekrutmenDokumen($pengajuan);
         $this->actingAs($ts)->postJson('/api/v1/placement', ['id_evaluasi' => $pengajuan->evaluasi()->value('id_evaluasi'), 'tanggal_mulai' => now()->toDateString()])->assertCreated();
         expect(tipeDiterima($pengajuan->talent->user))->toBe(['placement_dibuat'])
             ->and(tipeDiterima($hr))->toBe(['placement_dibuat']);
