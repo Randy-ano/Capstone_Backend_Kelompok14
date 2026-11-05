@@ -176,6 +176,9 @@ describe('GET /job-requirements/{id}', function () {
                 'screening_pending' => 1,
                 'screening_lolos' => 1,
                 'screening_tidak_lolos' => 1,
+                'usulan_menunggu_am' => 2,
+                'usulan_diteruskan' => 0,
+                'usulan_tidak_diteruskan' => 1,
                 'terpenuhi' => 0,
                 'sisa_kebutuhan' => 3,
             ])

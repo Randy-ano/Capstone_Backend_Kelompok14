@@ -125,10 +125,17 @@ describe('POST /pengajuan', function () {
             ->id_penanggung_jawab->toBe($am->pegawai->id_pegawai);
     });
 
-    it('menolak screening belum lolos, sudah diajukan, atau job tidak diproses (422)', function (string $kasus, string $pesan) {
+    it('meneruskan usulan data lama yang masih pending', function () {
+        loginSebagai(Role::AccountManager);
+        $screening = ScreeningTalent::factory()->for(rekrutmenJob())->create(['hasil_screening' => HasilScreening::Pending]);
+
+        $this->postJson('/api/v1/pengajuan', ['id_screening' => $screening->id_screening])->assertCreated();
+    });
+
+    it('menolak usulan tidak diteruskan, sudah diajukan, atau job tidak diproses (422)', function (string $kasus, string $pesan) {
         loginSebagai(Role::AccountManager);
         $screening = match ($kasus) {
-            'pending' => ScreeningTalent::factory()->for(rekrutmenJob())->create(['hasil_screening' => HasilScreening::Pending]),
+            'tidak diteruskan' => ScreeningTalent::factory()->for(rekrutmenJob())->create(['hasil_screening' => HasilScreening::TidakLolos]),
             'sudah diajukan' => rekrutmenPengajuan(rekrutmenJob())->screening,
             'job terpenuhi' => rekrutmenScreeningLolos(rekrutmenJob(atribut: ['status_req' => StatusReq::Terpenuhi])),
         };
@@ -137,7 +144,7 @@ describe('POST /pengajuan', function () {
             ->assertUnprocessable()
             ->assertJsonPath('errors.id_screening.0', $pesan);
     })->with([
-        ['pending', 'Hanya kandidat yang lolos screening yang dapat diajukan ke klien.'],
+        ['tidak diteruskan', 'Usulan ini sudah tidak diteruskan sehingga tidak dapat diajukan ke klien.'],
         ['sudah diajukan', 'Kandidat ini sudah diajukan ke klien.'],
         ['job terpenuhi', 'Permintaan kebutuhan berstatus terpenuhi; proses kandidat tidak dapat dilanjutkan.'],
     ]);

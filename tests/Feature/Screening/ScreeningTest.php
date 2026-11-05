@@ -84,9 +84,11 @@ describe('POST /screening', function () {
             'catatan_screening' => 'Cocok.',
         ])
             ->assertCreated()
-            ->assertJsonPath('message', 'Screening berhasil dibuat.')
+            ->assertJsonPath('message', 'Kandidat berhasil diusulkan ke Account Manager.')
             ->assertJsonPath('data.skor_kecocokan', 60)
-            ->assertJsonPath('data.hasil_screening', 'pending')
+            ->assertJsonPath('data.hasil_screening', 'lolos')
+            ->assertJsonPath('data.status_usulan', 'menunggu_am')
+            ->assertJsonPath('data.catatan_screening', 'Cocok.')
             ->assertJsonPath('data.talent.status_kandidat', 'dalam_proses')
             ->assertJsonPath('data.job_requirement.status_req', 'diproses')
             ->assertJsonPath('data.talent_support.id_pegawai', $ts->pegawai->id_pegawai);
@@ -118,7 +120,7 @@ describe('POST /screening', function () {
 
         $this->postJson('/api/v1/screening', ['id_job_req' => $job->id_job_req, 'id_talent' => $talent->id_talent])
             ->assertUnprocessable()
-            ->assertJsonPath('errors.id_talent.0', 'Talent sudah pernah di-screening untuk permintaan kebutuhan ini.');
+            ->assertJsonPath('errors.id_talent.0', 'Talent ini sudah pernah diusulkan untuk permintaan kebutuhan ini.');
     });
 
     it('menolak talent yang tidak tersedia (422)', function (string $kasus) {
@@ -174,7 +176,7 @@ describe('PUT /screening/{id}', function () {
 
         $this->putJson("/api/v1/screening/{$screening->id_screening}", ['hasil_screening' => 'lolos', 'catatan_screening' => 'Bagus.'])
             ->assertOk()
-            ->assertJsonPath('message', 'Screening berhasil diperbarui.')
+            ->assertJsonPath('message', 'Usulan berhasil diperbarui.')
             ->assertJsonPath('data.hasil_screening', 'lolos')
             ->assertJsonPath('data.catatan_screening', 'Bagus.');
 
