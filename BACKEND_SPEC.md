@@ -374,9 +374,9 @@ Kolom dan tabel berikut ditambahkan untuk profil & CV talent (FR-03, FR-04); lih
 | id_talent | FK→talent, cascade | |
 | id_placement | FK→placement, cascade | placement harus `aktif` |
 | id_approver_klien | FK→hr_client, nullable, set null | diisi saat HR memutuskan |
-| id_approver_manager | FK→pegawai, nullable, set null | diisi saat Manager memutuskan |
+| id_approver_manager | FK→pegawai, nullable, set null | **tidak dipakai lagi** (revisi 2026-11-05: keputusan cuti hanya HR Client); tetap ada tanpa migration |
 | status_approval_klien | string (enum) | `menunggu` (default), `disetujui`, `ditolak` |
-| status_approval_manager | string (enum) | `menunggu` (default), `disetujui`, `ditolak` |
+| status_approval_manager | string (enum) | `menunggu` (default), `disetujui`, `ditolak` — **tidak dipakai lagi**, selalu `menunggu` |
 | tanggal_mulai | date | |
 | tanggal_selesai | date | ≥ tanggal_mulai |
 | alasan_cuti | text | |
@@ -391,6 +391,7 @@ Kolom dan tabel berikut ditambahkan untuk profil & CV talent (FR-03, FR-04); lih
 | tanggal_shift | date | |
 | jenis_shift | string (enum) | `pagi`, `siang`, `malam`, `libur` |
 | keterangan | string, nullable | |
+| status_shift | string (enum) | `aktif` (default), `dibatalkan` — migration `2026_11_05_100000` (shift tidak dihapus, hanya dibatalkan) |
 | *unique* | (id_placement, tanggal_shift) | 1 shift per talent per hari |
 
 **monitoring_talent**
@@ -453,9 +454,9 @@ Buat `EnsureRole` dan daftarkan alias `role`. Contoh: `Route::middleware('role:t
 ### 5.2 Scoping data (wajib, ditegakkan di Policy + query)
 | Role | Boleh melihat |
 |---|---|
-| `talent` | Hanya data miliknya: profil, screening/pengajuan/interview miliknya, placement miliknya, cuti & shift miliknya, dokumen dengan `id_talent` miliknya, notifikasinya |
+| `talent` | Hanya data miliknya: profil, screening/pengajuan/interview miliknya, placement miliknya, cuti & shift miliknya, dokumen dengan `id_talent` miliknya, notifikasinya. **Cuti, shift, dan dokumen hanya terbuka setelah talent punya placement berstatus tampil Belum Aktif/Aktif** (middleware `talent.ditempatkan`; selain itu 403 "Fitur ini tersedia setelah Anda ditempatkan di perusahaan klien."). Profil & CV tidak terpengaruh. |
 | `hr_client` | Hanya data dengan `id_klien` = klien tempat ia bekerja: job requirement, pengajuan ke job klien tersebut, interview, evaluasi, placement, cuti & shift talent yang ditempatkan di klien tsb, laporan keluhan, dokumen klien |
-| `account_manager`, `talent_support`, `manager` | Semua data (internal PT Intellisys), dengan batas aksi sesuai tabel endpoint |
+| `account_manager`, `talent_support`, `manager` | Semua data (internal PT Intellisys), dengan batas aksi sesuai tabel endpoint (cuti: hanya melihat) |
 
 Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`, `talentProfile()`, `pegawaiProfile()`, `hrClientProfile()`.
 
@@ -524,11 +525,13 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
 - **R20.** Saat placement `selesai`/`dihentikan` → talent kembali `tersedia` di pool.
 
 ### Operasional (FR-14, FR-15, FR-18, FR-19)
-- **R21. Cuti:** diajukan talent untuk placement `aktif` miliknya; tanggal tidak boleh tumpang tindih dengan cuti lain yang `menunggu`/`disetujui`.
-  - HR Client (klien yang sama) memutuskan `status_approval_klien`; Manager memutuskan `status_approval_manager`.
-  - `status_cuti` = `disetujui` jika **keduanya** disetujui; `ditolak` jika **salah satu** menolak; selain itu `menunggu`.
+- **R21. Cuti** (direvisi 2026-11-05)**:** diajukan talent untuk placement `aktif` miliknya; tanggal tidak boleh tumpang tindih dengan cuti lain yang `menunggu`/`disetujui`.
+  - **Hanya HR Client** dari klien tempat talent ditempatkan yang memutuskan (`status_approval_klien`, `id_approver_klien`); keputusannya langsung menjadi `status_cuti` (`disetujui`/`ditolak`). Manager, AM, dan TS hanya melihat (PATCH approval → 403). Kolom approval manager tidak dipakai.
+  - Lama cuti dihitung dalam **hari kerja** (Sabtu & Minggu tidak dihitung) → `jumlah_hari_kerja` di respons.
+  - **Kuota** `CutiService::KUOTA_HARI_KERJA_PER_TAHUN` = 12 hari kerja per tahun kalender per talent; yang dihitung cuti `menunggu` + `disetujui`. Cuti yang melewati pergantian tahun dihitung per tahun. Melebihi sisa kuota → 422 dengan pesan berisi sisa kuota.
+  - Tanggal: `tanggal_mulai` paling cepat besok, `tanggal_selesai` ≥ `tanggal_mulai`, keduanya dalam periode placement, dan rentang minimal berisi satu hari kerja.
   - Talent boleh membatalkan selama masih `menunggu`.
-- **R22. Shift:** dikelola HR Client (klien yang sama) atau Manager. Dukung input massal (satu request untuk banyak tanggal). Talent hanya melihat shift miliknya.
+- **R22. Shift:** dikelola HR Client (klien yang sama) atau Manager. Dukung input massal (satu request untuk banyak tanggal). Talent hanya melihat shift miliknya. **Shift tidak dihapus**, melainkan dibatalkan (`status_shift` = `dibatalkan`, tetap tampil di daftar); shift yang dibatalkan tidak bisa diubah, dan aktif kembali bila tanggalnya diatur ulang lewat input massal.
 - **R23. Monitoring:** dicatat oleh Manager untuk placement mana pun; dilihat Manager & AM, dan talent untuk placement miliknya (read-only, FR-15).
 - **R24. Laporan keluhan:** dibuat HR Client untuk placement di kliennya (status `baru`). AM/Manager menindaklanjuti: isi `id_penindak_lanjut`, `hasil_tindak_lanjut`, `tanggal_tindak_lanjut`, ubah status.
 
@@ -636,13 +639,15 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 ### Cuti, Shift, Monitoring, Keluhan (FR-14, FR-15, FR-18, FR-19)
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| GET | /cuti | T, HC, M | sesuai scope; filter `status`, `id_placement` |
-| POST | /cuti | T | R21; body `id_placement`, `tanggal_mulai` (≥ hari ini), `tanggal_selesai`, `alasan_cuti` |
-| PATCH | /cuti/{id}/approval | HC, M | body: `keputusan` (disetujui/ditolak); satu kali per pihak, hanya saat `menunggu` |
+| GET | /cuti | T, HC, M, AM, TS | sesuai scope (internal hanya melihat); filter `status`, `id_placement`; item berisi `jumlah_hari`, `jumlah_hari_kerja`, `approval_klien` |
+| GET | /cuti/kuota | T | `{ tahun, kuota, terpakai, sisa }` dalam hari kerja; query `tahun` (default tahun ini) |
+| POST | /cuti | T | R21; body `id_placement`, `tanggal_mulai` (≥ besok), `tanggal_selesai`, `alasan_cuti`; dalam periode placement, minimal 1 hari kerja, tidak melebihi sisa kuota |
+| PATCH | /cuti/{id}/approval | HC | body: `keputusan` (disetujui/ditolak); langsung menjadi status akhir, hanya saat `menunggu` |
 | PATCH | /cuti/{id}/batal | T | pemilik, hanya saat `menunggu` |
 | GET | /shift | T, HC, M | filter `id_placement`, `dari`, `sampai`; urut tanggal, default 31 per halaman |
 | POST | /shift | HC, M | input massal (R22): `id_placement`, `tanggal[]` (maks 62), `jenis_shift`, `keterangan`; tanggal yang sudah ada diperbarui; respons `{ dibuat, diperbarui }` |
-| PUT/DELETE | /shift/{id} | HC, M | placement harus `aktif`; tanggal dalam periode placement |
+| PUT | /shift/{id} | HC, M | placement harus `aktif`; tanggal dalam periode placement; shift dibatalkan tidak bisa diubah |
+| PATCH | /shift/{id}/batal | HC, M | `status_shift` → `dibatalkan` (tidak ada lagi DELETE) |
 | GET | /monitoring | M, AM, T | filter `id_placement`, `search`; talent hanya catatan placement miliknya (FR-15, read-only) |
 | POST | /monitoring | M | R23; `tanggal_monitoring` default sekarang, tidak boleh di masa depan |
 | GET | /laporan-keluhan | HC, AM, M | sesuai scope; filter `status`, `id_placement`, `search`; `meta.ringkasan` per status |
@@ -709,6 +714,24 @@ Scheduler: `php artisan notifikasi:pengingat` (terjadwal 07:00 WIB, R31). Jalank
 | `ditolak` | `ditolak` | Ditolak |
 
 Filter `status` di `GET /pengajuan` memakai nilai `status_tampil`, sehingga hasil filter selalu sama dengan badge.
+
+**Status tampil penempatan** — `GET /placement`, `GET /placement/{id}`, ringkasan `placement` di respons cuti/shift/monitoring/keluhan, dan `GET /monitoring` (top-level) menyertakan dua field turunan (bukan kolom database):
+```json
+{ "status_placement": "aktif", "status_tampil": "belum_aktif", "label_status_tampil": "Belum Aktif" }
+```
+| Kondisi (dicek berurutan) | `status_tampil` | `label_status_tampil` |
+|---|---|---|
+| `status_placement` `selesai`/`dihentikan` | `selesai` | Selesai |
+| `tanggal_selesai` < hari ini | `selesai` | Selesai |
+| `tanggal_mulai` > hari ini | `belum_aktif` | Belum Aktif |
+| selain itu | `aktif` | Aktif |
+
+**GET /api/v1/auth/me (talent)** — `data.sudah_ditempatkan` (boolean, hanya untuk role talent; juga di `data.user` respons login) = talent punya placement `belum_aktif`/`aktif`. Frontend memakai field ini untuk menu Pengajuan Cuti & Shift dan Dokumen.
+
+**GET /api/v1/cuti/kuota**
+```json
+{ "data": { "tahun": 2026, "kuota": 12, "terpakai": 2, "sisa": 10 }, "message": "Berhasil" }
+```
 
 **GET /api/v1/job-requirements/12/rekomendasi**
 ```json
@@ -832,3 +855,5 @@ Setiap fase: kerjakan → jalankan `php artisan test` → semua hijau → commit
 | `pengajuan_kandidat.status_pengajuan` punya nilai `lanjut_interview` | Kebutuhan FR-11 (interview hanya untuk kandidat yang dinyatakan lanjut oleh klien) |
 | Tabel `riwayat_pendidikan`, `pengalaman_kerja_talent`, `sertifikat_talent`, `bahasa`, `talent_bahasa` dan 13 kolom profil di `talent` (bagian 4.2, "Profil talent") | Data profil & CV talent yang lebih rinci (SCRUM-8). Lama pengalaman untuk R9 dihitung dari `pengalaman_kerja_talent`, jadi kolom `lama_pengalaman_tahun` tidak diperlukan |
 | Tidak memakai spatie/laravel-permission | Role cukup dari `users.role` (sesuai ERD) |
+| `shifting_talent.status_shift` (`aktif`/`dibatalkan`, default `aktif`) | Revisi bimbingan 2026-11-05: jadwal shift tidak dihapus, hanya dibatalkan |
+| `pengajuan_cuti.id_approver_manager` & `status_approval_manager` tidak dipakai lagi (kolom tetap ada) | Revisi bimbingan 2026-11-05: keputusan cuti hanya oleh HR Client; ERD & activity diagram cuti perlu diperbarui |
