@@ -45,8 +45,8 @@ Didukung oleh: Progres Pemenuhan (tahapan + SLA), Dokumen & Tanda Tangan Digital
 | Database | MySQL 8 |
 | Auth API | Laravel Sanctum, **token-based** (`Authorization: Bearer <token>`) — dipakai web & mobile nanti |
 | Otorisasi | Kolom `users.role` + middleware `role:` + Laravel Policies (lihat bagian 5) |
-| PDF | `barryvdh/laravel-dompdf` |
-| Email | Laravel Mail (driver `log` saat development, SMTP saat produksi) |
+| PDF | `barryvdh/laravel-dompdf`; `setasign/fpdi` + `setasign/fpdf` untuk menempel gambar tanda tangan & menggabungkan PDF saat dokumen diunduh |
+| Email | Laravel Mail (driver `log` saat development, SMTP saat produksi; contoh Mailtrap/Gmail di `.env.example` & SETUP.md) |
 | Queue | Driver `database` |
 | Scheduler | Laravel Scheduler (`routes/console.php`) |
 | File | Laravel Storage, disk `local` (private) untuk CV, dokumen, tanda tangan |
@@ -546,6 +546,11 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
   - `lainnya`: Account Manager, Manager, HR Client klien dokumen, dan talent terkait.
   Talent Support tidak menandatangani dokumen. **Dokumen yang diunggah talent:** penandatangan otomatis talent itu sendiri (dibuat saat unggah, status langsung `menunggu_ttd`); talent tidak dapat mengatur penandatangan (403).
 - **R28.** Penandatangan mengunggah gambar tanda tangan → status_ttd `ditandatangani`. Jika semua sudah → status_dokumen `ditandatangani`. Jika ada yang menolak → `ditolak`.
+- **R28a.** Dokumen PDF yang sudah punya penandatangan diunduh dalam bentuk **PDF bertanda tangan**, dibuat saat diunduh (file asli di disk tidak diubah):
+  - dokumen buatan sistem (R26) dirender ulang dari templatenya dengan blok tanda tangan per penandatangan (peran/jabatan, gambar tanda tangan, nama, status, tanggal & jam);
+  - PDF unggahan diberi halaman **Lembar Pengesahan** di akhir: per penandatangan gambar tanda tangan, nama, peran/jabatan, tanggal & jam, dan status;
+  - penandatangan yang belum memutuskan ditulis "Belum ditandatangani"; yang menolak "Ditolak".
+  Dokumen tanpa penandatangan (draft) dan file non-PDF diunduh apa adanya.
 
 ### Notifikasi & Reminder (FR-16)
 - **R29.** Gunakan satu `NotifikasiService::kirim(user, tipe, pesan, kanal)` yang menyimpan ke tabel `notifikasi` dan, jika kanal `email`, mengirim email lewat queue lalu memperbarui `status_pengiriman`.
@@ -574,6 +579,8 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | POST | /auth/login | publik | mengembalikan token + data user + role |
 | POST | /auth/logout | semua | hapus token aktif |
 | GET | /auth/me | semua | user + profil sesuai role |
+| POST | /auth/lupa-password | publik | `email`; kirim email tautan `FRONTEND_URL/reset-password?token=…&email=…` (berlaku 60 menit). Respons selalu "Jika email terdaftar, tautan reset sudah dikirim." Maks 5/menit |
+| POST | /auth/reset-password | publik | `email`, `token`, `password` (min. 8), `password_confirmation`; berhasil → semua token login dicabut; token salah/kedaluwarsa → 422 di field `token`. Maks 5/menit |
 | PUT | /auth/password | semua | ubah password sendiri: `password_lama`, `password` (min. 8, beda dari lama), `password_confirmation`; sesi lain dihapus, sesi saat ini tetap |
 | GET/POST/PUT | /pegawai, /pegawai/{id} | M | kelola akun internal (R2) |
 | PATCH | /users/{id}/status | M | aktif/nonaktifkan akun |
@@ -662,7 +669,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | GET | /dokumen | semua | sesuai scope (internal semua; HC dokumen kliennya; T miliknya; + yang diunggah/harus ditandatangani sendiri); filter `jenis`, `status`, `perlu_ttd`, `search`; tiap item berisi `penandatangan[]` dan `aksi` |
 | POST | /dokumen/upload | AM, HC, M, T | R25 (multipart `file`, `jenis_dokumen` selain cv, `id_placement`/`id_klien`/`id_talent`); unggahan talent langsung `menunggu_ttd` dengan penandatangan talent itu sendiri (R27) |
 | POST | /dokumen/generate | AM | R26 (quotation/PO: `items[]`; PKS: `ketentuan`; + `id_klien`, `nomor_dokumen`, `tanggal_dokumen`, `berlaku_sampai`, `perihal`, `catatan`) |
-| GET | /dokumen/{id}/download | sesuai Policy | nama file asli |
+| GET | /dokumen/{id}/download | sesuai Policy | nama file asli; PDF yang sudah punya penandatangan dikirim bertanda tangan (R28a) |
 | GET | /dokumen/{id}/calon-penandatangan | pengunggah (bukan talent) | sesuai jenis dokumen (R27): komersial → AM, M, HC klien; kepegawaian → talent terkait, AM, M; lainnya → AM, M, HC klien, talent terkait |
 | POST | /dokumen/{id}/penandatangan | pengunggah (bukan talent) | R27; body `id_user[]` (1–10) dari calon penandatangan; hanya saat `draft` |
 | POST | /dokumen/{id}/tanda-tangan | penandatangan | R28 (multipart `keputusan` ditandatangani/ditolak + `file_tanda_tangan` png/jpg maks 2 MB) |

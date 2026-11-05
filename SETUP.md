@@ -81,6 +81,24 @@ php artisan serve
 
 Cek http://localhost:8000/api/v1/health → harus `{"status":"ok"}`.
 
+### Email (lupa password)
+
+Default `.env` memakai `MAIL_MAILER=log`: email **tidak dikirim**, isinya ditulis ke `storage/logs/laravel.log`. Untuk mencoba lupa password tanpa server email:
+
+1. Di halaman Masuk frontend klik **Lupa password?**, isi email akun demo (mis. `talent@intellisys.test`).
+2. Buka `storage/logs/laravel.log`, cari email paling bawah berjudul `[Intellisys Talent Hub] Reset password`, salin tautan `http://localhost:5173/reset-password?token=...&email=...` lalu buka di browser.
+3. Isi password baru → masuk dengan password baru. Tautan berlaku 60 menit dan hanya sekali pakai.
+
+Ingin email benar-benar terkirim? Ubah bagian `MAIL_*` di file `.env` (contoh lengkap ada di komentar `.env.example`), lalu `php artisan config:clear`:
+
+| Pilihan | Langkah |
+|---|---|
+| **Mailtrap** (disarankan untuk uji; email tertangkap di inbox Mailtrap) | Daftar di mailtrap.io → **Email Testing → Inboxes → SMTP Settings**. Isi `MAIL_MAILER=smtp`, `MAIL_HOST=sandbox.smtp.mailtrap.io`, `MAIL_PORT=2525`, `MAIL_USERNAME` & `MAIL_PASSWORD` dari halaman itu. |
+| **Gmail** (terkirim ke penerima asli) | Aktifkan **Verifikasi 2 Langkah** di akun Google → buka **myaccount.google.com/apppasswords** → buat App Password. Isi `MAIL_MAILER=smtp`, `MAIL_SCHEME=smtps`, `MAIL_HOST=smtp.gmail.com`, `MAIL_PORT=465`, `MAIL_USERNAME` & `MAIL_FROM_ADDRESS` = alamat Gmail, `MAIL_PASSWORD` = App Password (tanpa spasi). |
+
+> Kredensial email hanya di `.env` (tidak ikut di-commit). Jangan menulisnya di `.env.example`, README, atau grup.
+> Tautan di email memakai `FRONTEND_URL` di `.env` (default `http://localhost:5173`).
+
 Untuk notifikasi email & pengingat harian jalankan juga `php artisan queue:work` dan `php artisan schedule:work` di terminal lain. Dokumentasi API: `php artisan scribe:generate` lalu buka http://localhost:8000/docs. Detail keduanya ada di [README.md](README.md#queue--scheduler).
 
 ## 4. Setup frontend
