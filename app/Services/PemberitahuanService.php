@@ -10,6 +10,7 @@ use App\Models\EvaluasiKandidat;
 use App\Models\JadwalInterview;
 use App\Models\JobRequirement;
 use App\Models\LaporanKeluhan;
+use App\Models\MonitoringTalent;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanKandidat;
 use App\Models\Placement;
@@ -126,6 +127,18 @@ class PemberitahuanService
             [$pl->talent->user, ...NotifikasiService::hrKlien($pl->id_klien)],
             'placement_dibuat',
             "{$pl->talent->nama_lengkap} ditempatkan di {$pl->klien->nama_perusahaan} sebagai {$pl->posisi_penempatan} mulai {$mulai}.",
+        );
+    }
+
+    /** Surat Peringatan diberikan Manager → talent & HR Client klien penempatan. */
+    public function spDiberikan(MonitoringTalent $m): void
+    {
+        $m->loadMissing(['placement.talent.user', 'placement.klien']);
+        $pl = $m->placement;
+        $this->notifikasi->kirimKe(
+            [$pl->talent->user, ...NotifikasiService::hrKlien($pl->id_klien)],
+            'sp_diberikan',
+            "Surat Peringatan {$m->nomorSp()} diberikan kepada {$pl->talent->nama_lengkap} ({$pl->posisi_penempatan}, {$pl->klien->nama_perusahaan}).",
         );
     }
 

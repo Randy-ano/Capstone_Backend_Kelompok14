@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Monitoring;
 
+use App\Enums\TipeMonitoring;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class IndexMonitoringRequest extends FormRequest
 {
@@ -10,6 +12,7 @@ class IndexMonitoringRequest extends FormRequest
     {
         return [
             'id_placement' => ['nullable', 'integer'],
+            'tipe' => ['nullable', Rule::enum(TipeMonitoring::class)],
             'search' => ['nullable', 'string', 'max:255'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],

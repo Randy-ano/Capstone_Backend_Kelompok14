@@ -12,6 +12,7 @@ class IndexDokumenRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'id_talent' => ['nullable', 'integer'],
             'jenis' => ['nullable', Rule::in(array_values(array_diff(JenisDokumen::values(), [JenisDokumen::Cv->value])))],
             'status' => ['nullable', Rule::enum(StatusDokumen::class)],
             'perlu_ttd' => ['nullable', 'boolean'],

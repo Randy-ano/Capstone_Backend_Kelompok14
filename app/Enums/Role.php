@@ -26,6 +26,18 @@ enum Role: string
         return [self::AccountManager, self::TalentSupport, self::Manager];
     }
 
+    /** Nama peran untuk ditampilkan (Bahasa Indonesia). */
+    public function label(): string
+    {
+        return match ($this) {
+            self::Talent => 'Talent',
+            self::HrClient => 'HR Client',
+            self::AccountManager => 'Account Manager',
+            self::TalentSupport => 'Talent Support',
+            self::Manager => 'Manager',
+        };
+    }
+
     public function isInternal(): bool
     {
         return in_array($this, self::internal(), true);
