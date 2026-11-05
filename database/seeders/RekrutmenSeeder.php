@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Enums\HasilScreening;
 use App\Enums\StatusInterview;
 use App\Enums\StatusPengajuan;
 use App\Enums\StatusPlacement;
@@ -27,7 +26,8 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
 /**
- * 8 permintaan kebutuhan dengan semua status & indikator SLA, kandidat di setiap tahap, dan penempatan yang
+ * 8 permintaan kebutuhan dengan semua status & indikator SLA, kandidat di setiap tahap (usulan TS menunggu AM,
+ * usulan tidak diteruskan, diajukan ke klien, interview, evaluasi), dan penempatan yang
  * tersebar 11 bulan. Semua lewat Service asli sehingga aturan bisnis (R7–R20), Observer (log progres), dan
  * notifikasi (R30) berjalan seperti saat aplikasi dipakai.
  */
@@ -56,7 +56,7 @@ class RekrutmenSeeder extends Seeder
         $this->networkEngineer();
     }
 
-    /** Terpenuhi 2/2: Budi & Dimas ditempatkan; satu tidak lolos screening, satu ditolak di evaluasi. */
+    /** Terpenuhi 2/2: Budi & Dimas ditempatkan; satu ditolak di evaluasi. */
     private function backendDeveloper(): void
     {
         $t = Linimasa::bulan(10, 4);
@@ -70,10 +70,9 @@ class RekrutmenSeeder extends Seeder
             'kualifikasi' => 'Membangun REST API dengan Laravel dan MySQL. Terbiasa bekerja dengan Git dan code review.',
         ], ['Laravel', 'MySQL', 'REST API', 'Git']);
 
-        $budi = $this->screen($job, 'Budi Santoso', $this->tambah($t, 3), HasilScreening::Lolos, 'Pengalaman backend sesuai; lolos tes teknis.');
-        $dimas = $this->screen($job, 'Dimas Prasetyo', $this->tambah($t, 3, 11), HasilScreening::Lolos, 'Skor tinggi; berpengalaman di layanan pembayaran.');
-        $rizky = $this->screen($job, 'Rizky Firmansyah', $this->tambah($t, 4), HasilScreening::Lolos, 'Kompetensi lengkap; lanjutkan ke klien.');
-        $this->screen($job, 'Fajar Ramadhan', $this->tambah($t, 4, 11), HasilScreening::TidakLolos, 'Belum memenuhi minimal pengalaman 2 tahun saat itu.');
+        $budi = $this->usul($job, 'Budi Santoso', $this->tambah($t, 3), 'Pengalaman backend sesuai; lolos tes teknis.');
+        $dimas = $this->usul($job, 'Dimas Prasetyo', $this->tambah($t, 3, 11), 'Skor tinggi; berpengalaman di layanan pembayaran.');
+        $rizky = $this->usul($job, 'Rizky Firmansyah', $this->tambah($t, 4), 'Kompetensi lengkap; lanjutkan ke klien.');
 
         $pBudi = $this->ajukan($budi, $this->tambah($t, 6));
         $pDimas = $this->ajukan($dimas, $this->tambah($t, 6, 10));
@@ -111,7 +110,7 @@ class RekrutmenSeeder extends Seeder
             'kualifikasi' => 'Menyusun skenario uji manual dan otomatis (Selenium) serta memeriksa data dengan SQL.',
         ], ['QA Manual', 'Selenium', 'SQL']);
 
-        $putri = $this->screen($job, 'Putri Ayu Lestari', $this->tambah($t, 3), HasilScreening::Lolos, 'Sesuai kebutuhan; berpengalaman Selenium.');
+        $putri = $this->usul($job, 'Putri Ayu Lestari', $this->tambah($t, 3), 'Sesuai kebutuhan; berpengalaman Selenium.');
         $pPutri = $this->ajukan($putri, $this->tambah($t, 5));
         $this->tinjau($pPutri, StatusPengajuan::LanjutInterview, $this->tambah($t, 6));
         $this->interviewSelesai($pPutri, $this->tambah($t, 9), 'Interview bersama QA Lead.');
@@ -121,18 +120,18 @@ class RekrutmenSeeder extends Seeder
         Linimasa::pada(Linimasa::bulan(7, 8, 17), fn () => $this->placement->ubahStatus($plPutri, StatusPlacement::Selesai, Linimasa::bulan(7, 8)->toDateString()));
 
         $s = Linimasa::bulan(7, 12);
-        $yoga = $this->screen($job, 'Yoga Pratama', $s, HasilScreening::Lolos, 'Pengalaman Scrum dan Selenium sesuai.');
+        $yoga = $this->usul($job, 'Yoga Pratama', $s, 'Pengalaman Scrum dan Selenium sesuai.');
         $pYoga = $this->ajukan($yoga, $this->tambah($s, 2));
         $this->tinjau($pYoga, StatusPengajuan::LanjutInterview, $this->tambah($s, 3));
         $this->interviewSelesai($pYoga, $this->tambah($s, 6), 'Interview bersama QA Lead.');
         $evYoga = $this->nilai('hr03', $pYoga, 86, 'diterima', 'Mampu menyusun rencana uji end-to-end.', $this->tambah($s, 8));
         $this->tempatkan($evYoga, Linimasa::bulan(6, 18), Linimasa::bulan(-6, 18));
 
-        $hafiz = $this->screen($job, 'Hafiz Akbar', Linimasa::hari(-30), HasilScreening::Lolos, 'Kandidat alternatif dengan latar pengujian keamanan.');
+        $hafiz = $this->usul($job, 'Hafiz Akbar', Linimasa::hari(-30), 'Kandidat alternatif dengan latar pengujian keamanan.');
         $pHafiz = $this->ajukan($hafiz, Linimasa::hari(-28));
         $this->tinjau($pHafiz, StatusPengajuan::Ditolak, Linimasa::hari(-26));
 
-        $nadia = $this->screen($job, 'Nadia Rahmawati', Linimasa::hari(-22), HasilScreening::Lolos, 'Sesuai kebutuhan pengujian manual.');
+        $nadia = $this->usul($job, 'Nadia Rahmawati', Linimasa::hari(-22), 'Sesuai kebutuhan pengujian manual.');
         $pNadia = $this->ajukan($nadia, Linimasa::hari(-20));
         $this->tinjau($pNadia, StatusPengajuan::LanjutInterview, Linimasa::hari(-18));
         $this->interviewSelesai($pNadia, Linimasa::hari(-12), 'Interview bersama QA Lead.');
@@ -155,7 +154,7 @@ class RekrutmenSeeder extends Seeder
             'kualifikasi' => 'Membangun antarmuka dengan React atau Vue, terbiasa dengan Git dan bekerja sama dengan desainer.',
         ], ['React', 'Vue', 'Git', 'UI/UX']);
 
-        $salsa = $this->screen($job, 'Salsabila Putri', $this->tambah($t, 3), HasilScreening::Lolos, 'Portofolio antarmuka kuat.');
+        $salsa = $this->usul($job, 'Salsabila Putri', $this->tambah($t, 3), 'Portofolio antarmuka kuat.');
         $pSalsa = $this->ajukan($salsa, $this->tambah($t, 5));
         $this->tinjau($pSalsa, StatusPengajuan::LanjutInterview, $this->tambah($t, 7));
         $this->interviewSelesai($pSalsa, $this->tambah($t, 12), 'Interview teknis React.');
@@ -163,7 +162,7 @@ class RekrutmenSeeder extends Seeder
         $this->tempatkan($ev, Linimasa::bulan(3, 8), Linimasa::bulan(-9, 8));
 
         // Interview selesai, menunggu evaluasi hr@ (ronde pertama sempat dibatalkan).
-        $reza = $this->screen($job, 'Reza Mahendra', Linimasa::hari(-24), HasilScreening::Lolos, 'Pengalaman dashboard sesuai kebutuhan.');
+        $reza = $this->usul($job, 'Reza Mahendra', Linimasa::hari(-24), 'Pengalaman dashboard sesuai kebutuhan.');
         $pReza = $this->ajukan($reza, Linimasa::hari(-21));
         $this->tinjau($pReza, StatusPengajuan::LanjutInterview, Linimasa::hari(-19));
         $batal = $this->jadwalkan($pReza, Linimasa::hari(-15), '10:00', 'Interview teknis Vue.', Linimasa::hari(-18));
@@ -171,24 +170,24 @@ class RekrutmenSeeder extends Seeder
         $this->interviewSelesai($pReza, Linimasa::hari(-3), 'Interview teknis Vue (jadwal pengganti).');
 
         // Interview terjadwal minggu ini.
-        $anisa = $this->screen($job, 'Anisa Fitriani', Linimasa::hari(-12), HasilScreening::Lolos, 'Perhatian pada aksesibilitas menjadi nilai tambah.');
+        $anisa = $this->usul($job, 'Anisa Fitriani', Linimasa::hari(-12), 'Perhatian pada aksesibilitas menjadi nilai tambah.');
         $pAnisa = $this->ajukan($anisa, Linimasa::hari(-10));
         $this->tinjau($pAnisa, StatusPengajuan::LanjutInterview, Linimasa::hari(-7));
         $this->jadwalkan($pAnisa, Linimasa::hari(3), '13:30', 'Interview teknis React bersama tim produk.', Linimasa::hari(-5));
 
         // Menunggu tinjauan hr@.
-        $kevin = $this->screen($job, 'Kevin Wijaya', Linimasa::hari(-6), HasilScreening::Lolos, 'React dan integrasi API kuat.');
+        $kevin = $this->usul($job, 'Kevin Wijaya', Linimasa::hari(-6), 'React dan integrasi API kuat.');
         $this->ajukan($kevin, Linimasa::hari(-1, 14));
 
         // Diterima hr@, menunggu dibuatkan penempatan oleh TS.
-        $maya = $this->screen($job, 'Maya Sari', Linimasa::hari(-28), HasilScreening::Lolos, 'Latar desain antarmuka sesuai.');
+        $maya = $this->usul($job, 'Maya Sari', Linimasa::hari(-28), 'Latar desain antarmuka sesuai.');
         $pMaya = $this->ajukan($maya, Linimasa::hari(-26));
         $this->tinjau($pMaya, StatusPengajuan::LanjutInterview, Linimasa::hari(-24));
         $this->interviewSelesai($pMaya, Linimasa::hari(-14), 'Interview teknis React.');
         $this->nilai('hr', $pMaya, 84, 'diterima', 'Hasil tes baik; siap bergabung setelah penempatan dibuat.', Linimasa::hari(-2, 15));
 
-        // Menunggu keputusan TS.
-        $this->screen($job, 'Bagas Saputra', Linimasa::hari(-1), HasilScreening::Pending, 'Lulusan baru; perlu tes teknis.');
+        // Usulan TS di luar rekomendasi (skor rendah), menunggu tinjauan AM.
+        $this->usul($job, 'Bagas Saputra', Linimasa::hari(-1), 'Lulusan baru S1 Informatika (di luar rekomendasi); portofolio React menarik, mohon dipertimbangkan.');
     }
 
     /** Terpenuhi 1/1: Wahyu ditempatkan; Galih ditolak di evaluasi. */
@@ -205,8 +204,8 @@ class RekrutmenSeeder extends Seeder
             'kualifikasi' => 'Mengelola Docker dan Kubernetes di AWS serta pipeline CI/CD.',
         ], ['Docker', 'Kubernetes', 'AWS', 'Linux']);
 
-        $wahyu = $this->screen($job, 'Wahyu Nugroho', $this->tambah($t, 4), HasilScreening::Lolos, 'Sertifikasi Kubernetes dan pengalaman panjang.', 'ts02');
-        $galih = $this->screen($job, 'Galih Wicaksono', $this->tambah($t, 4, 13), HasilScreening::Lolos, 'Pengalaman Docker dan AWS memadai.', 'ts02');
+        $wahyu = $this->usul($job, 'Wahyu Nugroho', $this->tambah($t, 4), 'Sertifikasi Kubernetes dan pengalaman panjang.', 'ts02');
+        $galih = $this->usul($job, 'Galih Wicaksono', $this->tambah($t, 4, 13), 'Pengalaman Docker dan AWS memadai.', 'ts02');
         $pWahyu = $this->ajukan($wahyu, $this->tambah($t, 7), 'am02');
         $pGalih = $this->ajukan($galih, $this->tambah($t, 7, 11), 'am02');
         $this->tinjau($pWahyu, StatusPengajuan::LanjutInterview, $this->tambah($t, 9));
@@ -218,7 +217,7 @@ class RekrutmenSeeder extends Seeder
         $this->tempatkan($ev, Linimasa::bulan(1, 5), Linimasa::bulan(-11, 5));
     }
 
-    /** Diproses 0/1, SLA aman: lolos, menunggu, tidak lolos, dan interview yang dijadwal ulang. */
+    /** Diproses 0/1, SLA aman: usulan menunggu AM, satu usulan tidak diteruskan AM, dan interview yang dijadwal ulang. */
     private function dataAnalyst(): void
     {
         $t = Linimasa::hari(-16);
@@ -232,15 +231,16 @@ class RekrutmenSeeder extends Seeder
             'kualifikasi' => 'Mengolah data dengan SQL dan Python serta menyusun dashboard Power BI untuk tim manajemen.',
         ], ['SQL', 'Python', 'Power BI', 'Excel', 'Data Analysis']);
 
-        $arif = $this->screen($job, 'Arif Hidayat', Linimasa::hari(-13), HasilScreening::Lolos, 'Pengalaman BI sesuai kebutuhan.');
+        $arif = $this->usul($job, 'Arif Hidayat', Linimasa::hari(-13), 'Pengalaman BI sesuai kebutuhan.');
         $pArif = $this->ajukan($arif, Linimasa::hari(-11));
         $this->tinjau($pArif, StatusPengajuan::LanjutInterview, Linimasa::hari(-9));
         $iv = $this->jadwalkan($pArif, Linimasa::hari(1), '10:00', 'Studi kasus analisis data.', Linimasa::hari(-8));
         Linimasa::pada(Linimasa::hari(-4), fn () => $this->interview->ubah($iv, ['tanggal_interview' => Linimasa::hari(5)->toDateString(), 'waktu_interview' => '14:00']));
 
-        $this->screen($job, 'Intan Permata', Linimasa::hari(-5), HasilScreening::Lolos, 'Sertifikasi Power BI; siap diajukan.');
-        $this->screen($job, 'Citra Dewi', Linimasa::hari(-5, 11), HasilScreening::TidakLolos, 'Pengalaman belum mencapai 2 tahun.');
-        $this->screen($job, 'Farhan Maulana', Linimasa::hari(-2), HasilScreening::Pending, 'Menunggu hasil studi kasus.');
+        $this->usul($job, 'Intan Permata', Linimasa::hari(-5), 'Sertifikasi Power BI; siap diajukan.');
+        $citra = $this->usul($job, 'Citra Dewi', Linimasa::hari(-5, 11), 'Kompetensi SQL & Python kuat, pengalaman 1 tahun; mohon pertimbangkan.');
+        $this->tidakDiteruskan($citra, 'Klien mensyaratkan pengalaman minimal 2 tahun.', Linimasa::hari(-4, 9));
+        $this->usul($job, 'Farhan Maulana', Linimasa::hari(-2), 'Latar statistika dan Python; cocok untuk analisis penjualan klien.');
     }
 
     /** Diajukan oleh HR Client, belum dicarikan kandidat: dipakai demo Rekomendasi Kandidat. */
@@ -270,7 +270,7 @@ class RekrutmenSeeder extends Seeder
         ], ['UI/UX', 'Figma'], StatusReq::Draft);
     }
 
-    /** Dibatalkan klien saat kandidat masih di-screening; talent dilepas kembali. */
+    /** Dibatalkan klien saat usulan masih menunggu AM; talent dilepas kembali. */
     private function networkEngineer(): void
     {
         $t = Linimasa::hari(-60);
@@ -282,7 +282,7 @@ class RekrutmenSeeder extends Seeder
             'kualifikasi' => 'Mengelola jaringan kantor dan keamanan server Linux.',
         ], ['Network', 'Linux', 'Cyber Security']);
 
-        $this->screen($job, 'Hafiz Akbar', Linimasa::hari(-55), HasilScreening::Pending, 'Sertifikasi CCNA sesuai.', 'ts02');
+        $this->usul($job, 'Hafiz Akbar', Linimasa::hari(-55), 'Sertifikasi CCNA sesuai.', 'ts02');
         Linimasa::pada(Linimasa::hari(-45), fn () => $this->job->ubahStatus($job->refresh(), StatusReq::Dibatalkan));
     }
 
@@ -302,22 +302,20 @@ class RekrutmenSeeder extends Seeder
         ]));
     }
 
-    private function screen(JobRequirement $job, string $nama, Carbon $waktu, HasilScreening $hasil, string $catatan, string $ts = 'ts'): ScreeningTalent
+    /** Talent Support mengusulkan talent ke AM beserta catatan (R10). */
+    private function usul(JobRequirement $job, string $nama, Carbon $waktu, string $catatan, string $ts = 'ts'): ScreeningTalent
     {
-        $screening = Linimasa::pada($waktu, fn () => $this->screening->buat($this->user($ts), [
+        return Linimasa::pada($waktu, fn () => $this->screening->buat($this->user($ts), [
             'id_job_req' => $job->id_job_req,
             'id_talent' => Talent::where('nama_lengkap', $nama)->value('id_talent'),
-            'catatan_screening' => $hasil === HasilScreening::Pending ? $catatan : null,
+            'catatan_screening' => $catatan,
         ]));
+    }
 
-        if ($hasil !== HasilScreening::Pending) {
-            $screening = Linimasa::pada($this->tambah($waktu, 0, $waktu->hour + 3), fn () => $this->screening->ubah($screening, [
-                'hasil_screening' => $hasil->value,
-                'catatan_screening' => $catatan,
-            ]));
-        }
-
-        return $screening;
+    /** AM tidak meneruskan usulan ke klien (R11). */
+    private function tidakDiteruskan(ScreeningTalent $usulan, string $alasan, Carbon $waktu): void
+    {
+        Linimasa::pada($waktu, fn () => $this->screening->tidakDiteruskan($usulan, $alasan));
     }
 
     private function ajukan(ScreeningTalent $screening, Carbon $waktu, string $am = 'am'): PengajuanKandidat
