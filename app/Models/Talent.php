@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\JenisDokumen;
 use App\Enums\StatusKandidat;
 use App\Enums\StatusKelengkapan;
 use App\Observers\TalentObserver;
@@ -208,6 +209,16 @@ class Talent extends Model
     public function sudahDitempatkan(): bool
     {
         return $this->placements()->berjalan()->exists();
+    }
+
+    /**
+     * Menu Dokumen terbuka bagi talent yang sudah ditempatkan, atau yang sudah punya Kontrak Kerja
+     * (harus ditandatangani sebelum penempatan dibuat, R36).
+     */
+    public function bolehAksesDokumen(): bool
+    {
+        return $this->sudahDitempatkan()
+            || Dokumen::where('id_talent', $this->id_talent)->where('jenis_dokumen', JenisDokumen::KontrakKerja)->exists();
     }
 
     // Relasi pengajuan cuti
