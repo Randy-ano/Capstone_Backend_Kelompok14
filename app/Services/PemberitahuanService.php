@@ -8,10 +8,12 @@ use App\Enums\StatusPengajuan;
 use App\Models\Dokumen;
 use App\Models\EvaluasiKandidat;
 use App\Models\JadwalInterview;
+use App\Models\JobRequirement;
 use App\Models\LaporanKeluhan;
 use App\Models\PengajuanCuti;
 use App\Models\PengajuanKandidat;
 use App\Models\Placement;
+use App\Models\ScreeningTalent;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 
@@ -22,6 +24,44 @@ use Illuminate\Support\Carbon;
 class PemberitahuanService
 {
     public function __construct(private readonly NotifikasiService $notifikasi) {}
+
+    /** Permintaan kebutuhan diajukan (HR Client/AM) → semua Talent Support & AM penanggung jawab, kecuali pelaku. */
+    public function permintaanDiajukan(JobRequirement $job, ?User $pelaku = null): void
+    {
+        $job->loadMissing('klien');
+        $penerima = NotifikasiService::talentSupportAktif()
+            ->merge(NotifikasiService::amPenanggungJawab($job))
+            ->reject(fn (User $u) => $u->id_user === $pelaku?->id_user);
+        $this->notifikasi->kirimKe(
+            $penerima,
+            'permintaan_diajukan',
+            "Permintaan kebutuhan baru dari {$job->klien->nama_perusahaan}: {$job->posisi} ({$job->jumlah_kebutuhan} orang). Silakan cari kandidat yang sesuai.",
+        );
+    }
+
+    /** Usulan kandidat dari Talent Support → AM penanggung jawab permintaan. */
+    public function usulanDibuat(ScreeningTalent $s): void
+    {
+        $s->loadMissing(['talent', 'jobRequirement.klien', 'talentSupport']);
+        $job = $s->jobRequirement;
+        $pengusul = $s->talentSupport?->nama_pegawai ?? 'Talent Support';
+        $this->notifikasi->kirimKe(
+            NotifikasiService::amPenanggungJawab($job),
+            'usulan_kandidat',
+            "{$pengusul} mengusulkan {$s->talent->nama_lengkap} untuk posisi {$job->posisi} ({$job->klien->nama_perusahaan}). Silakan tinjau.",
+        );
+    }
+
+    /** Usulan tidak diteruskan AM → Talent Support pengusul. */
+    public function usulanTidakDiteruskan(ScreeningTalent $s): void
+    {
+        $s->loadMissing(['talent', 'jobRequirement', 'talentSupport.user']);
+        $this->notifikasi->kirimKe(
+            [$s->talentSupport?->user],
+            'usulan_tidak_diteruskan',
+            "Usulan {$s->talent->nama_lengkap} untuk posisi {$s->jobRequirement->posisi} tidak diteruskan ke klien. Alasan: {$s->alasanTidakDiteruskan()}",
+        );
+    }
 
     /** Pengajuan kandidat dibuat → HR Client klien. */
     public function pengajuanDibuat(PengajuanKandidat $p): void

@@ -49,6 +49,10 @@ class JobRequirementResource extends JsonResource
                 'screening_pending' => (int) $atribut['screening_pending'],
                 'screening_lolos' => (int) $atribut['screening_lolos'],
                 'screening_tidak_lolos' => (int) $atribut['screening_tidak_lolos'],
+                // Revisi 2026-11-05: usulan TS → AM.
+                'usulan_menunggu_am' => (int) ($atribut['usulan_menunggu_am'] ?? 0),
+                'usulan_diteruskan' => (int) ($atribut['usulan_diteruskan'] ?? 0),
+                'usulan_tidak_diteruskan' => (int) ($atribut['usulan_tidak_diteruskan'] ?? 0),
                 'terpenuhi' => (int) ($atribut['terpenuhi'] ?? 0),
                 'sisa_kebutuhan' => max(0, $this->jumlah_kebutuhan - (int) ($atribut['terpenuhi'] ?? 0)),
             ]),

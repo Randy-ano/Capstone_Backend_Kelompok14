@@ -169,7 +169,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('role:account_manager,talent_support,manager')
         ->name('progres.index');
 
-    // FR-08: screening — dilihat internal, dibuat & diubah khusus TS.
+    // FR-08: usulan kandidat (screening) — dilihat internal, dibuat & diubah TS, tidak diteruskan oleh AM.
     Route::prefix('screening')->middleware('role:account_manager,talent_support,manager')->group(function () {
         Route::get('/', [ScreeningController::class, 'index'])
             ->can('viewAny', ScreeningTalent::class)
@@ -182,6 +182,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{screening}', [ScreeningController::class, 'update'])
             ->middleware('role:talent_support')
             ->name('screening.update');
+
+        Route::patch('/{screening}/tidak-diteruskan', [ScreeningController::class, 'tidakDiteruskan'])
+            ->middleware('role:account_manager')
+            ->name('screening.tidak-diteruskan');
     });
 
     // FR-10, FR-11, FR-12, FR-17: pengajuan kandidat, interview, evaluasi, dan placement.

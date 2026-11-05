@@ -70,7 +70,7 @@ class TalentPoolService
             ...self::RELASI_DAFTAR,
             'talent.pengalamanKerjaTalent',
             'talent.sertifikat',
-            'talent.screenings' => fn ($q) => $q->with('jobRequirement.klien')->latest('tanggal_screening'),
+            'talent.screenings' => fn ($q) => $q->with(['jobRequirement.klien', 'pengajuan'])->latest('tanggal_screening'),
         ]);
     }
 

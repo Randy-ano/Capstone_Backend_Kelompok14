@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Enums\HasilScreening;
+use App\Enums\JenisDokumen;
 use App\Enums\IndikatorSla;
 use App\Enums\Role;
 use App\Enums\StatusApproval;
@@ -79,10 +79,7 @@ class DashboardService
         $tahap = [
             ['tersedia', 'Tersedia, belum diproses', TalentPool::where('status_ketersediaan', StatusKetersediaan::Tersedia)
                 ->whereHas('talent', fn (Builder $q) => $q->where('status_kandidat', StatusKandidat::Tersedia))->count()],
-            ['screening', 'Sedang di-screening', ScreeningTalent::where('hasil_screening', HasilScreening::Pending)
-                ->whereHas('jobRequirement', fn (Builder $q) => $q->whereIn('status_req', self::JOB_AKTIF))->count()],
-            ['lolos_screening', 'Lolos screening', ScreeningTalent::where('hasil_screening', HasilScreening::Lolos)->doesntHave('pengajuan')
-                ->whereHas('jobRequirement', fn (Builder $q) => $q->whereIn('status_req', self::JOB_AKTIF))->count()],
+            ['diusulkan', 'Diusulkan ke AM', $this->usulanMenunggu()->count()],
             ['diajukan', 'Diajukan ke klien', PengajuanKandidat::where('status_pengajuan', StatusPengajuan::Diajukan)->count()],
             ['interview', 'Tahap interview', PengajuanKandidat::where('status_pengajuan', StatusPengajuan::LanjutInterview)->doesntHave('evaluasi')->count()],
             ['diterima', 'Diterima, menunggu penempatan', PengajuanKandidat::whereHas('evaluasi', fn (Builder $q) => $q->where('status_evaluasi', StatusEvaluasi::Diterima)->doesntHave('placement'))->count()],
@@ -145,8 +142,7 @@ class DashboardService
     {
         return [
             $this->kartu('job_aktif', 'Permintaan berjalan', $this->jobAktif()->count(), 'diajukan & diproses', '/permintaan-kebutuhan'),
-            $this->kartu('siap_diajukan', 'Siap diajukan ke klien', ScreeningTalent::where('hasil_screening', HasilScreening::Lolos)->doesntHave('pengajuan')
-                ->whereHas('jobRequirement', fn (Builder $q) => $q->where('status_req', StatusReq::Diproses))->count(), 'lolos screening', '/pengajuan-kandidat'),
+            $this->kartu('usulan_menunggu', 'Usulan perlu ditinjau', $this->usulanMenunggu()->count(), 'dari Talent Support', '/pengajuan-kandidat?tab=usulan'),
             $this->kartu('menunggu_klien', 'Menunggu tinjauan klien', PengajuanKandidat::where('status_pengajuan', StatusPengajuan::Diajukan)->count(), 'pengajuan', '/pengajuan-kandidat'),
             $this->kartu('interview_mendatang', 'Interview 7 hari ke depan', $this->interviewMendatang()->count(), null, '/jadwal-interview'),
             $this->kartu('keluhan_terbuka', 'Keluhan terbuka', LaporanKeluhan::whereIn('status_laporan', [StatusLaporan::Baru, StatusLaporan::Diproses])->count(), 'perlu tindak lanjut', '/tiket-komplain-klien'),
@@ -160,8 +156,7 @@ class DashboardService
             $this->kartu('talent_tersedia', 'Tersedia, belum diproses', TalentPool::where('status_ketersediaan', StatusKetersediaan::Tersedia)
                 ->whereHas('talent', fn (Builder $q) => $q->where('status_kandidat', StatusKandidat::Tersedia))->count(), 'di talent pool', '/talent-pool'),
             $this->kartu('job_terbuka', 'Permintaan perlu kandidat', $this->jobAktif()->count(), 'diajukan & diproses', '/rekomendasi-kandidat'),
-            $this->kartu('screening_pending', 'Screening belum diputuskan', ScreeningTalent::where('hasil_screening', HasilScreening::Pending)
-                ->whereHas('jobRequirement', fn (Builder $q) => $q->whereIn('status_req', self::JOB_AKTIF))->count(), null, '/rekomendasi-kandidat'),
+            $this->kartu('usulan_menunggu', 'Usulan menunggu AM', $this->usulanMenunggu()->count(), 'belum ditinjau Account Manager', '/rekomendasi-kandidat'),
             $this->kartu('menunggu_placement', 'Menunggu penempatan', PengajuanKandidat::whereHas('evaluasi', fn (Builder $q) => $q->where('status_evaluasi', StatusEvaluasi::Diterima)->doesntHave('placement'))->count(), 'evaluasi diterima', '/pengajuan-kandidat'),
         ];
     }
@@ -222,7 +217,14 @@ class DashboardService
     {
         return TandaTanganDokumen::where('id_user_penandatangan', $user->id_user)
             ->where('status_ttd', StatusTtd::Menunggu)
-            ->whereHas('dokumen', fn (Builder $q) => $q->where('status_dokumen', StatusDokumen::MenungguTtd))
+            ->whereHas('dokumen', fn (Builder $q) => $q->where('status_dokumen', StatusDokumen::MenungguTtd)->where('jenis_dokumen', '!=', JenisDokumen::Cv))
             ->count();
+    }
+
+    /** Usulan TS yang belum ditinjau AM (belum diteruskan, belum ditolak) untuk job yang masih berjalan. */
+    private function usulanMenunggu(): Builder
+    {
+        return ScreeningTalent::query()->statusUsulan('menunggu_am')
+            ->whereHas('jobRequirement', fn (Builder $q) => $q->whereIn('status_req', self::JOB_AKTIF));
     }
 }
