@@ -36,7 +36,10 @@ class DokumenService
     /** Jenis yang dibuat dari template (R26). */
     public const JENIS_TEMPLATE = [JenisDokumen::Quotation, JenisDokumen::PurchaseOrder, JenisDokumen::Pks];
 
-    public function __construct(private readonly PemberitahuanService $pemberitahuan) {}
+    public function __construct(
+        private readonly PemberitahuanService $pemberitahuan,
+        private readonly PdfTandaTanganService $pdfTtd,
+    ) {}
 
     /**
      * Internal: semua. HR Client: dokumen kliennya. Talent: dokumen miliknya.
@@ -135,6 +138,8 @@ class DokumenService
 
     /**
      * R26: quotation/PO/PKS dari template Blade → PDF, dengan data input + klien.
+     * Data template disimpan di template.json satu folder dengan PDF-nya, agar saat diunduh PDF dapat dirender ulang
+     * dengan blok tanda tangan (tanpa kolom tabel baru).
      *
      * @param  array<string, mixed>  $data
      */
@@ -144,18 +149,19 @@ class DokumenService
         $klien = Klien::findOrFail($data['id_klien']);
         $items = collect($data['items'] ?? [])->map(fn (array $i) => [...$i, 'subtotal' => $i['jumlah'] * $i['harga_satuan']]);
 
-        $pdf = Pdf::loadView('pdf.dokumen-template', [
-            'jenis' => $jenis,
+        $template = [
             'judul' => self::judul($jenis),
-            'klien' => $klien,
+            'klien' => $klien->only(['nama_perusahaan', 'alamat', 'penanggung_jawab']),
             'data' => $data,
-            'items' => $items,
+            'items' => $items->all(),
             'total' => $items->sum('subtotal'),
             'pembuat' => $user->namaTampilan(),
-        ]);
+        ];
+        $pdf = Pdf::loadView('pdf.dokumen-template', [...self::dataView($template), 'penandatangan' => []]);
 
         $path = 'dokumen/'.Str::uuid().'/'.Str::slug($jenis->value.' '.str_replace(['/', '\\'], '-', $data['nomor_dokumen'])).'.pdf';
         Storage::disk(self::DISK)->put($path, $pdf->output());
+        Storage::disk(self::DISK)->put(self::pathTemplate($path), json_encode($template, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 
         $dokumen = Dokumen::create([
             'id_user_uploader' => $user->id_user,
@@ -275,7 +281,54 @@ class DokumenService
             throw new DataTidakDitemukanException('File dokumen tidak ditemukan.');
         }
 
-        return Storage::disk(self::DISK)->download($dokumen->file_path, self::namaFile($dokumen));
+        $adaPenandatangan = $dokumen->tandaTangan()->exists();
+        if (! $adaPenandatangan || strtolower(pathinfo($dokumen->file_path, PATHINFO_EXTENSION)) !== 'pdf') {
+            return Storage::disk(self::DISK)->download($dokumen->file_path, self::namaFile($dokumen));
+        }
+
+        $isi = $this->pdfBertandaTangan($dokumen);
+
+        return response()->streamDownload(function () use ($isi) {
+            echo $isi;
+        }, self::namaFile($dokumen), ['Content-Type' => 'application/pdf']);
+    }
+
+    /**
+     * PDF yang diunduh memuat tanda tangan penandatangan yang sudah menandatangani; sisanya "Belum ditandatangani".
+     * Dokumen buatan sistem dirender ulang dari template.json; PDF unggahan diberi Lembar Pengesahan di akhir.
+     * Dibuat setiap kali diunduh, sehingga selalu sesuai tanda tangan terbaru. File asli tidak diubah.
+     */
+    public function pdfBertandaTangan(Dokumen $dokumen): string
+    {
+        $pathTemplate = self::pathTemplate($dokumen->file_path);
+        if (Storage::disk(self::DISK)->exists($pathTemplate)) {
+            $template = json_decode(Storage::disk(self::DISK)->get($pathTemplate), true);
+
+            return $this->pdfTtd->template('pdf.dokumen-template', self::dataView($template), $dokumen);
+        }
+
+        return $this->pdfTtd->lembarPengesahan(Storage::disk(self::DISK)->get($dokumen->file_path), $dokumen);
+    }
+
+    /** Lokasi data template dokumen buatan sistem (satu folder dengan PDF-nya). */
+    public static function pathTemplate(string $filePath): string
+    {
+        return dirname($filePath).'/template.json';
+    }
+
+    /**
+     * Data template tersimpan → variabel view pdf.dokumen-template.
+     *
+     * @param  array<string, mixed>  $template
+     * @return array<string, mixed>
+     */
+    private static function dataView(array $template): array
+    {
+        return [
+            ...$template,
+            'klien' => (object) $template['klien'],
+            'items' => collect($template['items']),
+        ];
     }
 
     public static function namaFile(Dokumen $dokumen): string

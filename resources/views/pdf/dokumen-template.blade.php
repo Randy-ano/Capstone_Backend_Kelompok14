@@ -24,6 +24,13 @@
         .ttd { margin-top: 40px; width: 100%; }
         .ttd td { width: 50%; text-align: center; vertical-align: top; }
         .ttd .garis { margin-top: 60px; border-top: 1px solid #222222; display: inline-block; width: 70%; padding-top: 4px; }
+        .blok-ttd { margin-top: 32px; width: 100%; border-collapse: collapse; page-break-inside: avoid; }
+        .blok-ttd td { width: 33.33%; text-align: center; vertical-align: top; padding: 0 6px 14px; }
+        .blok-ttd .peran { font-size: 9.5px; color: #444444; min-height: 26px; }
+        .blok-ttd .kotak { height: 64px; margin: 4px 8px; border-bottom: 1px solid #222222; text-align: center; }
+        .blok-ttd .status-kotak { display: inline-block; margin-top: 26px; font-size: 9px; color: #888888; font-style: italic; }
+        .blok-ttd .nama { font-weight: bold; margin-top: 4px; }
+        .blok-ttd .keterangan { font-size: 8.5px; color: #555555; }
         .catatan-kaki { margin-top: 24px; font-size: 8.5px; color: #777777; }
     </style>
 </head>
@@ -94,18 +101,43 @@
         </div>
     @endif
 
-    <table class="ttd">
-        <tr>
-            <td>
-                PT Intellisys IT Outsourcing
-                <div><span class="garis">{{ $pembuat }}</span></div>
-            </td>
-            <td>
-                {{ $klien->nama_perusahaan }}
-                <div><span class="garis">{{ $klien->penanggung_jawab ?? 'Perwakilan klien' }}</span></div>
-            </td>
-        </tr>
-    </table>
+    @if (! empty($penandatangan))
+        {{-- Blok tanda tangan per penandatangan; gambar ditempel di kotak ber-id ttd-… saat dokumen diunduh. --}}
+        <table class="blok-ttd">
+            @foreach (array_chunk($penandatangan, 3) as $baris)
+                <tr>
+                    @foreach ($baris as $p)
+                        <td>
+                            <div class="peran">{{ $p['peran'] }}</div>
+                            <div class="kotak" id="{{ $p['kotak'] }}">
+                                @if ($p['status'] !== \App\Enums\StatusTtd::Ditandatangani)
+                                    <span class="status-kotak">{{ $p['label_status'] }}</span>
+                                @endif
+                            </div>
+                            <div class="nama">{{ $p['nama'] }}</div>
+                            <div class="keterangan">{{ $p['label_status'] }}@if ($p['waktu']) · {{ $p['waktu'] }}@endif</div>
+                        </td>
+                    @endforeach
+                    @for ($i = count($baris); $i < 3; $i++)
+                        <td></td>
+                    @endfor
+                </tr>
+            @endforeach
+        </table>
+    @else
+        <table class="ttd">
+            <tr>
+                <td>
+                    PT Intellisys IT Outsourcing
+                    <div><span class="garis">{{ $pembuat }}</span></div>
+                </td>
+                <td>
+                    {{ $klien->nama_perusahaan }}
+                    <div><span class="garis">{{ $klien->penanggung_jawab ?? 'Perwakilan klien' }}</span></div>
+                </td>
+            </tr>
+        </table>
+    @endif
 
     <div class="catatan-kaki">Dokumen ini dibuat melalui Intellisys Talent Hub. Tanda tangan digital dicatat di sistem.</div>
 </body>

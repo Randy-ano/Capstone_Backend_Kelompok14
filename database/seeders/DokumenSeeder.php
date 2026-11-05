@@ -20,9 +20,6 @@ use Illuminate\Support\Carbon;
  */
 class DokumenSeeder extends Seeder
 {
-    /** Goresan tanda tangan contoh (PNG kecil), agar berkas tanda tangan benar-benar ada di disk. */
-    private const PNG_TTD = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==';
-
     public function __construct(private readonly DokumenService $dokumen) {}
 
     public function run(): void
@@ -160,10 +157,48 @@ class DokumenSeeder extends Seeder
     private function putus(Dokumen $dokumen, string $penandatangan, StatusTtd $keputusan, Carbon $waktu): void
     {
         $gambar = $keputusan === StatusTtd::Ditandatangani
-            ? UploadedFile::fake()->createWithContent('tanda-tangan.png', base64_decode(self::PNG_TTD))
+            ? UploadedFile::fake()->createWithContent('tanda-tangan.png', self::goresan(crc32($penandatangan)))
             : null;
 
         Linimasa::pada($waktu, fn () => $this->dokumen->tandaTangan($this->user($penandatangan), $dokumen, $keputusan->value, $gambar));
+    }
+
+    /**
+     * Goresan tanda tangan contoh: PNG transparan 240×90 (seperti hasil canvas di frontend), dibuat tanpa ekstensi GD.
+     * Bentuk gelombang berbeda per penandatangan agar terlihat seperti tanda tangan yang berbeda.
+     */
+    private static function goresan(int $benih): string
+    {
+        [$lebar, $tinggi] = [240, 90];
+        $piksel = array_fill(0, $lebar * $tinggi, false);
+        [$f1, $f2, $fase] = [2 + $benih % 3, 5 + $benih % 4, ($benih % 628) / 100];
+        for ($i = 0; $i <= 2000; $i++) {
+            $t = $i / 2000;
+            $x = 14 + $t * ($lebar - 28);
+            $y = $tinggi / 2 + 22 * sin($t * $f1 * M_PI + $fase) * (1 - 0.4 * $t) + 9 * sin($t * $f2 * M_PI);
+            for ($dx = -1; $dx <= 1; $dx++) {
+                for ($dy = -1; $dy <= 1; $dy++) {
+                    [$px, $py] = [(int) round($x) + $dx, (int) round($y) + $dy];
+                    if ($px >= 0 && $px < $lebar && $py >= 0 && $py < $tinggi) {
+                        $piksel[$py * $lebar + $px] = true;
+                    }
+                }
+            }
+        }
+
+        $mentah = '';
+        for ($y = 0; $y < $tinggi; $y++) {
+            $mentah .= "\0";
+            for ($x = 0; $x < $lebar; $x++) {
+                $mentah .= $piksel[$y * $lebar + $x] ? "\x0b\x1f\x5c\xff" : "\0\0\0\0";
+            }
+        }
+        $chunk = fn (string $jenis, string $isi) => pack('N', strlen($isi)).$jenis.$isi.pack('N', crc32($jenis.$isi));
+
+        return "\x89PNG\r\n\x1a\n"
+            .$chunk('IHDR', pack('NNCCCCC', $lebar, $tinggi, 8, 6, 0, 0, 0))
+            .$chunk('IDAT', gzcompress($mentah))
+            .$chunk('IEND', '');
     }
 
     private function klien(string $nama): int
