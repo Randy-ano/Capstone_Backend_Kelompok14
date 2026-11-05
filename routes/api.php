@@ -44,6 +44,15 @@ Route::prefix('auth')->middleware('throttle:10,1')->group(function () {
         ->name('auth.login');
 });
 
+// Lupa & reset password (publik): maksimal 5 permintaan per menit.
+Route::prefix('auth')->middleware('throttle:reset-password')->group(function () {
+    Route::post('/lupa-password', [AuthController::class, 'lupaPassword'])
+        ->name('auth.lupa-password');
+
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])
+        ->name('auth.reset-password');
+});
+
 // Semua route berikut memerlukan autentikasi.
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout'])

@@ -54,6 +54,10 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Alamat frontend (React) untuk tautan di email, mis. reset password. Jika FRONTEND_URL berisi beberapa
+    // origin dipisah koma (untuk CORS), yang pertama dipakai.
+    'frontend_url' => rtrim(explode(',', (string) env('FRONTEND_URL', 'http://localhost:5173'))[0], '/'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

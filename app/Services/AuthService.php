@@ -8,6 +8,7 @@ use App\Models\Klien;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -111,6 +112,36 @@ class AuthService
         $user->tokens()
             ->when($token instanceof PersonalAccessToken, fn ($q) => $q->whereKeyNot($token->getKey()))
             ->delete();
+    }
+
+    /**
+     * Kirim tautan reset password lewat email (token berlaku 60 menit). Hasilnya sengaja diabaikan:
+     * email tidak terdaftar atau permintaan berulang terlalu cepat menghasilkan respons yang sama (tidak membocorkan akun).
+     */
+    public function lupaPassword(string $email): void
+    {
+        Password::sendResetLink(['email' => $email]);
+    }
+
+    /**
+     * Reset password dengan token dari email. Berhasil → semua token login lama dicabut.
+     * Token salah, kedaluwarsa, atau email tidak cocok → 422 dengan pesan yang sama.
+     */
+    public function resetPassword(string $email, string $token, string $passwordBaru): void
+    {
+        $status = Password::reset(
+            ['email' => $email, 'token' => $token, 'password' => $passwordBaru],
+            function (User $user, string $password) {
+                $user->update(['password' => $password]);
+                $user->tokens()->delete();
+            },
+        );
+
+        if ($status !== Password::PASSWORD_RESET) {
+            throw ValidationException::withMessages([
+                'token' => 'Tautan reset password tidak valid atau sudah kedaluwarsa. Silakan minta tautan baru.',
+            ]);
+        }
     }
 
     private function buatUser(string $email, string $password, Role $role): User
