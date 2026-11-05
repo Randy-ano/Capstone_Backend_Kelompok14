@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\LupaPasswordRequest;
 use App\Http\Requests\Auth\RegisterHrClientRequest;
 use App\Http\Requests\Auth\RegisterTalentRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Requests\Auth\UbahPasswordRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -64,6 +66,41 @@ class AuthController extends Controller
         $sesi = $this->auth->login($request->validated('email'), $request->validated('password'));
 
         return $this->sesiResponse($sesi, 'Login berhasil');
+    }
+
+    /**
+     * Lupa password.
+     *
+     * Mengirim email berisi tautan reset password ke halaman frontend (token berlaku 60 menit).
+     * Respons selalu sama, terdaftar atau tidaknya email, agar tidak membocorkan akun. Maksimal 5 permintaan per menit.
+     *
+     * @unauthenticated
+     *
+     * @response {"data": null, "message": "Jika email terdaftar, tautan reset sudah dikirim."}
+     */
+    public function lupaPassword(LupaPasswordRequest $request): JsonResponse
+    {
+        $this->auth->lupaPassword($request->validated('email'));
+
+        return response()->json(['data' => null, 'message' => 'Jika email terdaftar, tautan reset sudah dikirim.']);
+    }
+
+    /**
+     * Reset password.
+     *
+     * Memakai token dari email. Setelah berhasil, semua sesi login lama keluar; masuk lagi dengan password baru.
+     * Maksimal 5 permintaan per menit.
+     *
+     * @unauthenticated
+     *
+     * @response {"data": null, "message": "Password berhasil direset. Silakan masuk dengan password baru."}
+     * @response 422 {"message": "Tautan reset password tidak valid atau sudah kedaluwarsa. Silakan minta tautan baru.", "errors": {"token": ["Tautan reset password tidak valid atau sudah kedaluwarsa. Silakan minta tautan baru."]}}
+     */
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        $this->auth->resetPassword($request->validated('email'), $request->validated('token'), $request->validated('password'));
+
+        return response()->json(['data' => null, 'message' => 'Password berhasil direset. Silakan masuk dengan password baru.']);
     }
 
     /**
