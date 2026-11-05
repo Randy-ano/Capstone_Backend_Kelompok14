@@ -19,11 +19,27 @@ class KompetensiService
     {
         return Kompetensi::query()
             ->when($filter['dengan_pemakaian'] ?? false, fn (Builder $q) => $q->withCount(['talents', 'jobRequirements']))
-            ->when($filter['search'] ?? null, fn ($q, $search) => $q->where('nama_kompetensi', 'like', "%{$search}%"))
-            ->when($filter['kategori'] ?? null, fn ($q, $kategori) => $q->where('kategori', $kategori))
+            // Beberapa kata kunci dipisah koma ("laravel, react, sql"): cocok jika salah satunya ada di nama.
+            ->when(self::kataKunci($filter['search'] ?? null), fn (Builder $q, array $kata) => $q->where(function (Builder $q) use ($kata) {
+                foreach ($kata as $k) {
+                    $q->orWhere('nama_kompetensi', 'like', "%{$k}%");
+                }
+            }))
+            // Satu atau beberapa kategori (sama persis).
+            ->when($filter['kategori'] ?? [], fn (Builder $q, array $kategori) => $q->whereIn('kategori', $kategori))
             ->orderBy('nama_kompetensi')
             ->paginate($filter['per_page'] ?? 15)
             ->withQueryString();
+    }
+
+    /**
+     * Pecah kata kunci pencarian yang dipisah koma; kosong → [] (tanpa filter).
+     *
+     * @return list<string>
+     */
+    public static function kataKunci(?string $search): array
+    {
+        return collect(explode(',', (string) $search))->map(fn (string $k) => trim($k))->filter()->unique()->values()->all();
     }
 
     /**
