@@ -89,12 +89,12 @@ class PemberitahuanService
         );
     }
 
-    /** Cuti diajukan → HR Client klien & Manager. */
+    /** Cuti diajukan → HR Client klien (satu-satunya pemberi keputusan). */
     public function cutiDiajukan(PengajuanCuti $c): void
     {
         $c->loadMissing(['talent', 'placement']);
         $this->notifikasi->kirimKe(
-            [...NotifikasiService::hrKlien($c->placement->id_klien), ...NotifikasiService::managerAktif()],
+            NotifikasiService::hrKlien($c->placement->id_klien),
             'cuti_diajukan',
             "{$c->talent->nama_lengkap} mengajukan cuti {$this->rentang($c)}. Mohon beri keputusan.",
         );

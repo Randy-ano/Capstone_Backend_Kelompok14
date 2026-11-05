@@ -60,12 +60,13 @@ class ShiftController extends Controller
     }
 
     /**
-     * Hapus shift.
+     * Batalkan shift.
+     *
+     * Shift tidak dihapus; statusnya menjadi dibatalkan dan tetap tampil di daftar.
      */
-    public function destroy(Request $request, ShiftingTalent $shift): JsonResponse
+    public function batal(Request $request, ShiftingTalent $shift): ShiftResource
     {
-        $this->shift->hapus($request->user(), $shift);
-
-        return response()->json(['data' => null, 'message' => 'Shift berhasil dihapus.']);
+        return (new ShiftResource($this->shift->batal($request->user(), $shift)))
+            ->additional(['message' => 'Shift berhasil dibatalkan.']);
     }
 }

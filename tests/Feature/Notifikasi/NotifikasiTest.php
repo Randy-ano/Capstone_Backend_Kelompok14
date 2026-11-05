@@ -146,19 +146,18 @@ describe('R30: notifikasi otomatis dari event', function () {
             ->and(tipeDiterima($hr))->toBe(['placement_dibuat']);
     });
 
-    it('cuti diajukan → HR Client & Manager; keputusan akhir → talent', function () {
+    it('cuti diajukan → HR Client (bukan Manager); keputusan HR Client → talent', function () {
+        $this->travelTo(Illuminate\Support\Carbon::parse('2026-11-02 09:00')); // Senin
         $placement = Placement::factory()->create();
         $hr = HrClient::factory()->create(['id_klien' => $placement->id_klien])->user;
         $manager = buatUser(Role::Manager);
         $talent = loginTalentPlacement($placement);
 
-        $id = $this->postJson('/api/v1/cuti', ['id_placement' => $placement->id_placement, 'tanggal_mulai' => now()->addDays(3)->toDateString(), 'tanggal_selesai' => now()->addDays(3)->toDateString(), 'alasan_cuti' => 'Keluarga.'])
+        $id = $this->postJson('/api/v1/cuti', ['id_placement' => $placement->id_placement, 'tanggal_mulai' => '2026-11-04', 'tanggal_selesai' => '2026-11-04', 'alasan_cuti' => 'Keluarga.'])
             ->assertCreated()->json('data.id_cuti');
-        expect(tipeDiterima($hr))->toBe(['cuti_diajukan'])->and(tipeDiterima($manager))->toBe(['cuti_diajukan']);
+        expect(tipeDiterima($hr))->toBe(['cuti_diajukan'])->and(tipeDiterima($manager))->toBe([]);
 
-        $this->actingAs($hr)->patchJson("/api/v1/cuti/{$id}/approval", ['keputusan' => 'disetujui']);
-        expect(tipeDiterima($talent))->toBe([]);
-        $this->actingAs($manager)->patchJson("/api/v1/cuti/{$id}/approval", ['keputusan' => 'disetujui']);
+        $this->actingAs($hr)->patchJson("/api/v1/cuti/{$id}/approval", ['keputusan' => 'disetujui'])->assertOk();
         expect(tipeDiterima($talent))->toBe(['cuti_diputuskan'])
             ->and(Notifikasi::where('id_user_penerima', $talent->id_user)->value('pesan'))->toContain('disetujui');
     });
@@ -188,6 +187,7 @@ describe('R31: php artisan notifikasi:pengingat', function () {
         JobRequirement::factory()->create(['status_req' => StatusReq::Terpenuhi, 'sla_deadline' => now()->subDay()]);
         $interview = JadwalInterview::factory()->create(['tanggal_interview' => now()->addDay()->toDateString()]);
         $cuti = PengajuanCuti::factory()->create(['created_at' => now()->subDays(3)]);
+        $hrCuti = HrClient::factory()->create(['id_klien' => $cuti->placement->id_klien])->user;
         PengajuanCuti::factory()->create(['created_at' => now()->subDay()]);
         $ttd = TandaTanganDokumen::factory()->create(['created_at' => now()->subDays(3), 'id_dokumen' => Dokumen::factory()->create(['status_dokumen' => 'menunggu_ttd'])]);
         $terjadwal = Notifikasi::factory()->create(['kanal' => KanalNotifikasi::Sistem, 'jadwal_kirim' => now()->subMinute()]);
@@ -196,11 +196,12 @@ describe('R31: php artisan notifikasi:pengingat', function () {
             ->expectsOutputToContain('Pengingat terkirim')
             ->assertSuccessful();
 
-        expect(tipeDiterima($manager))->toContain('sla_terlambat', 'pengingat_cuti')
+        expect(tipeDiterima($manager))->toContain('sla_terlambat')->not->toContain('pengingat_cuti')
+            ->and(tipeDiterima($hrCuti))->toBe(['pengingat_cuti'])
             ->and(tipeDiterima($terlambat->accountManager->user))->toBe(['sla_terlambat'])
             ->and(tipeDiterima($interview->pengajuan->talent->user))->toBe(['pengingat_interview'])
             ->and(tipeDiterima($ttd->penandatangan))->toBe(['pengingat_tanda_tangan'])
-            ->and(Notifikasi::where('tipe_notifikasi', 'pengingat_cuti')->where('id_user_penerima', $manager->id_user)->value('pesan'))->toContain($cuti->talent->nama_lengkap)
+            ->and(Notifikasi::where('tipe_notifikasi', 'pengingat_cuti')->where('id_user_penerima', $hrCuti->id_user)->value('pesan'))->toContain($cuti->talent->nama_lengkap)
             ->and(Notifikasi::where('tipe_notifikasi', 'sla_terlambat')->value('kanal'))->toBe(KanalNotifikasi::Email)
             ->and($terjadwal->fresh()->status_pengiriman)->toBe(StatusPengiriman::Terkirim);
         Queue::assertPushed(KirimEmailNotifikasi::class);

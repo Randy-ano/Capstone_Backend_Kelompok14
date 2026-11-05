@@ -32,6 +32,11 @@ class PengajuanResource extends JsonResource
                 'email' => $talent->user?->email,
                 'pendidikan' => $talent->ringkasanPendidikan(),
                 'status_kandidat' => $talent->status_kandidat,
+                // Hanya di detail (GET /pengajuan/{id}): pengalaman kerja lengkap dengan deskripsi pekerjaan.
+                'riwayat_pengalaman_kerja' => $this->when(
+                    $talent->relationLoaded('pengalamanKerjaTalent'),
+                    fn () => PengalamanKerjaTalentResource::collection($talent->pengalamanKerjaTalent->sortByDesc('tanggal_mulai')->values()),
+                ),
             ],
             'job_requirement' => [
                 'id_job_req' => $job->id_job_req,

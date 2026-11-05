@@ -29,7 +29,7 @@ dataset('skema', [
     'evaluasi_kandidat' => ['evaluasi_kandidat', ['id_evaluasi', 'id_pengajuan', 'id_hr_client', 'nilai_score', 'catatan_evaluasi', 'status_evaluasi']],
     'placement' => ['placement', ['id_placement', 'id_evaluasi', 'id_talent', 'id_job_req', 'id_klien', 'posisi_penempatan', 'tanggal_mulai', 'tanggal_selesai', 'status_placement']],
     'pengajuan_cuti' => ['pengajuan_cuti', ['id_cuti', 'id_talent', 'id_placement', 'id_approver_klien', 'id_approver_manager', 'status_approval_klien', 'status_approval_manager', 'tanggal_mulai', 'tanggal_selesai', 'alasan_cuti', 'status_cuti']],
-    'shifting_talent' => ['shifting_talent', ['id_shift', 'id_placement', 'id_pengelola', 'tanggal_shift', 'jenis_shift', 'keterangan']],
+    'shifting_talent' => ['shifting_talent', ['id_shift', 'id_placement', 'id_pengelola', 'tanggal_shift', 'jenis_shift', 'keterangan', 'status_shift']],
     'monitoring_talent' => ['monitoring_talent', ['id_monitoring', 'id_placement', 'id_manager', 'tanggal_monitoring', 'hasil_monitoring', 'catatan_tindak_lanjut']],
     'laporan_keluhan' => ['laporan_keluhan', ['id_laporan', 'id_placement', 'id_hr_client', 'id_penindak_lanjut', 'judul_laporan', 'deskripsi_keluhan', 'tanggal_laporan', 'status_laporan', 'hasil_tindak_lanjut', 'tanggal_tindak_lanjut']],
     'dokumen' => ['dokumen', ['id_dokumen', 'id_user_uploader', 'id_klien', 'id_talent', 'id_placement', 'jenis_dokumen', 'file_path', 'status_dokumen', 'tanggal_unggah']],

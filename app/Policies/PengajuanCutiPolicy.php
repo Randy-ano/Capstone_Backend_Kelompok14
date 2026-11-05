@@ -8,14 +8,13 @@ use App\Models\User;
 use Illuminate\Auth\Access\Response;
 
 /**
- * Cuti diputuskan HR Client dari klien tempat talent ditempatkan dan Manager; dibatalkan talent pemiliknya.
+ * Cuti diputuskan hanya oleh HR Client dari klien tempat talent ditempatkan; dibatalkan talent pemiliknya.
  */
 class PengajuanCutiPolicy
 {
     public function approve(User $user, PengajuanCuti $cuti): Response
     {
-        $boleh = $user->hasRole(Role::Manager)
-            || ($user->hasRole(Role::HrClient) && $cuti->placement->id_klien === $user->idKlien());
+        $boleh = $user->hasRole(Role::HrClient) && $cuti->placement->id_klien === $user->idKlien();
 
         return $boleh ? Response::allow() : Response::deny('Anda tidak memiliki akses ke pengajuan cuti ini.');
     }

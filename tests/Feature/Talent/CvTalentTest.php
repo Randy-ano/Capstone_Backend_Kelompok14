@@ -99,3 +99,20 @@ describe('POST /talent/cv/generate', function () {
         $this->postJson('/api/v1/talent/cv/generate')->assertUnauthorized();
     });
 });
+
+describe('isi CV PDF', function () {
+    it('mencetak jenis pekerjaan (termasuk Skripsi) dan deskripsi pekerjaan', function () {
+        $talent = Talent::factory()->lengkap()->create();
+        App\Models\PengalamanKerjaTalent::factory()->for($talent)->create([
+            'posisi' => 'Pengembang Sistem Presensi',
+            'jenis_pekerjaan' => 'Skripsi',
+            'deskripsi' => 'Merancang dan membangun aplikasi presensi berbasis web.',
+        ]);
+
+        $html = view('pdf.talent-cv', ['talent' => $talent->fresh()])->render();
+
+        expect($html)->toContain('Pengembang Sistem Presensi')
+            ->toContain('| Skripsi')
+            ->toContain('Merancang dan membangun aplikasi presensi berbasis web.');
+    });
+});

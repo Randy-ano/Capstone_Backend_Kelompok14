@@ -90,6 +90,7 @@ class TalentSeeder extends Seeder
                 'tanggal_mulai' => Linimasa::bulan($mulaiBulanLalu, 1)->toDateString(),
                 'tanggal_selesai' => $selesaiBulanLalu === null ? null : Linimasa::bulan($selesaiBulanLalu, 1)->toDateString(),
                 'masih_bekerja' => $selesaiBulanLalu === null,
+                'deskripsi' => self::deskripsiPekerjaan($posisi),
             ]);
         }
 
@@ -288,5 +289,18 @@ class TalentSeeder extends Seeder
                 'sertifikat' => [['Cisco Certified Network Associate', 'Cisco', 40]],
             ],
         ];
+    }
+
+    /** Deskripsi pekerjaan contoh sesuai bidang posisi (tampil di detail talent dan CV). */
+    private static function deskripsiPekerjaan(string $posisi): string
+    {
+        return match (true) {
+            str_contains($posisi, 'Backend'), str_contains($posisi, 'Software') => 'Membangun dan memelihara REST API, merancang skema database, serta menulis pengujian otomatis untuk layanan utama.',
+            str_contains($posisi, 'Frontend') => 'Mengembangkan antarmuka web yang responsif, mengintegrasikan REST API, dan menjaga konsistensi komponen desain.',
+            str_contains($posisi, 'QA') => 'Menyusun skenario uji, menjalankan pengujian manual dan otomatis, serta melaporkan dan memverifikasi perbaikan bug.',
+            str_contains($posisi, 'DevOps'), str_contains($posisi, 'System') => 'Mengelola server dan pipeline CI/CD, memantau layanan produksi, serta mengotomasi proses deployment.',
+            str_contains($posisi, 'Data') => 'Mengolah dan menganalisis data operasional, membuat dashboard laporan, serta menyiapkan rekomendasi bisnis.',
+            default => 'Mengerjakan tugas sesuai posisi bersama tim dan berkoordinasi dengan pemangku kepentingan.',
+        };
     }
 }

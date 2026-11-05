@@ -89,7 +89,7 @@ class PengajuanService
 
     public function detail(PengajuanKandidat $pengajuan): PengajuanKandidat
     {
-        return $pengajuan->load([...self::RELASI, 'interviews' => fn ($q) => $q->orderBy('tanggal_interview')->orderBy('waktu_interview'), 'evaluasi.hrClient'])
+        return $pengajuan->load([...self::RELASI, 'talent.pengalamanKerjaTalent', 'interviews' => fn ($q) => $q->orderBy('tanggal_interview')->orderBy('waktu_interview'), 'evaluasi.hrClient'])
             ->loadCount('interviews');
     }
 

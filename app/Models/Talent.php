@@ -204,6 +204,12 @@ class Talent extends Model
         );
     }
 
+    /** Talent punya penempatan Belum Aktif/Aktif: fitur cuti, shift, dan dokumen terbuka. */
+    public function sudahDitempatkan(): bool
+    {
+        return $this->placements()->berjalan()->exists();
+    }
+
     // Relasi pengajuan cuti
     public function cuti(): HasMany
     {

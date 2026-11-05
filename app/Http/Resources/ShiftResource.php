@@ -20,6 +20,7 @@ class ShiftResource extends JsonResource
             'tanggal_shift' => $this->tanggal_shift?->format('Y-m-d'),
             'jenis_shift' => $this->jenis_shift,
             'keterangan' => $this->keterangan,
+            'status_shift' => $this->status_shift,
             // Nama HR Client atau Manager yang terakhir mengatur shift ini.
             'diatur_oleh' => $pengelola ? ($pengelola->hrClient?->nama_hr ?? $pengelola->pegawai?->nama_pegawai) : null,
             'placement' => PlacementResource::ringkas($this->placement),

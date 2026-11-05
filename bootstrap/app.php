@@ -2,6 +2,7 @@
 
 use App\Exceptions\DataTidakDitemukanException;
 use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\EnsureTalentDitempatkan;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => EnsureRole::class,
+            'talent.ditempatkan' => EnsureTalentDitempatkan::class,
         ]);
 
         // API tidak punya halaman login; tamu dibalas 401 JSON, bukan redirect.

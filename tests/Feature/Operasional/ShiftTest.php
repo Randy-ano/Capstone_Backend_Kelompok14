@@ -122,7 +122,7 @@ describe('POST /shift (input massal, R22)', function () {
     });
 });
 
-describe('PUT & DELETE /shift/{id}', function () {
+describe('PUT /shift/{id} & PATCH /shift/{id}/batal', function () {
     it('mengubah jenis dan tanggal shift, menolak tanggal yang sudah terisi', function () {
         $placement = Placement::factory()->create(['tanggal_mulai' => now()->toDateString()]);
         $shift = ShiftingTalent::factory()->for($placement)->create(['tanggal_shift' => tgl(1), 'jenis_shift' => JenisShift::Pagi]);
@@ -143,29 +143,70 @@ describe('PUT & DELETE /shift/{id}', function () {
             ->assertJsonValidationErrors(['jenis_shift']);
     });
 
-    it('menghapus shift', function () {
+    it('membatalkan shift (bukan menghapus): tetap tampil berstatus dibatalkan, tidak bisa diubah, dan aktif lagi lewat input massal', function () {
+        $placement = Placement::factory()->create(['tanggal_mulai' => now()->toDateString()]);
+        $shift = ShiftingTalent::factory()->for($placement)->create(['tanggal_shift' => tgl(1)]);
+        $manager = loginSebagai(Role::Manager);
+
+        $this->patchJson("/api/v1/shift/{$shift->id_shift}/batal")
+            ->assertOk()
+            ->assertJsonPath('message', 'Shift berhasil dibatalkan.')
+            ->assertJsonPath('data.status_shift', 'dibatalkan')
+            ->assertJsonPath('data.diatur_oleh', $manager->pegawai->nama_pegawai);
+        expect(ShiftingTalent::count())->toBe(1);
+
+        $this->getJson('/api/v1/shift')->assertJsonPath('data.0.status_shift', 'dibatalkan');
+        $this->patchJson("/api/v1/shift/{$shift->id_shift}/batal")
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.status_shift.0', 'Shift ini sudah dibatalkan.');
+        $this->putJson("/api/v1/shift/{$shift->id_shift}", ['jenis_shift' => 'malam'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.status_shift.0', 'Shift yang sudah dibatalkan tidak dapat diubah. Atur ulang lewat tambah shift.');
+
+        $this->postJson('/api/v1/shift', ['id_placement' => $placement->id_placement, 'tanggal' => [tgl(1)], 'jenis_shift' => 'siang'])
+            ->assertCreated()
+            ->assertJsonPath('data.diperbarui', 1);
+        expect($shift->fresh()->status_shift->value)->toBe('aktif');
+    });
+
+    it('tidak ada lagi route hapus shift (405)', function () {
         $shift = ShiftingTalent::factory()->create();
         loginSebagai(Role::Manager);
 
-        $this->deleteJson("/api/v1/shift/{$shift->id_shift}")
-            ->assertOk()
-            ->assertExactJson(['data' => null, 'message' => 'Shift berhasil dihapus.']);
-        expect(ShiftingTalent::count())->toBe(0);
+        $this->deleteJson("/api/v1/shift/{$shift->id_shift}")->assertStatus(405);
+        expect(ShiftingTalent::count())->toBe(1);
     });
 
-    it('menolak HR Client dari klien lain, talent, dan 404', function () {
+    it('menolak pembatalan oleh HR Client dari klien lain, talent, AM/TS, dan 404', function () {
         $shift = ShiftingTalent::factory()->create();
 
         loginSebagai(Role::HrClient);
         $this->putJson("/api/v1/shift/{$shift->id_shift}", ['jenis_shift' => 'malam'])->assertForbidden();
-        $this->deleteJson("/api/v1/shift/{$shift->id_shift}")->assertForbidden();
+        $this->patchJson("/api/v1/shift/{$shift->id_shift}/batal")
+            ->assertForbidden()
+            ->assertExactJson(['message' => 'Anda tidak memiliki akses ke penempatan ini.']);
 
         loginTalentPlacement($shift->placement);
-        $this->deleteJson("/api/v1/shift/{$shift->id_shift}")->assertForbidden();
+        $this->patchJson("/api/v1/shift/{$shift->id_shift}/batal")->assertForbidden();
+
+        foreach ([Role::AccountManager, Role::TalentSupport] as $role) {
+            loginSebagai($role);
+            $this->patchJson("/api/v1/shift/{$shift->id_shift}/batal")->assertForbidden();
+        }
 
         loginSebagai(Role::Manager);
-        $this->deleteJson('/api/v1/shift/999')->assertNotFound();
+        $this->patchJson('/api/v1/shift/999/batal')->assertNotFound();
 
-        expect(ShiftingTalent::count())->toBe(1);
+        expect($shift->fresh()->status_shift->value)->toBe('aktif');
+    });
+});
+
+describe('talent belum ditempatkan', function () {
+    it('tidak bisa membuka shift (403)', function () {
+        loginSebagai(Role::Talent);
+
+        $this->getJson('/api/v1/shift')
+            ->assertForbidden()
+            ->assertExactJson(['message' => 'Fitur ini tersedia setelah Anda ditempatkan di perusahaan klien.']);
     });
 });

@@ -135,7 +135,7 @@ class DashboardService
             $this->kartu('job_aktif', 'Permintaan berjalan', $this->jobAktif()->count(), 'diajukan & diproses', '/permintaan-kebutuhan'),
             $this->kartu('sla_terlambat', 'SLA terlambat', $this->jumlahSla(IndikatorSla::Terlambat), "{$this->jumlahSla(IndikatorSla::Mendekati)} mendekati deadline", '/pipeline-rekrutmen'),
             $this->kartu('placement_aktif', 'Talent ditempatkan', Placement::where('status_placement', StatusPlacement::Aktif)->count(), 'penempatan aktif', '/penugasan-penempatan'),
-            $this->kartu('cuti_menunggu', 'Cuti menunggu keputusan', PengajuanCuti::where('status_cuti', StatusCuti::Menunggu)->where('status_approval_manager', StatusApproval::Menunggu)->count(), 'perlu persetujuan Anda', '/pengajuan-cuti-shift'),
+            $this->kartu('cuti_menunggu', 'Cuti menunggu HR Client', PengajuanCuti::where('status_cuti', StatusCuti::Menunggu)->count(), 'diputuskan HR Client', '/pengajuan-cuti-shift'),
             $this->kartu('keluhan_terbuka', 'Keluhan terbuka', LaporanKeluhan::whereIn('status_laporan', [StatusLaporan::Baru, StatusLaporan::Diproses])->count(), 'baru & diproses', '/tiket-komplain-klien'),
             $this->kartu('ttd_menunggu', 'Perlu tanda tangan Anda', $this->ttdMenunggu($user), 'dokumen', '/dokumen-quotation-po'),
         ];
@@ -184,14 +184,15 @@ class DashboardService
     private function kartuTalent(User $user): array
     {
         $talent = $user->talent;
-        $placement = $talent?->placements()->where('status_placement', StatusPlacement::Aktif)->with('klien')->first();
+        // Penempatan Belum Aktif/Aktif; kartu cuti hanya untuk talent yang sudah ditempatkan (menu cuti tertutup sebelumnya).
+        $placement = $talent?->placements()->berjalan()->with('klien')->first();
         $lengkap = $talent?->status_kelengkapan === StatusKelengkapan::Lengkap;
 
         return [
             $this->kartu('status_profil', 'Status profil', $lengkap ? 'Lengkap' : 'Belum lengkap', $lengkap ? 'masuk talent pool' : 'lengkapi agar masuk talent pool', '/profil-saya'),
             $this->kartu('status_kandidat', 'Status kandidat', $placement ? 'Ditempatkan' : ($talent?->status_kandidat === StatusKandidat::DalamProses ? 'Dalam proses' : 'Tersedia'), $placement ? "{$placement->posisi_penempatan} di {$placement->klien->nama_perusahaan}" : null, $placement ? '/penugasan-penempatan' : '/pengajuan-kandidat'),
             $this->kartu('interview_mendatang', 'Interview 7 hari ke depan', $this->interviewMendatang()->whereHas('pengajuan', fn (Builder $q) => $q->where('id_talent', $talent?->id_talent))->count(), null, '/jadwal-interview'),
-            $this->kartu('cuti_menunggu', 'Cuti menunggu persetujuan', PengajuanCuti::where('id_talent', $talent?->id_talent)->where('status_cuti', StatusCuti::Menunggu)->count(), null, '/pengajuan-cuti-shift'),
+            ...($placement ? [$this->kartu('cuti_menunggu', 'Cuti menunggu persetujuan', PengajuanCuti::where('id_talent', $talent->id_talent)->where('status_cuti', StatusCuti::Menunggu)->count(), null, '/pengajuan-cuti-shift')] : []),
         ];
     }
 

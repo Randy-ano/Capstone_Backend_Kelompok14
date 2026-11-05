@@ -35,9 +35,12 @@ class TalentPoolDetailResource extends TalentPoolResource
                 ->map(fn (PengalamanKerjaTalent $p) => [
                     'nama_perusahaan' => $p->nama_perusahaan,
                     'posisi' => $p->posisi,
+                    'jenis_pekerjaan' => $p->jenis_pekerjaan,
+                    'lokasi' => $p->lokasi,
                     'tanggal_mulai' => $p->tanggal_mulai?->format('Y-m-d'),
                     'tanggal_selesai' => $p->tanggal_selesai?->format('Y-m-d'),
                     'masih_bekerja' => $p->masih_bekerja,
+                    'deskripsi' => $p->deskripsi,
                 ]),
             'lama_pengalaman_tahun' => round(app(PengalamanKerjaService::class)->lamaTahun($talent->pengalamanKerjaTalent), 1),
             'sertifikat' => SertifikatTalentResource::collection($talent->sertifikat),

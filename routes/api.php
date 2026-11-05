@@ -225,17 +225,23 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // FR-14, FR-15, FR-18, FR-19: operasional talent yang sudah ditempatkan (cuti, shift, monitoring, keluhan).
     // Talent: data miliknya; HR Client: placement di kliennya (scoping di service + Policy); internal sesuai role.
-    Route::prefix('cuti')->group(function () {
+    // Revisi 2026-11-05: talent baru bisa memakai cuti, shift, dan dokumen setelah ditempatkan (talent.ditempatkan);
+    // keputusan cuti hanya oleh HR Client, internal hanya melihat.
+    Route::prefix('cuti')->middleware('talent.ditempatkan')->group(function () {
         Route::get('/', [CutiController::class, 'index'])
-            ->middleware('role:talent,hr_client,manager')
+            ->middleware('role:talent,hr_client,manager,account_manager,talent_support')
             ->name('cuti.index');
+
+        Route::get('/kuota', [CutiController::class, 'kuota'])
+            ->middleware('role:talent')
+            ->name('cuti.kuota');
 
         Route::post('/', [CutiController::class, 'store'])
             ->middleware('role:talent')
             ->name('cuti.store');
 
         Route::patch('/{cuti}/approval', [CutiController::class, 'approval'])
-            ->middleware('role:hr_client,manager')
+            ->middleware('role:hr_client')
             ->name('cuti.approval');
 
         Route::patch('/{cuti}/batal', [CutiController::class, 'batal'])
@@ -244,7 +250,7 @@ Route::middleware('auth:sanctum')->group(function () {
             ->name('cuti.batal');
     });
 
-    Route::prefix('shift')->group(function () {
+    Route::prefix('shift')->middleware('talent.ditempatkan')->group(function () {
         Route::get('/', [ShiftController::class, 'index'])
             ->middleware('role:talent,hr_client,manager')
             ->name('shift.index');
@@ -256,8 +262,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('/{shift}', [ShiftController::class, 'update'])
                 ->name('shift.update');
 
-            Route::delete('/{shift}', [ShiftController::class, 'destroy'])
-                ->name('shift.destroy');
+            // Revisi 2026-11-05: shift tidak dihapus, hanya dibatalkan.
+            Route::patch('/{shift}/batal', [ShiftController::class, 'batal'])
+                ->name('shift.batal');
         });
     });
 
@@ -284,7 +291,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // FR-13: dokumen & tanda tangan digital (R25–R28). Scope per data lewat DokumenPolicy.
-    Route::prefix('dokumen')->group(function () {
+    Route::prefix('dokumen')->middleware('talent.ditempatkan')->group(function () {
         Route::get('/', [DokumenController::class, 'index'])
             ->name('dokumen.index');
 

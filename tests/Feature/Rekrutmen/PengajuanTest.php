@@ -82,6 +82,19 @@ describe('GET /pengajuan/{id}', function () {
             ->assertJsonPath('data.id_placement', null);
     });
 
+    it('detail memuat pengalaman kerja talent beserta deskripsi pekerjaan; daftar tidak', function () {
+        loginSebagai(Role::Manager);
+        $pengajuan = rekrutmenPengajuan(rekrutmenJob());
+        App\Models\PengalamanKerjaTalent::factory()->for($pengajuan->talent)->create(['posisi' => 'Asisten Riset', 'jenis_pekerjaan' => 'Skripsi', 'deskripsi' => 'Membangun aplikasi presensi.']);
+
+        $this->getJson("/api/v1/pengajuan/{$pengajuan->id_pengajuan}")
+            ->assertOk()
+            ->assertJsonPath('data.talent.riwayat_pengalaman_kerja.0.posisi', 'Asisten Riset')
+            ->assertJsonPath('data.talent.riwayat_pengalaman_kerja.0.jenis_pekerjaan', 'Skripsi')
+            ->assertJsonPath('data.talent.riwayat_pengalaman_kerja.0.deskripsi', 'Membangun aplikasi presensi.');
+        $this->getJson('/api/v1/pengajuan')->assertJsonMissingPath('data.0.talent.riwayat_pengalaman_kerja');
+    });
+
     it('menolak HR Client klien lain dan talent lain (403)', function (Role $role) {
         loginSebagai($role);
         $pengajuan = rekrutmenPengajuan(rekrutmenJob());
