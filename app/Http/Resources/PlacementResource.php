@@ -27,6 +27,8 @@ class PlacementResource extends JsonResource
             'id_placement' => $placement->id_placement,
             'posisi_penempatan' => $placement->posisi_penempatan,
             'status_placement' => $placement->status_placement,
+            'status_tampil' => $placement->statusTampil(),
+            'label_status_tampil' => $placement->statusTampil()->label(),
             'talent' => ['id_talent' => $placement->talent->id_talent, 'nama_lengkap' => $placement->talent->nama_lengkap],
             'klien' => ['id_klien' => $placement->klien->id_klien, 'nama_perusahaan' => $placement->klien->nama_perusahaan],
         ];
@@ -43,6 +45,9 @@ class PlacementResource extends JsonResource
             'tanggal_mulai' => $this->tanggal_mulai?->format('Y-m-d'),
             'tanggal_selesai' => $this->tanggal_selesai?->format('Y-m-d'),
             'status_placement' => $this->status_placement,
+            // Turunan untuk tampilan: belum_aktif / aktif / selesai (lihat Placement::statusTampil()).
+            'status_tampil' => $this->statusTampil(),
+            'label_status_tampil' => $this->statusTampil()->label(),
             'talent' => [
                 'id_talent' => $this->talent->id_talent,
                 'nama_lengkap' => $this->talent->nama_lengkap,

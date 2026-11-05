@@ -284,7 +284,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // FR-13: dokumen & tanda tangan digital (R25–R28). Scope per data lewat DokumenPolicy.
-    Route::prefix('dokumen')->group(function () {
+    Route::prefix('dokumen')->middleware('talent.ditempatkan')->group(function () {
         Route::get('/', [DokumenController::class, 'index'])
             ->name('dokumen.index');
 

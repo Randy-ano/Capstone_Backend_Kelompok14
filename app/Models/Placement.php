@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Enums\StatusPlacement;
+use App\Enums\StatusTampilPlacement;
 use App\Observers\PlacementObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -86,5 +88,28 @@ class Placement extends Model
     public function dokumen(): HasMany
     {
         return $this->hasMany(Dokumen::class, 'id_placement', 'id_placement');
+    }
+
+    /**
+     * Status tampil: Selesai jika status selesai/dihentikan atau tanggal_selesai sudah lewat; Belum Aktif jika
+     * tanggal_mulai masih di masa depan; selain itu Aktif.
+     */
+    public function statusTampil(): StatusTampilPlacement
+    {
+        $hariIni = now()->startOfDay();
+
+        return match (true) {
+            $this->status_placement !== StatusPlacement::Aktif => StatusTampilPlacement::Selesai,
+            $this->tanggal_selesai !== null && $this->tanggal_selesai->lt($hariIni) => StatusTampilPlacement::Selesai,
+            $this->tanggal_mulai !== null && $this->tanggal_mulai->gt($hariIni) => StatusTampilPlacement::BelumAktif,
+            default => StatusTampilPlacement::Aktif,
+        };
+    }
+
+    /** Placement berstatus tampil Belum Aktif atau Aktif: status aktif dan tanggal selesai belum lewat. */
+    public function scopeBerjalan(Builder $query): Builder
+    {
+        return $query->where('status_placement', StatusPlacement::Aktif)
+            ->where(fn (Builder $q) => $q->whereNull('tanggal_selesai')->orWhereDate('tanggal_selesai', '>=', now()->toDateString()));
     }
 }
