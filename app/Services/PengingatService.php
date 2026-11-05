@@ -82,7 +82,7 @@ class PengingatService
         return $jumlah;
     }
 
-    /** Cuti menunggu > 2 hari → approver yang belum memutuskan. */
+    /** Cuti menunggu > 2 hari → HR Client klien (pemberi keputusan cuti). */
     private function cutiTertunda(): int
     {
         $jumlah = 0;
@@ -92,10 +92,7 @@ class PengingatService
             ->with(['talent', 'placement'])
             ->get();
         foreach ($cuti as $c) {
-            $penerima = [
-                ...($c->status_approval_klien === StatusApproval::Menunggu ? NotifikasiService::hrKlien($c->placement->id_klien) : []),
-                ...($c->status_approval_manager === StatusApproval::Menunggu ? NotifikasiService::managerAktif() : []),
-            ];
+            $penerima = NotifikasiService::hrKlien($c->placement->id_klien);
             $pesan = "Pengingat: cuti {$c->talent->nama_lengkap} mulai {$c->tanggal_mulai->translatedFormat('d F Y')} masih menunggu keputusan Anda.";
             $jumlah += $this->kirim($penerima, 'pengingat_cuti', $pesan);
         }

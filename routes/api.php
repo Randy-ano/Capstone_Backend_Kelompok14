@@ -244,7 +244,7 @@ Route::middleware('auth:sanctum')->group(function () {
             ->name('cuti.batal');
     });
 
-    Route::prefix('shift')->group(function () {
+    Route::prefix('shift')->middleware('talent.ditempatkan')->group(function () {
         Route::get('/', [ShiftController::class, 'index'])
             ->middleware('role:talent,hr_client,manager')
             ->name('shift.index');

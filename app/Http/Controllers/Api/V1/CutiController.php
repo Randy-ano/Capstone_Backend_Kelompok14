@@ -12,12 +12,14 @@ use App\Http\Resources\CutiResource;
 use App\Models\PengajuanCuti;
 use App\Services\CutiService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * @group Operasional
  *
- * Pengajuan cuti talent (FR-14, R21). Talent melihat miliknya, HR Client melihat talent di kliennya, Manager semua.
+ * Pengajuan cuti talent (FR-14, R21). Talent melihat miliknya, HR Client melihat talent di kliennya dan memutuskan;
+ * Manager, AM, dan TS hanya melihat. Lama cuti dihitung dalam hari kerja dengan kuota per tahun.
  */
 class CutiController extends Controller
 {
@@ -33,9 +35,29 @@ class CutiController extends Controller
     }
 
     /**
+     * Kuota cuti saya.
+     *
+     * Khusus Talent: kuota, terpakai (menunggu + disetujui), dan sisa hari kerja di tahun kalender (default tahun ini).
+     *
+     * @queryParam tahun integer Tahun kalender. Example: 2026
+     *
+     * @response {"data": {"tahun": 2026, "kuota": 12, "terpakai": 2, "sisa": 10}, "message": "Berhasil"}
+     */
+    public function kuota(Request $request): JsonResponse
+    {
+        $tahun = $request->validate(['tahun' => ['nullable', 'integer', 'min:2000', 'max:2100']])['tahun'] ?? now()->year;
+
+        return response()->json([
+            'data' => $this->cuti->kuota($request->user()->talent, (int) $tahun),
+            'message' => 'Berhasil',
+        ]);
+    }
+
+    /**
      * Ajukan cuti.
      *
-     * Khusus Talent, untuk penempatan aktif miliknya; tanggal tidak boleh tumpang tindih dengan cuti lain yang menunggu/disetujui.
+     * Khusus Talent, untuk penempatan aktif miliknya. Tanggal mulai paling cepat besok, dalam periode penempatan,
+     * minimal satu hari kerja, tidak tumpang tindih dengan cuti lain yang menunggu/disetujui, dan tidak melebihi sisa kuota.
      */
     public function store(StoreCutiRequest $request): JsonResponse
     {
@@ -48,17 +70,13 @@ class CutiController extends Controller
     /**
      * Putuskan cuti.
      *
-     * HR Client (klien yang sama) dan Manager memberi keputusan masing-masing; cuti disetujui jika keduanya setuju.
+     * Khusus HR Client dari klien tempat talent ditempatkan; keputusan langsung menjadi status akhir cuti.
      */
     public function approval(ApprovalCutiRequest $request, PengajuanCuti $cuti): CutiResource
     {
         $cuti = $this->cuti->putuskan($request->user(), $cuti, StatusApproval::from($request->validated('keputusan')));
 
-        $pesan = match ($cuti->status_cuti) {
-            StatusCuti::Disetujui => 'Cuti disetujui.',
-            StatusCuti::Ditolak => 'Cuti ditolak.',
-            default => 'Keputusan disimpan. Menunggu keputusan pihak lain.',
-        };
+        $pesan = $cuti->status_cuti === StatusCuti::Disetujui ? 'Cuti disetujui.' : 'Cuti ditolak.';
 
         return (new CutiResource($cuti))->additional(['message' => $pesan]);
     }
