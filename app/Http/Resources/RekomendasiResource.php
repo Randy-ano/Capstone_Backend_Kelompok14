@@ -28,6 +28,7 @@ class RekomendasiResource extends JsonResource
             'kompetensi_kurang' => $this->resource['kompetensi_kurang'],
             'status_ketersediaan' => $talent->talentPool?->status_ketersediaan,
             'tag_keahlian' => $talent->talentPool?->tag_keahlian,
+            'sertifikat' => SertifikatTalentResource::collection($talent->sertifikat),
         ];
     }
 }

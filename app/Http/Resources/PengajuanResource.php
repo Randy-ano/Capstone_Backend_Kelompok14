@@ -37,6 +37,11 @@ class PengajuanResource extends JsonResource
                     $talent->relationLoaded('pengalamanKerjaTalent'),
                     fn () => PengalamanKerjaTalentResource::collection($talent->pengalamanKerjaTalent->sortByDesc('tanggal_mulai')->values()),
                 ),
+                // Hanya di detail: sertifikat beserta nama file (dibuka lewat GET /sertifikat/{id}/file).
+                'sertifikat' => $this->when(
+                    $talent->relationLoaded('sertifikat'),
+                    fn () => SertifikatTalentResource::collection($talent->sertifikat),
+                ),
             ],
             'job_requirement' => [
                 'id_job_req' => $job->id_job_req,
