@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\JenisDokumen;
 use App\Enums\Role;
 use App\Enums\StatusEvaluasi;
 use App\Enums\StatusKandidat;
@@ -26,6 +27,7 @@ class PlacementService
     public function __construct(
         private readonly JobRequirementService $jobRequirement,
         private readonly PemberitahuanService $pemberitahuan,
+        private readonly KelengkapanDokumenService $kelengkapan,
     ) {}
 
     /** Batasi query placement sesuai role: talent miliknya, HR Client kliennya, internal semua. */
@@ -87,6 +89,11 @@ class PlacementService
             throw ValidationException::withMessages(['id_evaluasi' => 'Evaluasi ini sudah memiliki penempatan.']);
         }
         PengajuanService::pastikanJobBerjalan($job, 'id_evaluasi');
+        // R36: penempatan setelah Quotation, PO, PKS, dan Kontrak Kerja kandidat ini selesai ditandatangani.
+        $kurang = $this->kelengkapan->untukPengajuan($pengajuan)['kurang'];
+        if ($kurang !== []) {
+            throw ValidationException::withMessages(['id_evaluasi' => 'Penempatan belum bisa dibuat. Dokumen yang belum selesai ditandatangani: '.implode(', ', $kurang).'.']);
+        }
 
         return DB::transaction(function () use ($data, $evaluasi, $pengajuan, $job) {
             $placement = Placement::create([
@@ -98,6 +105,9 @@ class PlacementService
                 'tanggal_mulai' => $data['tanggal_mulai'],
                 'tanggal_selesai' => $data['tanggal_selesai'] ?? null,
             ]);
+
+            // Kontrak Kerja kandidat ini ditautkan ke penempatan.
+            $pengajuan->dokumen()->where('jenis_dokumen', JenisDokumen::KontrakKerja)->update(['id_placement' => $placement->id_placement]);
 
             $pengajuan->talent->update(['status_kandidat' => StatusKandidat::Ditempatkan]);
             $pengajuan->talent->talentPool?->update(['status_ketersediaan' => StatusKetersediaan::TidakTersedia]);

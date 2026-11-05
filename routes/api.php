@@ -315,7 +315,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // FR-13: dokumen & tanda tangan digital (R25–R28). Scope per data lewat DokumenPolicy.
-    Route::prefix('dokumen')->middleware('talent.ditempatkan')->group(function () {
+    // Talent juga boleh masuk jika sudah punya Kontrak Kerja untuk ditandatangani (R36).
+    Route::prefix('dokumen')->middleware('talent.ditempatkan:dokumen')->group(function () {
         Route::get('/', [DokumenController::class, 'index'])
             ->name('dokumen.index');
 
@@ -326,6 +327,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/generate', [DokumenController::class, 'generate'])
             ->middleware('role:account_manager')
             ->name('dokumen.generate');
+
+        // R34–R35: pilihan permintaan / kandidat untuk dokumen berurutan.
+        Route::get('/tujuan', [DokumenController::class, 'tujuan'])
+            ->middleware('role:account_manager,hr_client,manager')
+            ->name('dokumen.tujuan');
+
+        Route::get('/{dokumen}', [DokumenController::class, 'show'])
+            ->whereNumber('dokumen')
+            ->can('view', 'dokumen')
+            ->name('dokumen.show');
 
         Route::get('/{dokumen}/download', [DokumenController::class, 'download'])
             ->can('view', 'dokumen')

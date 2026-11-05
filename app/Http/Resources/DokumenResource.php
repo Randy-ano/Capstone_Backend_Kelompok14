@@ -34,6 +34,8 @@ class DokumenResource extends JsonResource
             'klien' => $this->klien ? ['id_klien' => $this->klien->id_klien, 'nama_perusahaan' => $this->klien->nama_perusahaan] : null,
             'talent' => $this->talent ? ['id_talent' => $this->talent->id_talent, 'nama_lengkap' => $this->talent->nama_lengkap] : null,
             'id_placement' => $this->id_placement,
+            'id_pengajuan' => $this->id_pengajuan,
+            'permintaan' => $this->jobRequirement ? ['id_job_req' => $this->jobRequirement->id_job_req, 'posisi' => $this->jobRequirement->posisi] : null,
             'penandatangan' => $this->tandaTangan->map(fn (TandaTanganDokumen $t) => [
                 'id_ttd' => $t->id_ttd,
                 ...self::user($t->penandatangan),

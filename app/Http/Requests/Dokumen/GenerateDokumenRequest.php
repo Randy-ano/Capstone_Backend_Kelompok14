@@ -15,7 +15,7 @@ class GenerateDokumenRequest extends FormRequest
     {
         return [
             'jenis_dokumen' => ['required', Rule::in([JenisDokumen::Quotation->value, JenisDokumen::PurchaseOrder->value, JenisDokumen::Pks->value])],
-            'id_klien' => ['required', 'integer', 'exists:klien,id_klien'],
+            'id_job_req' => ['required', 'integer', 'exists:job_requirement,id_job_req'],
             'nomor_dokumen' => ['required', 'string', 'max:100'],
             'tanggal_dokumen' => ['required', 'date'],
             'berlaku_sampai' => ['nullable', 'date', 'after_or_equal:tanggal_dokumen'],
@@ -43,7 +43,7 @@ class GenerateDokumenRequest extends FormRequest
     {
         return [
             'jenis_dokumen' => 'jenis dokumen',
-            'id_klien' => 'klien',
+            'id_job_req' => 'permintaan kebutuhan',
             'nomor_dokumen' => 'nomor dokumen',
             'tanggal_dokumen' => 'tanggal dokumen',
             'berlaku_sampai' => 'tanggal berlaku',
@@ -57,7 +57,7 @@ class GenerateDokumenRequest extends FormRequest
     {
         return [
             'jenis_dokumen' => ['description' => 'quotation, purchase_order, atau pks.', 'example' => 'quotation'],
-            'id_klien' => ['example' => 1],
+            'id_job_req' => ['description' => 'Permintaan kebutuhan tujuan; klien diambil dari permintaan (R34).', 'example' => 1],
             'nomor_dokumen' => ['example' => 'QUO/2026/10/001'],
             'tanggal_dokumen' => ['example' => '2026-10-22'],
             'berlaku_sampai' => ['example' => '2026-11-22'],

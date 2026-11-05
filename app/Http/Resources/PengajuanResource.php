@@ -3,7 +3,9 @@
 namespace App\Http\Resources;
 
 use App\Enums\Role;
+use App\Enums\StatusEvaluasi;
 use App\Models\PengajuanKandidat;
+use App\Services\KelengkapanDokumenService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -64,6 +66,11 @@ class PengajuanResource extends JsonResource
                 ? ['status_evaluasi' => $this->evaluasi->status_evaluasi]
                 : new EvaluasiResource($this->evaluasi))),
             'id_placement' => $this->whenLoaded('evaluasi', fn () => $this->evaluasi?->placement?->id_placement),
+            // R36: daftar periksa dokumen untuk kandidat diterima (detail saja; tidak untuk talent).
+            'kelengkapan_dokumen' => $this->when(
+                ! $olehTalent && $this->relationLoaded('interviews') && $this->relationLoaded('evaluasi'),
+                fn () => $this->evaluasi?->status_evaluasi === StatusEvaluasi::Diterima ? app(KelengkapanDokumenService::class)->untukPengajuan($this->resource) : null,
+            ),
         ];
     }
 }
