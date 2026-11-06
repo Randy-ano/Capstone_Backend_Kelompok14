@@ -7,6 +7,12 @@ use Knuckles\Scribe\Extracting\Strategies;
 use function Knuckles\Scribe\Config\configureStrategy;
 use function Knuckles\Scribe\Config\removeStrategies;
 
+// Scribe adalah dependensi dev. Di server produksi yang memasang Composer tanpa paket dev, konfigurasi ini
+// dikosongkan agar `php artisan config:cache` tidak gagal karena kelas/fungsi Scribe tidak ada.
+if (! class_exists(Defaults::class)) {
+    return [];
+}
+
 // Only the most common configs are shown. See the https://scribe.knuckles.wtf/laravel/reference/config for all.
 
 return [

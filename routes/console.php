@@ -3,6 +3,7 @@
 use App\Services\PengingatService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -18,4 +19,10 @@ Artisan::command('notifikasi:pengingat', function (PengingatService $pengingat) 
     ));
 })->purpose('Kirim pengingat harian (R31)');
 
-Schedule::command('notifikasi:pengingat')->dailyAt('07:00')->timezone('Asia/Jakarta');
+// Jatuh tempo kapan saja pada jam 07.xx WIB, tetapi hanya dijalankan sekali per hari. Dengan begitu pengingat tetap
+// terkirim walaupun `schedule:run` hanya dipanggil tiap jam oleh cron Railway (UTC, bisa terlambat beberapa menit),
+// dan tidak berulang tiap menit saat `schedule:work` dipakai di lokal. PengingatService sendiri juga idempoten per hari.
+Schedule::command('notifikasi:pengingat')
+    ->cron('* 7 * * *')
+    ->timezone('Asia/Jakarta')
+    ->when(fn () => Cache::add('pengingat-harian:'.now('Asia/Jakarta')->toDateString(), true, now()->addDays(2)));

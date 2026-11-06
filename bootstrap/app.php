@@ -26,6 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'talent.ditempatkan' => EnsureTalentDitempatkan::class,
         ]);
 
+        // Produksi (Railway) berada di balik proxy HTTPS: percayai header X-Forwarded-* agar URL yang dibuat
+        // (link pagination, URL unduhan) memakai https dan host publik. Aman karena aplikasi hanya bisa
+        // dijangkau lewat proxy Railway.
+        $middleware->trustProxies(at: '*');
+
         // API tidak punya halaman login; tamu dibalas 401 JSON, bukan redirect.
         $middleware->redirectGuestsTo(fn (Request $request) => $request->is('api/*') ? null : '/');
     })

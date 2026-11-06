@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\HasilScreening;
 use App\Enums\KanalNotifikasi;
 use App\Enums\Role;
 use App\Enums\StatusInterview;
@@ -19,6 +18,7 @@ use App\Models\Placement;
 use App\Models\TandaTanganDokumen;
 use App\Models\User;
 use App\Services\NotifikasiService;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 
@@ -213,9 +213,25 @@ describe('R31: php artisan notifikasi:pengingat', function () {
         expect(Notifikasi::count())->toBe($jumlah);
     });
 
-    it('terjadwal pukul 07:00 WIB', function () {
+    it('terjadwal pukul 07.xx WIB, sekali sehari', function () {
         $this->artisan('schedule:list')->expectsOutputToContain('notifikasi:pengingat')->assertSuccessful();
-        $event = collect(app(Illuminate\Console\Scheduling\Schedule::class)->events())->first(fn ($e) => str_contains($e->command, 'notifikasi:pengingat'));
-        expect($event->expression)->toBe('0 7 * * *')->and($event->timezone)->toBe('Asia/Jakarta');
+        $event = collect(app(Schedule::class)->events())->first(fn ($e) => str_contains($e->command, 'notifikasi:pengingat'));
+        expect($event->expression)->toBe('* 7 * * *')->and($event->timezone)->toBe('Asia/Jakarta');
     });
+
+    it('tetap terpicu bila schedule:run hanya dijalankan tiap jam (cron Railway UTC, bisa terlambat beberapa menit)', function (string $utc, bool $jalan) {
+        $event = collect(app(Schedule::class)->events())->first(fn ($e) => str_contains($e->command, 'notifikasi:pengingat'));
+        $this->travelTo(Carbon\Carbon::parse($utc, 'UTC'));
+
+        expect($event->isDue(app()) && $event->filtersPass(app()))->toBe($jalan);
+        // Panggilan kedua di hari yang sama (mis. schedule:work tiap menit) tidak menjalankannya lagi.
+        if ($jalan) {
+            expect($event->filtersPass(app()))->toBeFalse();
+        }
+    })->with([
+        '07.00 WIB tepat' => ['2026-11-09 00:00:00', true],
+        '07.04 WIB (cron terlambat)' => ['2026-11-09 00:04:00', true],
+        '06.59 WIB' => ['2026-11-08 23:59:00', false],
+        '08.00 WIB' => ['2026-11-09 01:00:00', false],
+    ]);
 });

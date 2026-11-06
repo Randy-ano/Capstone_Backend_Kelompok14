@@ -82,11 +82,15 @@ Notifikasi email (pengingat R31) dikirim lewat antrean `database`; mail driver d
 
 ```bash
 php artisan queue:work        # memproses antrean email notifikasi
-php artisan schedule:work     # menjalankan jadwal: notifikasi:pengingat setiap hari 07:00 WIB
+php artisan schedule:work     # menjalankan jadwal: notifikasi:pengingat setiap hari 07.00 WIB
 ```
 
 Pengingat juga bisa dijalankan manual saat demo/pengujian: `php artisan notifikasi:pengingat` (aman diulang; pesan yang sama tidak dikirim dua kali di hari yang sama).
-Di server produksi cukup satu cron: `* * * * * php /path/ke/repo/artisan schedule:run >> /dev/null 2>&1`, plus `queue:work` yang dijaga supervisor.
+Produksi (Railway) memakai `QUEUE_CONNECTION=sync` tanpa `queue:work`, dan service cron yang menjalankan `schedule:run` tiap jam. Pengingat jatuh tempo pada jam 07.xx WIB dan hanya dijalankan sekali per hari.
+
+### Deploy
+
+Backend di Railway (Laravel + MySQL + Volume + cron), frontend di Vercel. Langkah lengkap, daftar variabel, dan cara reset data demo (`SEED_DEMO`) ada di [DEPLOY.md](DEPLOY.md); contoh variabel di [.env.production.example](.env.production.example).
 
 ### Dokumentasi API
 

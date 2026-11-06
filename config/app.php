@@ -56,7 +56,7 @@ return [
 
     // Alamat frontend (React) untuk tautan di email, mis. reset password. Jika FRONTEND_URL berisi beberapa
     // origin dipisah koma (untuk CORS), yang pertama dipakai.
-    'frontend_url' => rtrim(explode(',', (string) env('FRONTEND_URL', 'http://localhost:5173'))[0], '/'),
+    'frontend_url' => rtrim(trim(explode(',', (string) env('FRONTEND_URL', 'http://localhost:5173'))[0]), '/') ?: 'http://localhost:5173',
 
     /*
     |--------------------------------------------------------------------------

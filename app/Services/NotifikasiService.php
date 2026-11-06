@@ -13,6 +13,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Throwable;
 
 /**
  * FR-16, R29: satu pintu pengiriman notifikasi. Kanal sistem langsung terkirim (tampil di lonceng);
@@ -50,11 +51,21 @@ class NotifikasiService
         collect($penerima)->filter()->unique('id_user')->each(fn (User $u) => $this->kirim($u, $tipe, $pesan, $kanal));
     }
 
-    /** Kanal sistem langsung terkirim; kanal email masuk antrean. */
+    /**
+     * Kanal sistem langsung terkirim; kanal email masuk antrean.
+     *
+     * Dengan QUEUE_CONNECTION=sync (produksi Railway) job dijalankan saat itu juga dan kegagalannya dilempar ulang.
+     * Kegagalan kirim email tidak boleh menggagalkan proses yang memicunya (mis. pengingat ke penerima lain):
+     * job sudah menandai notifikasi `gagal` lewat failed(), jadi di sini cukup dicatat di log.
+     */
     public function proses(Notifikasi $notifikasi): void
     {
         if ($notifikasi->kanal === KanalNotifikasi::Email) {
-            KirimEmailNotifikasi::dispatch($notifikasi);
+            try {
+                KirimEmailNotifikasi::dispatch($notifikasi);
+            } catch (Throwable $e) {
+                report($e);
+            }
         } else {
             $notifikasi->update(['status_pengiriman' => StatusPengiriman::Terkirim]);
         }
