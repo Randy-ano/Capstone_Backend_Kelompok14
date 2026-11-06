@@ -183,7 +183,7 @@ describe('GET /monitoring (linimasa)', function () {
 describe('GET /monitoring/talent (kartu per talent)', function () {
     it('menampilkan kartu per penempatan dengan status kontrak, sisa hari, jumlah catatan & SP, dan filter', function () {
         $this->freezeTime();
-        $aktif = Placement::factory()->for(Talent::factory()->lengkap()->create(['nama_lengkap' => 'Ani Aktif']))->create([
+        $aktif = Placement::factory()->for(Talent::factory()->lengkap()->create(['nama_lengkap' => 'Zevaniqa Aktif']))->create([
             'tanggal_mulai' => now()->subMonth()->toDateString(), 'tanggal_selesai' => now()->addDays(30)->toDateString(),
         ]);
         MonitoringTalent::factory()->for($aktif)->count(2)->create();
@@ -197,7 +197,7 @@ describe('GET /monitoring/talent (kartu per talent)', function () {
             ->assertJsonPath('meta.ringkasan', ['belum_aktif' => 1, 'aktif' => 1, 'selesai' => 1]);
         $this->getJson('/api/v1/monitoring/talent?status=aktif')
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.talent.nama_lengkap', 'Ani Aktif')
+            ->assertJsonPath('data.0.talent.nama_lengkap', 'Zevaniqa Aktif')
             ->assertJsonPath('data.0.status_tampil', 'aktif')
             ->assertJsonPath('data.0.label_status_tampil', 'Aktif')
             ->assertJsonPath('data.0.sisa_hari', 30)
@@ -206,7 +206,7 @@ describe('GET /monitoring/talent (kartu per talent)', function () {
         $this->getJson('/api/v1/monitoring/talent?status=belum_aktif')
             ->assertJsonPath('data.0.id_placement', $belum->id_placement)
             ->assertJsonPath('data.0.hari_menuju_mulai', 5);
-        $this->getJson('/api/v1/monitoring/talent?search=ani')->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/monitoring/talent?search=zevaniqa')->assertJsonCount(1, 'data');
         $this->getJson("/api/v1/monitoring/talent?id_klien={$aktif->id_klien}")->assertJsonCount(1, 'data');
         $this->getJson('/api/v1/monitoring/talent?status=lainnya')->assertUnprocessable();
     });
