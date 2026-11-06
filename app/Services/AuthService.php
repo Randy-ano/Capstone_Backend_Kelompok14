@@ -85,7 +85,7 @@ class AuthService
         }
 
         if (! $user->status_aktif) {
-            throw new AccessDeniedHttpException('Akun Anda dinonaktifkan. Silakan hubungi Manager PT Intellisys.');
+            throw new AccessDeniedHttpException('Akun Anda dinonaktifkan. Silakan hubungi Manager PT Intellisys IT Outsourcing.');
         }
 
         return $this->sesiBaru($user);

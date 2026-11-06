@@ -80,7 +80,7 @@ final class RangkaianDokumen
     public function po(JobRequirement $job, Carbon $waktu): Dokumen
     {
         $job->loadMissing('klien');
-        $pdf = Pdf::loadHTML("<h2>Purchase Order</h2><p>{$job->klien->nama_perusahaan}</p><p>Pemesanan {$job->jumlah_kebutuhan} {$job->posisi} dari PT Intellisys.</p><p>Dokumen contoh untuk keperluan demo.</p>")->output();
+        $pdf = Pdf::loadHTML("<h2>Purchase Order</h2><p>{$job->klien->nama_perusahaan}</p><p>Pemesanan {$job->jumlah_kebutuhan} {$job->posisi} dari PT Intellisys IT Outsourcing.</p><p>Dokumen contoh untuk keperluan demo.</p>")->output();
 
         return Linimasa::pada($waktu, fn () => $this->dokumen->unggah($this->user($this->hr($job)), [
             'file' => UploadedFile::fake()->createWithContent('purchase-order-'.str($job->posisi)->slug().'.pdf', $pdf),

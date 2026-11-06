@@ -20,7 +20,7 @@ return [
     'title' => 'Intellisys Talent Hub API',
 
     // A short description of your API. Will be included in the docs webpage, Postman collection and OpenAPI spec.
-    'description' => 'REST API sistem outsourcing talent PT Intellisys: akun, profil & CV talent, talent pool, permintaan kebutuhan, rekomendasi kandidat berbasis aturan, screening, pengajuan, interview, evaluasi, placement, cuti & shift, monitoring, keluhan, dokumen & tanda tangan, notifikasi, dan dashboard.',
+    'description' => 'REST API sistem outsourcing talent PT Intellisys IT Outsourcing: akun, profil & CV talent, talent pool, permintaan kebutuhan, rekomendasi kandidat berbasis aturan, screening, pengajuan, interview, evaluasi, placement, cuti & shift, monitoring, keluhan, dokumen & tanda tangan, notifikasi, dan dashboard.',
 
     // Text to place in the "Introduction" section, right after the `description`. Markdown and HTML are supported.
     'intro_text' => <<<'INTRO'
