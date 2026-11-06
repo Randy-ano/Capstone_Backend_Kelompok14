@@ -8,10 +8,12 @@ use App\Models\Klien;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Throwable;
 
 class AuthService
 {
@@ -83,7 +85,7 @@ class AuthService
         }
 
         if (! $user->status_aktif) {
-            throw new AccessDeniedHttpException('Akun Anda dinonaktifkan. Silakan hubungi Manager PT Intellisys.');
+            throw new AccessDeniedHttpException('Akun Anda dinonaktifkan. Silakan hubungi Manager PT Intellisys IT Outsourcing.');
         }
 
         return $this->sesiBaru($user);
@@ -117,10 +119,19 @@ class AuthService
     /**
      * Kirim tautan reset password lewat email (token berlaku 60 menit). Hasilnya sengaja diabaikan:
      * email tidak terdaftar atau permintaan berulang terlalu cepat menghasilkan respons yang sama (tidak membocorkan akun).
+     * Pengiriman gagal (mis. API key Brevo salah atau kuota habis) hanya dicatat di log; respons ke pengguna tetap sama.
      */
     public function lupaPassword(string $email): void
     {
-        Password::sendResetLink(['email' => $email]);
+        try {
+            Password::sendResetLink(['email' => $email]);
+        } catch (Throwable $e) {
+            Log::error('Gagal mengirim email reset password.', [
+                'email' => $email,
+                'mailer' => config('mail.default'),
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

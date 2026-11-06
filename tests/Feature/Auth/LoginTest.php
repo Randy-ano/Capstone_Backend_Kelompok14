@@ -51,7 +51,7 @@ describe('POST /auth/login', function () {
 
         $this->postJson('/api/v1/auth/login', ['email' => $user->email, 'password' => 'password'])
             ->assertForbidden()
-            ->assertExactJson(['message' => 'Akun Anda dinonaktifkan. Silakan hubungi Manager PT Intellisys.']);
+            ->assertExactJson(['message' => 'Akun Anda dinonaktifkan. Silakan hubungi Manager PT Intellisys IT Outsourcing.']);
 
         expect($user->tokens()->count())->toBe(0);
     });
