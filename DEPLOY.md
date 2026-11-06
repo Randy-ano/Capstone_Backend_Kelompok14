@@ -133,12 +133,42 @@ Reset hanya berjalan **sekali per deployment** (penanda `storage/app/.seed-demo-
 Restart container setelah crash tidak menghapus data lagi, tetapi setiap **deploy baru** dengan `SEED_DEMO` yang masih
 `true` akan mereset ulang. Karena itu langkah 3 wajib.
 
-## 6. Email
+## 6. Email (Brevo)
 
-Bawaan `MAIL_MAILER=log`: email tidak dikirim, isinya (termasuk tautan reset password) tampil di tab **Logs**
-service app. Karena itu `LOG_LEVEL=debug`. Untuk mengirim sungguhan, isi `MAIL_*` SMTP di Variables (contoh Gmail
-& Mailtrap ada di `.env.example`). Jika SMTP gagal, notifikasi email ditandai `gagal` dan proses yang memicunya
-(mis. pengingat ke penerima lain) tetap berjalan. Tautan reset password memakai origin pertama di `FRONTEND_URL`.
+Railway memblokir koneksi SMTP keluar pada paket Trial/Hobby, sehingga Gmail/Mailtrap lewat SMTP tidak bisa
+dipakai. Email lupa password dan notifikasi email dikirim lewat **Brevo HTTP API** (HTTPS, paket gratis
+300 email/hari) memakai `symfony/brevo-mailer`. Mailer `brevo` terdaftar di `config/mail.php`; lokal & test
+tetap `MAIL_MAILER=log`.
+
+1. **Buat API key.** Masuk ke [app.brevo.com](https://app.brevo.com) → menu profil (kanan atas) → **SMTP & API**
+   → tab **API Keys** → **Generate a new API key**. Salin key (diawali `xkeysib-`); key hanya tampil sekali.
+   Jangan simpan key di repo, `.env.example`, atau `.env.production.example`.
+2. **Verifikasi alamat pengirim.** **Senders, Domains & Dedicated IPs → Senders → Add a sender**, isi nama
+   & alamat, lalu klik tautan verifikasi yang dikirim Brevo ke alamat itu. Brevo menolak email dari alamat yang
+   belum diverifikasi.
+3. **Isi Variables** di service app **dan** service cron (pengingat harian juga mengirim email):
+
+   | Variabel | Isi |
+   |---|---|
+   | `MAIL_MAILER` | `brevo` |
+   | `BREVO_API_KEY` | key dari langkah 1 |
+   | `MAIL_FROM_ADDRESS` | alamat pengirim yang **sudah diverifikasi** di langkah 2 |
+   | `MAIL_FROM_NAME` | `Intellisys Talent Hub` |
+
+4. Deploy ulang, lalu coba **Lupa password** dari frontend dengan email akun yang bisa Anda buka.
+
+Catatan:
+
+- Email dari alamat pribadi (mis. Gmail) yang dikirim lewat Brevo tanpa domain sendiri sering masuk folder
+  **Spam/Promosi**. Minta penerima memeriksa folder tersebut dan menandai "Bukan spam". Untuk mengurangi hal ini,
+  autentikasi domain sendiri di Brevo (**Domains → Add a domain**, tambahkan record DKIM/DMARC).
+- Jika pengiriman gagal (API key salah, alamat pengirim belum diverifikasi, kuota harian habis), lupa password
+  tetap menampilkan pesan umum yang sama ("Jika email terdaftar, tautan reset sudah dikirim.") dan detail error
+  dicatat di tab **Logs** (`Gagal mengirim email reset password.`). Notifikasi email yang gagal ditandai `gagal`
+  dan proses yang memicunya (mis. pengingat ke penerima lain) tetap berjalan.
+- Cadangan tanpa Brevo: `MAIL_MAILER=log` (email tidak dikirim, isinya termasuk tautan reset tampil di tab
+  **Logs**; butuh `LOG_LEVEL=debug`).
+- Tautan reset password memakai origin pertama di `FRONTEND_URL`.
 
 ## 7. Sambungkan frontend
 
@@ -156,4 +186,5 @@ service app. Karena itu `LOG_LEVEL=debug`. Untuk mengirim sungguhan, isi `MAIL_*
 | File unggahan / PDF hilang setelah deploy | Volume belum dipasang atau mount path bukan `/app/storage/app`. |
 | Tautan pagination/unduhan memakai `http://` | Proxy dipercaya lewat `trustProxies(at: '*')` di `bootstrap/app.php`. Pastikan akses lewat domain Railway (https). |
 | Pengingat tidak terkirim | Cek Logs service cron sekitar 00.00 UTC. Variabel database & `CACHE_STORE=database` harus sama dengan service app. |
+| Email lupa password tidak datang | Cek folder Spam. Cek Logs: `Gagal mengirim email reset password.` berarti `BREVO_API_KEY` salah, `MAIL_FROM_ADDRESS` belum diverifikasi di Brevo, atau kuota harian habis. Pastikan `MAIL_MAILER=brevo` dan deploy ulang setelah mengubah variabel. |
 | Dokumentasi `/docs` tidak ada | Scribe adalah dependensi dev; dokumentasi API dibuat di laptop (`php artisan scribe:generate`). |
