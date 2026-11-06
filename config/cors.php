@@ -19,7 +19,12 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => array_filter(explode(',', env('FRONTEND_URL', 'http://localhost:5173'))),
+    // FRONTEND_URL boleh berisi beberapa origin dipisah koma (mis. domain Vercel produksi dan domain kustom).
+    // http://localhost:5173 selalu diizinkan untuk pengembangan. Spasi dan garis miring di akhir diabaikan.
+    'allowed_origins' => array_values(array_unique(array_filter([
+        ...array_map(fn (string $o) => rtrim(trim($o), '/'), explode(',', (string) env('FRONTEND_URL', ''))),
+        'http://localhost:5173',
+    ]))),
 
     'allowed_origins_patterns' => [],
 
