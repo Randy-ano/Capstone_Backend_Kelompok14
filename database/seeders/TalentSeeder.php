@@ -22,10 +22,10 @@ use Illuminate\Support\Str;
 class TalentSeeder extends Seeder
 {
     /** Talent yang CV-nya sudah dibuat. */
-    private const PUNYA_CV = ['Budi Santoso', 'Dimas Prasetyo', 'Yoga Pratama', 'Intan Permata', 'Rizky Firmansyah'];
+    private const PUNYA_CV = ['Budi Santoso', 'Dimas Prasetyo', 'Yoga Pratama', 'Intan Permata', 'Rizky Firmansyah', 'Farhan Maulana'];
 
     /** Sertifikat yang diberi contoh file PDF (sisanya tanpa file, untuk contoh "belum diunggah"). */
-    private const SERTIFIKAT_BERFILE = ['Laravel Certified Developer', 'AWS Certified Developer', 'ISTQB Foundation Level', 'Meta Front-End Developer', 'Microsoft Certified: Power BI Data Analyst', 'Oracle Certified Associate'];
+    private const SERTIFIKAT_BERFILE = ['Laravel Certified Developer', 'AWS Certified Developer', 'ISTQB Foundation Level', 'Meta Front-End Developer', 'Microsoft Certified: Power BI Data Analyst', 'Oracle Certified Associate', 'Google Data Analytics Professional Certificate'];
 
     public function run(TalentCvService $cv): void
     {
@@ -275,6 +275,8 @@ class TalentSeeder extends Seeder
                 'tentang' => 'Analis data dengan minat pada pemodelan statistik dan otomatisasi laporan.',
                 'pengalaman' => [['Junior Data Analyst', 'PT Bumi Data Nusantara', 'Surabaya', 26, null]],
                 'kompetensi' => ['SQL', 'Python', 'Data Analysis', 'Excel'],
+                'sertifikat' => [['Google Data Analytics Professional Certificate', 'Google', 12]],
+                'bahasa' => ['Indonesia' => 'Penutur Asli', 'Inggris' => 'Fasih'],
             ],
             'talent14@intellisys.test' => [
                 'nama' => 'Arif Hidayat', 'domisili' => 'Surakarta', 'umur' => 29, 'gaji' => 12500000, 'daftar_hari_lalu' => 33,
