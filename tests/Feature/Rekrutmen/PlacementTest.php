@@ -13,6 +13,10 @@ use App\Models\Kompetensi;
 use App\Models\Placement;
 use App\Models\Talent;
 use App\Models\TalentPool;
+use Illuminate\Support\Facades\Storage;
+
+// Surat akhir penempatan (PDF) ditulis ke disk palsu.
+beforeEach(fn () => Storage::fake('local'));
 
 /** Evaluasi diterima untuk job tertentu dengan dokumen Quotation–Kontrak Kerja selesai (R36), siap dibuatkan placement. */
 function evaluasiDiterima(?App\Models\JobRequirement $job = null): App\Models\EvaluasiKandidat
@@ -143,7 +147,7 @@ describe('PATCH /placement/{id}/status', function () {
         $p->talent->update(['status_kandidat' => StatusKandidat::Ditempatkan]);
         $pool = TalentPool::factory()->for($p->talent)->create(['status_ketersediaan' => StatusKetersediaan::TidakTersedia]);
 
-        $this->patchJson("/api/v1/placement/{$p->id_placement}/status", ['status_placement' => $status, 'tanggal_selesai' => '2026-06-30'])
+        $this->patchJson("/api/v1/placement/{$p->id_placement}/status", ['status_placement' => $status, 'tanggal_selesai' => '2026-06-30', 'alasan_penghentian' => 'Proyek klien selesai lebih awal.'])
             ->assertOk()
             ->assertJsonPath('data.status_placement', $status)
             ->assertJsonPath('data.tanggal_selesai', '2026-06-30');
@@ -156,9 +160,9 @@ describe('PATCH /placement/{id}/status', function () {
         loginSebagai(Role::Manager);
         $p = Placement::factory()->create(['tanggal_mulai' => '2026-01-01', 'tanggal_selesai' => null]);
 
-        $this->patchJson("/api/v1/placement/{$p->id_placement}/status", ['status_placement' => 'dihentikan'])
+        $this->patchJson("/api/v1/placement/{$p->id_placement}/status", ['status_placement' => 'dihentikan', 'alasan_penghentian' => 'Kontrak diputus klien.'])
             ->assertOk()
-            ->assertJsonPath('message', 'Penempatan dihentikan.')
+            ->assertJsonPath('message', 'Penempatan dihentikan. Surat Pemberhentian Penempatan dibuat dan menunggu tanda tangan Manager.')
             ->assertJsonPath('data.tanggal_selesai', now()->toDateString());
     });
 
@@ -167,7 +171,7 @@ describe('PATCH /placement/{id}/status', function () {
         $selesai = Placement::factory()->create(['status_placement' => StatusPlacement::Selesai]);
         $aktif = Placement::factory()->create(['tanggal_mulai' => '2026-05-01']);
 
-        $this->patchJson("/api/v1/placement/{$selesai->id_placement}/status", ['status_placement' => 'dihentikan'])
+        $this->patchJson("/api/v1/placement/{$selesai->id_placement}/status", ['status_placement' => 'dihentikan', 'alasan_penghentian' => 'Uji.'])
             ->assertUnprocessable()->assertJsonPath('errors.status_placement.0', 'Hanya penempatan aktif yang dapat diakhiri.');
         $this->patchJson("/api/v1/placement/{$aktif->id_placement}/status", ['status_placement' => 'selesai', 'tanggal_selesai' => '2026-04-01'])
             ->assertUnprocessable()->assertJsonPath('errors.tanggal_selesai.0', 'Tanggal selesai tidak boleh sebelum tanggal mulai.');
