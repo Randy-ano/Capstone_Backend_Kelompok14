@@ -51,6 +51,10 @@ class DokumenService
      */
     public static function scope(Builder $query, User $user): Builder
     {
+        // Surat akhir penempatan hanya untuk talent bersangkutan, AM, Manager, dan HR Client kliennya (bukan TS).
+        if ($user->hasRole(Role::TalentSupport)) {
+            return $query->whereNotIn('jenis_dokumen', JenisDokumen::AKHIR_PENEMPATAN);
+        }
         if ($user->isInternal()) {
             return $query;
         }
@@ -238,6 +242,10 @@ class DokumenService
     {
         $query = User::query()->with(['talent', 'hrClient.klien', 'pegawai'])->where('status_aktif', true);
 
+        if ($dokumen->jenis_dokumen->akhirPenempatan()) {
+            return $query->where('role', Role::Manager)->orderBy('email')->get();
+        }
+
         if ($dokumen->uploader?->hasRole(Role::Talent)) {
             return $query->whereKey($dokumen->id_user_uploader)->get();
         }
@@ -314,6 +322,9 @@ class DokumenService
                 $dokumen->update(['status_dokumen' => StatusDokumen::Ditolak]);
             } elseif ($status->every(fn (StatusTtd $s) => $s === StatusTtd::Ditandatangani)) {
                 $dokumen->update(['status_dokumen' => StatusDokumen::Ditandatangani]);
+                if ($dokumen->jenis_dokumen->akhirPenempatan()) {
+                    $this->pemberitahuan->suratAkhirPenempatan($dokumen, true);
+                }
             }
 
             return $dokumen->load(self::RELASI);
@@ -370,7 +381,7 @@ class DokumenService
         if (Storage::disk(self::DISK)->exists($pathTemplate)) {
             $template = json_decode(Storage::disk(self::DISK)->get($pathTemplate), true);
 
-            return $this->pdfTtd->template('pdf.dokumen-template', self::dataView($template), $dokumen);
+            return $this->pdfTtd->template(self::viewTemplate($dokumen->jenis_dokumen), self::dataView($template), $dokumen);
         }
 
         if (self::ekstensi($dokumen) === 'pdf') {
@@ -411,13 +422,19 @@ class DokumenService
      * @param  array<string, mixed>  $template
      * @return array<string, mixed>
      */
-    private static function dataView(array $template): array
+    public static function dataView(array $template): array
     {
         return [
             ...$template,
             'klien' => (object) $template['klien'],
-            'items' => collect($template['items']),
+            'items' => collect($template['items'] ?? []),
         ];
+    }
+
+    /** View Blade dokumen buatan sistem per jenis. */
+    public static function viewTemplate(JenisDokumen $jenis): string
+    {
+        return $jenis->akhirPenempatan() ? 'pdf.surat-akhir-penempatan' : 'pdf.dokumen-template';
     }
 
     public static function namaFile(Dokumen $dokumen): string
@@ -435,6 +452,8 @@ class DokumenService
             JenisDokumen::SuratPeringatan => 'Surat Peringatan',
             JenisDokumen::Cv => 'CV',
             JenisDokumen::Lainnya => 'Lainnya',
+            JenisDokumen::SuratSelesaiPenempatan => 'Surat Keterangan Selesai Penempatan',
+            JenisDokumen::SuratPemberhentianPenempatan => 'Surat Pemberhentian Penempatan',
         };
     }
 }

@@ -435,7 +435,7 @@ Kolom dan tabel berikut ditambahkan untuk profil & CV talent (FR-03, FR-04); lih
 | id_placement | FK→placement, nullable, set null | untuk kontrak kerja, SP |
 | id_job_req | FK→job_requirement, nullable, set null | quotation, PO, PKS, dan kontrak kerja (R34; migration `2026_11_06_100000`) |
 | id_pengajuan | FK→pengajuan_kandidat, nullable, set null | kontrak kerja per kandidat diterima (R34; migration `2026_11_06_100000`) |
-| jenis_dokumen | string (enum) | `quotation`, `purchase_order`, `pks`, `kontrak_kerja`, `surat_peringatan`, `cv`, `lainnya` |
+| jenis_dokumen | string (enum) | `quotation`, `purchase_order`, `pks`, `kontrak_kerja`, `surat_peringatan`, `cv`, `lainnya`, `surat_selesai_penempatan`, `surat_pemberhentian_penempatan` (dua terakhir dibuat sistem saat penempatan diakhiri, R37; nilai enum PHP saja, tanpa migration) |
 | file_path | string | path di disk private |
 | status_dokumen | string (enum) | `draft` (default), `menunggu_ttd`, `ditandatangani`, `ditolak` |
 | tanggal_unggah | datetime | |
@@ -530,6 +530,7 @@ Helper yang disarankan di model `User`: `isInternal()`, `kliens()` / `idKlien()`
 - **R18.** Placement dibuat oleh TS, **hanya dari evaluasi `diterima`** yang belum punya placement, dan (revisi 2026-11-06) setelah dokumen Quotation–Kontrak Kerja selesai (R36). Salin id_talent, id_job_req, id_klien.
 - **R19.** Saat placement dibuat (dalam 1 DB transaction): talent.status_kandidat = `ditempatkan`, talent_pool.status_ketersediaan = `tidak_tersedia`, dan jika jumlah placement `aktif` untuk job tsb ≥ `jumlah_kebutuhan` → status_req = `terpenuhi`.
 - **R20.** Saat placement `selesai`/`dihentikan` → talent kembali `tersedia` di pool.
+- **R37. Surat akhir penempatan** (feedback SUS 2026-11-14): dalam transaksi yang sama dengan R20 sistem membuat PDF (dompdf, `DokumenAkhirPenempatanService`): `selesai` → **Surat Keterangan Selesai Penempatan** (`surat_selesai_penempatan`), `dihentikan` → **Surat Pemberhentian Penempatan** (`surat_pemberhentian_penempatan`, `alasan_penghentian` wajib, maks. 1000). Isi: kop PT Intellisys IT Outsourcing, nomor `NNN/SKSP|SPHP/ITS/<bulan romawi>/<tahun>` (urut per jenis per tahun), nama talent, klien, posisi, periode penempatan (mulai s.d. selesai kontrak), tanggal berakhir, alasan (dihentikan), dan blok tanda tangan Manager. Dokumen terhubung ke `id_placement`, `id_talent`, `id_klien`, `id_job_req`; pengunggah = pelaku; data surat (termasuk alasan) disimpan di `template.json` seperti R26 sehingga unduhan memuat tanda tangan (R28a). Penandatangan otomatis: Manager pelaku, atau Manager aktif pertama bila diakhiri TS (status langsung `menunggu_ttd`; tanpa Manager aktif tetap `draft`). Talent dinotifikasi saat surat dibuat dan saat Manager menandatangani (tipe `surat_akhir_penempatan`, kanal email bila mailer bukan `log`/`array`). Akses: talent bersangkutan, AM, Manager, HR Client klien penempatan; **Talent Support ditolak** (walau pengunggah). Kedua jenis tidak bisa diunggah manual (422). Talent yang menerima surat tetap boleh membuka menu Dokumen setelah penempatan berakhir.
 
 ### Operasional (FR-14, FR-15, FR-18, FR-19)
 - **R21. Cuti** (direvisi 2026-11-05)**:** diajukan talent untuk placement `aktif` miliknya; tanggal tidak boleh tumpang tindih dengan cuti lain yang `menunggu`/`disetujui`.
@@ -566,7 +567,7 @@ Alur per permintaan kebutuhan: kandidat diterima di evaluasi → **Quotation** �
 
 ### Notifikasi & Reminder (FR-16)
 - **R29.** Gunakan satu `NotifikasiService::kirim(user, tipe, pesan, kanal)` yang menyimpan ke tabel `notifikasi` dan, jika kanal `email`, mengirim email lewat queue lalu memperbarui `status_pengiriman`.
-- **R30. Event yang memicu notifikasi:** permintaan kebutuhan diajukan oleh HR Client/AM (→ semua TS aktif + AM penanggung jawab, atau semua AM aktif bila belum ada; pelaku tidak dinotifikasi), usulan kandidat dibuat (→ AM penanggung jawab), usulan tidak diteruskan (→ TS pengusul), pengajuan kandidat dibuat (→ HR Client), status pengajuan berubah (→ AM, Talent), interview dijadwalkan/diubah (→ Talent, HR Client), evaluasi disimpan (→ AM, TS), placement dibuat (→ Talent, HR Client), cuti diajukan (→ HR Client, Manager), cuti diputuskan (→ Talent), laporan keluhan baru (→ AM, Manager), permintaan tanda tangan (→ penandatangan).
+- **R30. Event yang memicu notifikasi:** permintaan kebutuhan diajukan oleh HR Client/AM (→ semua TS aktif + AM penanggung jawab, atau semua AM aktif bila belum ada; pelaku tidak dinotifikasi), usulan kandidat dibuat (→ AM penanggung jawab), usulan tidak diteruskan (→ TS pengusul), pengajuan kandidat dibuat (→ HR Client), status pengajuan berubah (→ AM, Talent), interview dijadwalkan/diubah (→ Talent, HR Client), evaluasi disimpan (→ AM, TS), placement dibuat (→ Talent, HR Client), cuti diajukan (→ HR Client, Manager), cuti diputuskan (→ Talent), laporan keluhan baru (→ AM, Manager), permintaan tanda tangan (→ penandatangan), surat akhir penempatan dibuat/ditandatangani (→ Talent, R37).
 - **R31. Scheduler harian (pukul 07:00 WIB):**
   - Job requirement dengan SLA `mendekati`/`terlambat` → AM & Manager
   - Interview besok → Talent & HR Client
@@ -658,8 +659,8 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 |---|---|---|---|
 | GET | /placement | HC, Internal, T | sesuai scope; filter `status`, `id_klien` (internal), `search` |
 | POST | /placement | TS | R18, R19, R36 (422 dengan daftar dokumen yang belum selesai); body `id_evaluasi`, `tanggal_mulai`, `tanggal_selesai`, `posisi_penempatan` (default posisi job) |
-| GET | /placement/{id} | HC, Internal, T | + `ringkasan` (jumlah cuti, shift, monitoring, keluhan) |
-| PATCH | /placement/{id}/status | TS, M | R20; `selesai`/`dihentikan` dari `aktif`; `tanggal_selesai` default tanggal kontrak atau hari ini |
+| GET | /placement/{id} | HC, Internal, T | + `ringkasan` (jumlah cuti, shift, monitoring, keluhan) + `dokumen[]` histori dokumen penempatan yang boleh dilihat user (`id_dokumen`, `jenis_dokumen`, `label_jenis`, `nama_file`, `status_dokumen`, `tanggal_unggah`; tanpa CV) + `alasan_penghentian` (dari Surat Pemberhentian, null bila tidak ada/tidak berhak) |
+| PATCH | /placement/{id}/status | TS, M | R20, R37; `selesai`/`dihentikan` dari `aktif`; `tanggal_selesai` default tanggal kontrak atau hari ini; `alasan_penghentian` wajib bila `dihentikan` (maks. 1000); membuat surat akhir penempatan; respons = detail placement |
 
 ### Cuti, Shift, Monitoring, Keluhan (FR-14, FR-15, FR-18, FR-19)
 | Method | Path | Role | Keterangan |

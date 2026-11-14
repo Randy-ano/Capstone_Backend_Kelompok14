@@ -117,6 +117,12 @@ class NotifikasiService
             ->where(fn (Builder $q) => $q->whereNull('jadwal_kirim')->orWhere('jadwal_kirim', '<=', now()));
     }
 
+    /** Kanal email bila mailer pengirim aktif (bukan `log`/`array` pengembangan & test), selain itu kanal sistem. */
+    public static function kanalEmailJikaAktif(): KanalNotifikasi
+    {
+        return in_array(config('mail.default'), ['log', 'array'], true) ? KanalNotifikasi::Sistem : KanalNotifikasi::Email;
+    }
+
     /* ---------- Penerima umum ---------- */
 
     /** @return Collection<int, User> */

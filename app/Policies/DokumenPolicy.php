@@ -22,9 +22,13 @@ class DokumenPolicy
             : Response::deny('Anda tidak memiliki akses ke dokumen ini.');
     }
 
-    /** File asli tanpa tanda tangan: hanya pengunggah dan tim internal (AM, TS, Manager). */
+    /** File asli tanpa tanda tangan: hanya pengunggah dan tim internal (AM, TS, Manager) yang boleh melihat dokumennya. */
     public function unduhAsli(User $user, Dokumen $dokumen): Response
     {
+        if (! DokumenService::bolehLihat($user, $dokumen)) {
+            return Response::deny('Anda tidak memiliki akses ke dokumen ini.');
+        }
+
         return $dokumen->id_user_uploader === $user->id_user || $user->isInternal()
             ? Response::allow()
             : Response::deny('File asli hanya dapat diunduh oleh pengunggah dokumen dan tim internal.');

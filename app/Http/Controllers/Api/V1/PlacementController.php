@@ -9,6 +9,8 @@ use App\Http\Requests\Placement\StorePlacementRequest;
 use App\Http\Requests\Placement\UpdateStatusPlacementRequest;
 use App\Http\Resources\PlacementResource;
 use App\Models\Placement;
+use App\Services\DokumenAkhirPenempatanService;
+use App\Services\DokumenService;
 use App\Services\PlacementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -51,7 +53,7 @@ class PlacementController extends Controller
      */
     public function show(Placement $placement): PlacementResource
     {
-        return (new PlacementResource($this->placement->detail($placement)))->additional(['message' => 'Berhasil']);
+        return (new PlacementResource($this->placement->detail($placement, request()->user())))->additional(['message' => 'Berhasil']);
     }
 
     /**
@@ -63,7 +65,11 @@ class PlacementController extends Controller
     {
         $status = StatusPlacement::from($request->validated('status_placement'));
 
-        return (new PlacementResource($this->placement->ubahStatus($placement, $status, $request->validated('tanggal_selesai'))))
-            ->additional(['message' => $status === StatusPlacement::Selesai ? 'Penempatan ditandai selesai.' : 'Penempatan dihentikan.']);
+        $hasil = $this->placement->ubahStatus($placement, $status, $request->validated('tanggal_selesai'), $request->user(), $request->validated('alasan_penghentian'));
+        $surat = DokumenService::judul(DokumenAkhirPenempatanService::jenis($status));
+
+        return (new PlacementResource($hasil))
+            ->additional(['message' => ($status === StatusPlacement::Selesai ? 'Penempatan ditandai selesai.' : 'Penempatan dihentikan.')
+                ." {$surat} dibuat dan menunggu tanda tangan Manager."]);
     }
 }
