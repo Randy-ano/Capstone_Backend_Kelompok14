@@ -212,6 +212,23 @@ class Talent extends Model
     }
 
     /**
+     * R4: syarat profil lengkap (satu sumber untuk status_kelengkapan dan checklist di halaman Profil & CV).
+     * Memakai relasi yang sudah dimuat bila ada, selain itu query.
+     *
+     * @return list<array{kunci: string, label: string, terpenuhi: bool}>
+     */
+    public function syaratKelengkapan(): array
+    {
+        $ada = fn (string $relasi) => $this->relationLoaded($relasi) ? $this->{$relasi}->isNotEmpty() : $this->{$relasi}()->exists();
+
+        return [
+            ['kunci' => 'nama_lengkap', 'label' => 'Nama lengkap', 'terpenuhi' => trim((string) $this->nama_lengkap) !== ''],
+            ['kunci' => 'riwayat_pendidikan', 'label' => 'Riwayat pendidikan (min. 1)', 'terpenuhi' => $ada('riwayatPendidikan')],
+            ['kunci' => 'kompetensi', 'label' => 'Kompetensi (min. 1)', 'terpenuhi' => $ada('kompetensi')],
+        ];
+    }
+
+    /**
      * Menu Dokumen terbuka bagi talent yang sudah ditempatkan, yang sudah punya Kontrak Kerja
      * (harus ditandatangani sebelum penempatan dibuat, R36), atau yang menerima surat akhir penempatan.
      */
