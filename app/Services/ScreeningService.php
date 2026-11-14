@@ -51,6 +51,28 @@ class ScreeningService
     }
 
     /**
+     * Detail usulan untuk tinjauan AM: relasi profil kandidat + rincian skor R9 dihitung ulang dari profil saat ini
+     * (skor tersimpan di `skor_kecocokan` tidak diubah).
+     *
+     * @return array{0: ScreeningTalent, 1: array<string, mixed>}
+     */
+    public function detail(ScreeningTalent $screening): array
+    {
+        $screening->load([
+            ...self::RELASI,
+            'jobRequirement.kompetensi',
+            'talent.talentPool',
+            'talent.riwayatPendidikan',
+            'talent.pengalamanKerjaTalent',
+            'talent.kompetensi',
+            'talent.bahasa',
+            'talent.sertifikat',
+        ]);
+
+        return [$screening, $this->rekomendasi->skor($screening->jobRequirement, $screening->talent)];
+    }
+
+    /**
      * R10: usulan TS (hasil langsung `lolos`). Skor dari R9 disimpan sebagai informasi, tidak ada batas minimum.
      * Talent → dalam_proses; job diajukan → diproses; AM penanggung jawab dinotifikasi.
      *

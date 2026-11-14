@@ -179,6 +179,11 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('role:talent_support')
             ->name('screening.store');
 
+        // Detail usulan untuk tinjauan AM: profil kandidat + rincian kecocokan (internal saja).
+        Route::get('/{screening}', [ScreeningController::class, 'show'])
+            ->can('view', 'screening')
+            ->name('screening.show');
+
         Route::put('/{screening}', [ScreeningController::class, 'update'])
             ->middleware('role:talent_support')
             ->name('screening.update');

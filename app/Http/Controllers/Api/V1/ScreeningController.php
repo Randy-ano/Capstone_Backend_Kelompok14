@@ -7,6 +7,7 @@ use App\Http\Requests\Screening\IndexScreeningRequest;
 use App\Http\Requests\Screening\StoreScreeningRequest;
 use App\Http\Requests\Screening\TidakDiteruskanRequest;
 use App\Http\Requests\Screening\UpdateScreeningRequest;
+use App\Http\Resources\ScreeningDetailResource;
 use App\Http\Resources\ScreeningResource;
 use App\Models\ScreeningTalent;
 use App\Services\ScreeningService;
@@ -30,6 +31,20 @@ class ScreeningController extends Controller
     {
         return ScreeningResource::collection($this->screening->daftar($request->validated()))
             ->additional(['message' => 'Berhasil']);
+    }
+
+    /**
+     * Detail usulan.
+     *
+     * Profil kandidat (pendidikan, pengalaman, kompetensi + kategori, bahasa + tingkat, sertifikat, ketersediaan CV),
+     * catatan Talent Support, dan `rincian_kecocokan` (R9) yang dihitung ulang dari profil saat ini.
+     * `skor_kecocokan` tetap skor tersimpan saat usulan dibuat. Khusus internal (AM, TS, Manager).
+     */
+    public function show(ScreeningTalent $screening): ScreeningDetailResource
+    {
+        [$screening, $rincian] = $this->screening->detail($screening);
+
+        return (new ScreeningDetailResource($screening, $rincian))->additional(['message' => 'Berhasil']);
     }
 
     /**

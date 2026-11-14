@@ -17,6 +17,14 @@ class ScreeningTalentPolicy
         return $user->isInternal();
     }
 
+    /** Detail usulan (profil kandidat + rincian kecocokan) hanya untuk internal; HR Client & talent tidak pernah. */
+    public function view(User $user, ScreeningTalent $screening): Response
+    {
+        return $user->isInternal()
+            ? Response::allow()
+            : Response::deny('Anda tidak memiliki akses ke usulan kandidat ini.');
+    }
+
     public function create(User $user): Response
     {
         return $this->khususTs($user);

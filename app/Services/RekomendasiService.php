@@ -17,9 +17,9 @@ use Illuminate\Validation\ValidationException;
  */
 class RekomendasiService
 {
-    private const BOBOT_KOMPETENSI = 0.8;
+    public const BOBOT_KOMPETENSI = 0.8;
 
-    private const BOBOT_PENGALAMAN = 0.2;
+    public const BOBOT_PENGALAMAN = 0.2;
 
     /** Kandidat dengan skor_kecocokan di bawah nilai ini tidak direkomendasikan (rumus skor tidak berubah). */
     public const SKOR_MINIMUM = 70;
