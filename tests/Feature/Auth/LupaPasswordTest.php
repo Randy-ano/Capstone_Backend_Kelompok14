@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 
-const PESAN_LUPA = 'Jika email terdaftar, tautan reset sudah dikirim.';
+const PESAN_LUPA = 'Jika email terdaftar, tautan reset sudah dikirim. Jika tidak ada di Kotak Masuk, cek folder Spam.';
 const PESAN_TOKEN_SALAH = 'Tautan reset password tidak valid atau sudah kedaluwarsa. Silakan minta tautan baru.';
 
 describe('POST /auth/lupa-password', function () {

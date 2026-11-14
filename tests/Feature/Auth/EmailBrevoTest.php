@@ -8,7 +8,7 @@ use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Mailer\Bridge\Brevo\Transport\BrevoApiTransport;
 
-const PESAN_LUPA_BREVO = 'Jika email terdaftar, tautan reset sudah dikirim.';
+const PESAN_LUPA_BREVO = 'Jika email terdaftar, tautan reset sudah dikirim. Jika tidak ada di Kotak Masuk, cek folder Spam.';
 
 /** Ganti transport brevo dengan versi yang memakai HTTP client palsu (tidak ada panggilan ke API Brevo sungguhan). */
 function brevoPalsu(MockResponse|Closure $respons): void

@@ -74,10 +74,30 @@ class TalentResource extends JsonResource
 
             // Status profil
             'status_kelengkapan' => $this->status_kelengkapan,
+            // Checklist R4 untuk halaman Profil & CV (feedback SUS 2026-11-14).
+            'kelengkapan_profil' => $this->when(
+                $this->relationLoaded('riwayatPendidikan') && $this->relationLoaded('kompetensi'),
+                fn () => $this->kelengkapanProfil(),
+            ),
             'status_kandidat' => $this->status_kandidat,
 
             // Informasi CV
             'ada_cv' => $this->file_cv !== null,
+        ];
+    }
+
+    /** @return array{syarat: list<array{kunci: string, label: string, terpenuhi: bool}>, terpenuhi: int, total: int, lengkap: bool, di_talent_pool: bool} */
+    private function kelengkapanProfil(): array
+    {
+        $syarat = $this->syaratKelengkapan();
+        $terpenuhi = count(array_filter($syarat, fn (array $s) => $s['terpenuhi']));
+
+        return [
+            'syarat' => $syarat,
+            'terpenuhi' => $terpenuhi,
+            'total' => count($syarat),
+            'lengkap' => $terpenuhi === count($syarat),
+            'di_talent_pool' => $this->talentPool()->exists(),
         ];
     }
 }

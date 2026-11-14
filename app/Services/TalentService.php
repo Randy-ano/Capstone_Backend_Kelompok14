@@ -145,10 +145,9 @@ class TalentService
      */
     private function updateKelengkapan(Talent $talent): void
     {
-        $lengkap =
-            trim((string) $talent->nama_lengkap) !== '' &&
-            $talent->riwayatPendidikan()->exists() &&
-            $talent->kompetensi()->exists();
+        // Relasi lama bisa sudah dimuat sebelum diubah: hitung dari database.
+        $talent->unsetRelation('riwayatPendidikan')->unsetRelation('kompetensi');
+        $lengkap = collect($talent->syaratKelengkapan())->every('terpenuhi');
 
         $talent->update([
             'status_kelengkapan' => $lengkap
