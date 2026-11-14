@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\JenisDokumen;
 use App\Enums\StatusInterview;
 use App\Enums\StatusPengajuan;
 use App\Enums\StatusPlacement;
@@ -118,8 +119,15 @@ class RekrutmenSeeder extends Seeder
         $this->interviewSelesai($pPutri, $this->tambah($t, 9), 'Interview bersama QA Lead.');
         $evPutri = $this->nilai('hr03', $pPutri, 84, 'diterima', 'Teliti dan cepat memahami alur produk.', $this->tambah($t, 11));
         $plPutri = $this->tempatkan($evPutri, Linimasa::bulan(11, 8), Linimasa::bulan(7, 8));
-        // Kontrak jangka pendek selesai; talent kembali tersedia di pool (R20).
-        Linimasa::pada(Linimasa::bulan(7, 8, 17), fn () => $this->placement->ubahStatus($plPutri, StatusPlacement::Selesai, Linimasa::bulan(7, 8)->toDateString()));
+        // Kontrak jangka pendek selesai; talent kembali tersedia di pool (R20). Surat Keterangan Selesai Penempatan
+        // dibuat otomatis lalu ditandatangani Manager keesokan harinya.
+        Linimasa::pada(Linimasa::bulan(7, 8, 17), fn () => $this->placement->ubahStatus($plPutri, StatusPlacement::Selesai, Linimasa::bulan(7, 8)->toDateString(), $this->user('ts')));
+        $this->dokumen->putus(
+            $plPutri->dokumen()->where('jenis_dokumen', JenisDokumen::SuratSelesaiPenempatan)->sole(),
+            'manager',
+            StatusTtd::Ditandatangani,
+            Linimasa::bulan(7, 9, 10),
+        );
 
         $s = Linimasa::bulan(7, 12);
         $yoga = $this->usul($job, 'Yoga Pratama', $s, 'Pengalaman Scrum dan Selenium sesuai.');
