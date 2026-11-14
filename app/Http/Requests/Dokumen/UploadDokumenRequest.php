@@ -15,7 +15,7 @@ class UploadDokumenRequest extends FormRequest
     {
         return [
             'file' => ['required', 'file', 'mimes:pdf,doc,docx,png,jpg,jpeg', 'max:5120'],
-            'jenis_dokumen' => ['required', Rule::in(array_values(array_diff(JenisDokumen::values(), [JenisDokumen::Cv->value])))],
+            'jenis_dokumen' => ['required', Rule::in(JenisDokumen::bolehUnggah())],
             'id_klien' => ['nullable', 'integer', 'exists:klien,id_klien'],
             'id_talent' => ['nullable', 'integer', 'exists:talent,id_talent'],
             'id_placement' => ['nullable', 'integer', 'exists:placement,id_placement'],

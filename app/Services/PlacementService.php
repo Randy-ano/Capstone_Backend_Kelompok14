@@ -28,6 +28,7 @@ class PlacementService
         private readonly JobRequirementService $jobRequirement,
         private readonly PemberitahuanService $pemberitahuan,
         private readonly KelengkapanDokumenService $kelengkapan,
+        private readonly DokumenAkhirPenempatanService $suratAkhir,
     ) {}
 
     /** Batasi query placement sesuai role: talent miliknya, HR Client kliennya, internal semua. */
@@ -64,10 +65,23 @@ class PlacementService
     }
 
     /** Detail + ringkasan cuti, shift, monitoring, dan keluhan (dipakai Fase 6). */
-    public function detail(Placement $placement): Placement
+    /**
+     * Detail + ringkasan operasional. Dengan `$user`, ikut dimuat histori dokumen penempatan yang boleh ia lihat
+     * (CV tidak termasuk; surat akhir penempatan tidak untuk Talent Support).
+     */
+    public function detail(Placement $placement, ?User $user = null): Placement
     {
-        return $placement->load([...self::RELASI, 'evaluasi'])
+        $placement->load([...self::RELASI, 'evaluasi'])
             ->loadCount(['cuti', 'shifts', 'monitorings', 'laporanKeluhan']);
+
+        if ($user !== null) {
+            $placement->load(['dokumen' => fn ($q) => DokumenService::scope($q->getQuery(), $user)
+                ->where('jenis_dokumen', '!=', JenisDokumen::Cv)
+                ->orderByDesc('tanggal_unggah')
+                ->orderByDesc('id_dokumen')]);
+        }
+
+        return $placement;
     }
 
     /**
@@ -127,7 +141,11 @@ class PlacementService
      * R20: placement aktif diakhiri (selesai/dihentikan) → talent kembali tersedia di pool.
      * Status job tidak dibuka kembali.
      */
-    public function ubahStatus(Placement $placement, StatusPlacement $status, ?string $tanggalSelesai): Placement
+    /**
+     * R20 + surat akhir penempatan: Selesai → Surat Keterangan Selesai Penempatan, Dihentikan → Surat Pemberhentian
+     * Penempatan (alasan wajib). Surat dibuat dalam transaksi yang sama, lalu talent & Manager penandatangan dinotifikasi.
+     */
+    public function ubahStatus(Placement $placement, StatusPlacement $status, ?string $tanggalSelesai, User $pelaku, ?string $alasan = null): Placement
     {
         if ($placement->status_placement !== StatusPlacement::Aktif) {
             throw ValidationException::withMessages(['status_placement' => 'Hanya penempatan aktif yang dapat diakhiri.']);
@@ -135,17 +153,27 @@ class PlacementService
         if ($tanggalSelesai && $placement->tanggal_mulai->gt($tanggalSelesai)) {
             throw ValidationException::withMessages(['tanggal_selesai' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.']);
         }
+        $alasan = $status === StatusPlacement::Dihentikan ? trim((string) $alasan) : null;
+        if ($status === StatusPlacement::Dihentikan && $alasan === '') {
+            throw ValidationException::withMessages(['alasan_penghentian' => 'Alasan penghentian wajib diisi bila penempatan dihentikan.']);
+        }
 
-        return DB::transaction(function () use ($placement, $status, $tanggalSelesai) {
+        $surat = DB::transaction(function () use ($placement, $status, $tanggalSelesai, $pelaku, $alasan) {
+            $selesaiKontrak = $placement->tanggal_selesai?->toDateString();
             $placement->update([
                 'status_placement' => $status,
-                'tanggal_selesai' => $tanggalSelesai ?? $placement->tanggal_selesai ?? now()->toDateString(),
+                'tanggal_selesai' => $tanggalSelesai ?? $selesaiKontrak ?? now()->toDateString(),
             ]);
 
             $placement->talent->update(['status_kandidat' => StatusKandidat::Tersedia]);
             $placement->talent->talentPool?->update(['status_ketersediaan' => StatusKetersediaan::Tersedia]);
 
-            return $this->detail($placement);
+            return $this->suratAkhir->buat($placement->refresh(), $pelaku, $selesaiKontrak, $alasan);
         });
+
+        $this->pemberitahuan->suratAkhirPenempatan($surat);
+        $this->pemberitahuan->mintaTandaTangan($surat, $surat->tandaTangan->pluck('penandatangan'));
+
+        return $this->detail($placement, $pelaku);
     }
 }

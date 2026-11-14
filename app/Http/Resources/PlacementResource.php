@@ -2,7 +2,10 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Dokumen;
 use App\Models\Placement;
+use App\Services\DokumenAkhirPenempatanService;
+use App\Services\DokumenService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -55,6 +58,19 @@ class PlacementResource extends JsonResource
             ],
             'klien' => ['id_klien' => $this->klien->id_klien, 'nama_perusahaan' => $this->klien->nama_perusahaan],
             'job_requirement' => ['id_job_req' => $this->jobRequirement->id_job_req, 'posisi' => $this->jobRequirement->posisi],
+            // Histori dokumen penempatan yang boleh dilihat user (detail saja; lihat PlacementService::detail).
+            'dokumen' => $this->whenLoaded('dokumen', fn () => $this->dokumen->map(fn (Dokumen $d) => [
+                'id_dokumen' => $d->id_dokumen,
+                'jenis_dokumen' => $d->jenis_dokumen,
+                'label_jenis' => DokumenService::judul($d->jenis_dokumen),
+                'nama_file' => DokumenService::namaFileUnduhan($d),
+                'status_dokumen' => $d->status_dokumen,
+                'tanggal_unggah' => $d->tanggal_unggah?->toIso8601String(),
+            ])->values()),
+            'alasan_penghentian' => $this->whenLoaded('dokumen', fn () => $this->dokumen
+                ->map(fn (Dokumen $d) => DokumenAkhirPenempatanService::alasan($d))
+                ->filter()
+                ->first()),
             'ringkasan' => $this->when(array_key_exists('cuti_count', $atribut), fn () => [
                 'jumlah_cuti' => (int) $atribut['cuti_count'],
                 'jumlah_shift' => (int) $atribut['shifts_count'],

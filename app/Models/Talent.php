@@ -212,13 +212,15 @@ class Talent extends Model
     }
 
     /**
-     * Menu Dokumen terbuka bagi talent yang sudah ditempatkan, atau yang sudah punya Kontrak Kerja
-     * (harus ditandatangani sebelum penempatan dibuat, R36).
+     * Menu Dokumen terbuka bagi talent yang sudah ditempatkan, yang sudah punya Kontrak Kerja
+     * (harus ditandatangani sebelum penempatan dibuat, R36), atau yang menerima surat akhir penempatan.
      */
     public function bolehAksesDokumen(): bool
     {
         return $this->sudahDitempatkan()
-            || Dokumen::where('id_talent', $this->id_talent)->where('jenis_dokumen', JenisDokumen::KontrakKerja)->exists();
+            || Dokumen::where('id_talent', $this->id_talent)
+                ->whereIn('jenis_dokumen', [JenisDokumen::KontrakKerja, ...JenisDokumen::AKHIR_PENEMPATAN])
+                ->exists();
     }
 
     // Relasi pengajuan cuti

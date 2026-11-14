@@ -193,6 +193,27 @@ class PemberitahuanService
         );
     }
 
+    /**
+     * Surat akhir penempatan dibuat (menunggu tanda tangan Manager) atau sudah ditandatangani → talent bersangkutan.
+     * Kanal email bila mailer aktif (bukan `log`/`array`); notifikasi tetap tampil di lonceng.
+     */
+    public function suratAkhirPenempatan(Dokumen $d, bool $ditandatangani = false): void
+    {
+        $d->loadMissing(['talent.user', 'placement.klien']);
+        $user = $d->talent?->user;
+        if ($user === null) {
+            return;
+        }
+        $judul = DokumenService::judul($d->jenis_dokumen);
+        $pl = $d->placement;
+        $tentang = $pl ? " untuk penempatan Anda sebagai {$pl->posisi_penempatan} di {$pl->klien->nama_perusahaan}" : '';
+        $pesan = $ditandatangani
+            ? "{$judul}{$tentang} telah ditandatangani Manager dan dapat diunduh di menu Dokumen."
+            : "{$judul}{$tentang} telah dibuat dan menunggu tanda tangan Manager. Dokumen dapat dilihat di menu Dokumen.";
+
+        $this->notifikasi->kirim($user, 'surat_akhir_penempatan', $pesan, NotifikasiService::kanalEmailJikaAktif());
+    }
+
     private function rentang(PengajuanCuti $c): string
     {
         $mulai = $c->tanggal_mulai->translatedFormat('d F Y');
