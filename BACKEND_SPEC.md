@@ -592,7 +592,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 | POST | /auth/login | publik | mengembalikan token + data user + role |
 | POST | /auth/logout | semua | hapus token aktif |
 | GET | /auth/me | semua | user + profil sesuai role |
-| POST | /auth/lupa-password | publik | `email`; kirim email tautan `FRONTEND_URL/reset-password?token=…&email=…` (berlaku 60 menit). Respons selalu "Jika email terdaftar, tautan reset sudah dikirim." Maks 5/menit |
+| POST | /auth/lupa-password | publik | `email`; kirim email tautan `FRONTEND_URL/reset-password?token=…&email=…` (berlaku 60 menit). Respons selalu "Jika email terdaftar, tautan reset sudah dikirim. Jika tidak ada di Kotak Masuk, cek folder Spam." Maks 5/menit |
 | POST | /auth/reset-password | publik | `email`, `token`, `password` (min. 8), `password_confirmation`; berhasil → semua token login dicabut; token salah/kedaluwarsa → 422 di field `token`. Maks 5/menit |
 | PUT | /auth/password | semua | ubah password sendiri: `password_lama`, `password` (min. 8, beda dari lama), `password_confirmation`; sesi lain dihapus, sesi saat ini tetap |
 | GET/POST/PUT | /pegawai, /pegawai/{id} | M | kelola akun internal (R2) |
@@ -603,7 +603,7 @@ Semua di bawah `/api/v1`. Kolom Role: T = talent, HC = hr_client, AM = account_m
 |---|---|---|---|
 | GET | /kompetensi | semua | master kompetensi; filter `search` (beberapa kata kunci dipisah koma, salah satu cocok), `kategori` (satu nilai atau `kategori[]` beberapa kategori); `meta.kategori` = semua kategori terpakai; `dengan_pemakaian=1` menambah `jumlah_talent` & `jumlah_job_requirement` |
 | POST/PUT/DELETE | /kompetensi, /kompetensi/{id} | TS, M | kelola master; nama unik tanpa membedakan huruf besar/kecil; DELETE ditolak 422 jika masih dipakai talent/job requirement |
-| GET | /talent/profil | T | profil sendiri + kompetensi |
+| GET | /talent/profil | T | profil sendiri + kompetensi + `kelengkapan_profil` (`syarat[]` R4: `kunci`, `label`, `terpenuhi`; `terpenuhi`, `total`, `lengkap`, `di_talent_pool`; juga di respons PUT profil & kompetensi) |
 | PUT | /talent/profil | T | update profil (R4, R5); `riwayat_pendidikan[]`, `riwayat_pengalaman_kerja[]`, `bahasa[]` (`nama_bahasa`, `tingkat_kemampuan`) jika dikirim menggantikan daftar lama; `sertifikat[]` disinkronkan per `id_sertifikat` (baris ber-id diperbarui dan filenya tetap, tanpa id dibuat, yang tidak dikirim dihapus beserta filenya) |
 | PUT | /talent/profil/kompetensi | T | sync daftar `id_kompetensi` |
 | POST | /talent/cv/generate | T | R6; 422 jika profil belum lengkap (R4) |
