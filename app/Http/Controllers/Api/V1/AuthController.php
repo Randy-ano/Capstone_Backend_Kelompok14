@@ -76,13 +76,13 @@ class AuthController extends Controller
      *
      * @unauthenticated
      *
-     * @response {"data": null, "message": "Jika email terdaftar, tautan reset sudah dikirim."}
+     * @response {"data": null, "message": "Jika email terdaftar, tautan reset sudah dikirim. Jika tidak ada di Kotak Masuk, cek folder Spam."}
      */
     public function lupaPassword(LupaPasswordRequest $request): JsonResponse
     {
         $this->auth->lupaPassword($request->validated('email'));
 
-        return response()->json(['data' => null, 'message' => 'Jika email terdaftar, tautan reset sudah dikirim.']);
+        return response()->json(['data' => null, 'message' => 'Jika email terdaftar, tautan reset sudah dikirim. Jika tidak ada di Kotak Masuk, cek folder Spam.']);
     }
 
     /**
